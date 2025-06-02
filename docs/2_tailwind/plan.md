@@ -37,10 +37,19 @@
 ---
 
 ## マイルストーン
-1. 現状CSSのTailwind変換リストアップ
-2. Tailwindユーティリティへの置換作業
-3. コンポーネント修正・テスト
-4. 不要CSS削除・最終レビュー
+1. 現状CSSのTailwind変換リストアップ　→　**完了**
+2. Tailwindユーティリティへの置換作業　→　**完了**
+3. コンポーネント修正・テスト　→　**完了**
+4. 不要CSS削除・最終レビュー　→　一部完了（画面最終確認・追加調整は次担当者へ）
+
+---
+
+## 進捗メモ（2024/xx/xx 時点）
+- `globals.css`/`Home.module.css`の内容をTailwindユーティリティに変換し、`pages/index.tsx`へ反映済み。
+- 旧CSSファイルは削除済み。
+- `package.json`にtailwindcss, postcss, autoprefixer, daisyuiを追加済み。
+- 主要なグローバルCSSは`app/globals.css`（Tailwind基本セットのみ）で管理。
+- 画面の最終デザイン確認・追加調整、他ページのTailwind化が必要な場合は次担当者が対応してください。
 
 ---
 
