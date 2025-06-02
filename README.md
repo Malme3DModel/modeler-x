@@ -45,9 +45,8 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 │   ├── threejs/           # Three.js components
 │   │   ├── ThreeJSViewport.tsx
 │   │   └── ThreeJSModel.tsx
-│   ├── ui/                # UI components
-│   │   └── LoadingSpinner.tsx
-│   └── OCJSViewport.tsx   # Legacy component (preserved)
+│   └── ui/                # UI components
+│       └── LoadingSpinner.tsx
 ├── hooks/                 # Custom React hooks
 │   └── useOpenCascade.ts
 ├── lib/                   # Library code

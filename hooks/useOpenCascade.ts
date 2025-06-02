@@ -21,7 +21,7 @@ export function useOpenCascade(): UseOpenCascadeReturn {
         setOc(ocInstance);
         
         try {
-          // 既存の形状生成ロジック（OCJSViewport.tsx からコピー）
+          // 既存の形状生成ロジック（元 model-viewer 実装からの移植）
           const sphere = new ocInstance.BRepPrimAPI_MakeSphere_1(1);
           
           // Take shape and subtract a translated and scaled sphere from it
