@@ -53,20 +53,36 @@ async function initializeOpenCascade() {
     console.log("📁 Loading OpenCascade v1.1.1 from local files...");
     console.log("📡 URL: /opencascade/opencascade.wasm.js");
     
-    // ローカルファイルからOpenCascade.js v1.1.1を読み込み
-    console.log("📦 Executing importScripts...");
-    importScripts('/opencascade/opencascade.wasm.js');
-    console.log("✅ importScripts completed successfully");
+    // ES Modules形式のファイルをfetch()で読み込み、export文を削除してからeval()で実行
+    console.log("📦 Fetching OpenCascade.js file...");
+    const response = await fetch('/opencascade/opencascade.wasm.js');
     
-    // opencascade関数の存在確認（v1.1.1では initOpenCascade 関数）
-    if (typeof initOpenCascade === 'undefined') {
-      throw new Error("initOpenCascade function not available after import from local files");
+    if (!response.ok) {
+      throw new Error(`Failed to fetch OpenCascade.js: ${response.status} ${response.statusText}`);
     }
     
-    console.log("🔧 initOpenCascade function found, initializing...");
+    console.log("📦 Reading file content...");
+    let jsCode = await response.text();
+    
+    console.log("🔧 Processing ES Modules format...");
+    // export文を削除（ES Modules形式をWebWorker対応に変換）
+    jsCode = jsCode.replace(/export\s+default\s+[^;]+;?\s*$/, '');
+    
+    console.log("📦 Executing OpenCascade.js code...");
+    // グローバルスコープで実行
+    eval(jsCode);
+    
+    console.log("✅ OpenCascade.js code executed successfully");
+    
+    // opencascade関数の存在確認
+    if (typeof opencascade === 'undefined') {
+      throw new Error("opencascade function not available after execution");
+    }
+    
+    console.log("🔧 opencascade function found, initializing...");
     
     // OpenCascadeの初期化（v1.1.1 形式）
-    const openCascade = await initOpenCascade({
+    const openCascade = await opencascade({
       locateFile(path) {
         console.log(`🔍 Locating file: ${path}`);
         if (path.endsWith('.wasm')) {
