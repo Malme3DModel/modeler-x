@@ -1,6 +1,14 @@
-# OpenCascade.js Demo with Next.js and TypeScript
+# OpenCascade.js Demo with Three.js, Next.js and TypeScript
 
-This is a [Next.js](https://nextjs.org/) project showcasing [OpenCascade.js](https://ocjs.org/) integration, now fully migrated to TypeScript.
+This is a [Next.js](https://nextjs.org/) project showcasing [OpenCascade.js](https://ocjs.org/) integration with [Three.js](https://threejs.org/) rendering, fully implemented in TypeScript.
+
+## ✨ Features
+
+- **Three.js Rendering**: High-performance WebGL-based 3D visualization
+- **OpenCascade.js Integration**: Advanced CAD geometry processing
+- **Interactive Controls**: Orbit controls for camera manipulation
+- **TypeScript**: Full type safety and developer experience
+- **Next.js 14**: Modern React framework with App Router
 
 ## Getting Started
 
@@ -29,36 +37,63 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 ## Project Structure
 
 ```
-├── pages/              # Next.js pages (Pages Router)
-│   ├── api/           # API routes
-│   ├── _app.tsx       # App component
-│   └── index.tsx      # Home page
-├── components/         # React components
-│   └── OCJSViewport.tsx
-├── lib/               # Library code
-│   └── shapeToUrl.ts
-├── styles/            # CSS styles
-├── public/            # Static files
-├── types/             # TypeScript type definitions
-└── utils/             # Utility functions
+├── app/                    # Next.js App Router
+│   ├── layout.tsx         # Root layout
+│   ├── page.tsx           # Home page
+│   └── globals.css        # Global styles
+├── components/            # React components
+│   ├── threejs/           # Three.js components
+│   │   ├── ThreeJSViewport.tsx
+│   │   └── ThreeJSModel.tsx
+│   ├── ui/                # UI components
+│   │   └── LoadingSpinner.tsx
+│   └── OCJSViewport.tsx   # Legacy component (preserved)
+├── hooks/                 # Custom React hooks
+│   └── useOpenCascade.ts
+├── lib/                   # Library code
+│   ├── threejs/           # Three.js utilities
+│   └── shapeToUrl.ts      # OpenCascade to GLB conversion
+├── docs/                  # Documentation
+│   └── 4_convert_threejs/ # Migration documentation
+├── public/                # Static files
+└── types/                 # TypeScript type definitions
 ```
 
-## TypeScript Configuration
+## Architecture
 
-This project uses TypeScript with strict mode enabled. The configuration can be found in `tsconfig.json`.
+### Three.js Rendering Pipeline
+1. **OpenCascade.js**: Generates 3D geometry using CAD operations
+2. **GLB Conversion**: Converts geometry to GLB format via `shapeToUrl`
+3. **Three.js**: Renders GLB models with WebGL
+4. **React Three Fiber**: React integration for Three.js
+
+### Key Components
+- **ThreeJSViewport**: Main 3D viewport with lighting and controls
+- **ThreeJSModel**: GLTF/GLB model renderer with material optimization
+- **useOpenCascade**: Hook managing OpenCascade.js initialization and shape generation
 
 ## Technologies Used
 
-- [Next.js 12.1.5](https://nextjs.org/)
-- [TypeScript](https://www.typescriptlang.org/)
-- [React 18](https://reactjs.org/)
-- [OpenCascade.js](https://ocjs.org/)
-- [@google/model-viewer](https://modelviewer.dev/)
+- [Next.js 14.2.5](https://nextjs.org/) - React framework
+- [TypeScript](https://www.typescriptlang.org/) - Type safety
+- [Three.js 0.160.0](https://threejs.org/) - 3D rendering
+- [React Three Fiber 8.15.12](https://docs.pmnd.rs/react-three-fiber) - React integration
+- [React Three Drei 9.92.7](https://github.com/pmndrs/drei) - Three.js utilities
+- [OpenCascade.js](https://ocjs.org/) - CAD geometry processing
+- [Tailwind CSS](https://tailwindcss.com/) - Styling
+- [DaisyUI](https://daisyui.com/) - UI components
+
+## Migration History
+
+This project has been migrated from `@google/model-viewer` to Three.js for enhanced performance and customization. The migration documentation can be found in `docs/4_convert_threejs/`.
+
+**Migration completed**: June 2024
 
 ## Learn More
 
+- [Three.js Documentation](https://threejs.org/docs/)
+- [React Three Fiber Documentation](https://docs.pmnd.rs/react-three-fiber)
 - [Next.js Documentation](https://nextjs.org/docs)
-- [TypeScript Documentation](https://www.typescriptlang.org/docs/)
 - [OpenCascade.js Documentation](https://ocjs.org/docs)
 
 ## Contributing

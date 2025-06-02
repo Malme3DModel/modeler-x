@@ -9,7 +9,7 @@ const nextConfig = {
       },
     ],
   },
-  webpack: (config) => {
+  webpack: (config, { isServer }) => {
     config.module.rules.push(
       {
         test: /\.wasm$/,
@@ -24,6 +24,19 @@ const nextConfig = {
         use: ['raw-loader', 'glslify-loader']
       }
     );
+
+    // Three.js の重複インスタンス問題を解決
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'three': 'three',
+      };
+      
+      // Three.js の重複を避けるため、確実に単一のインスタンスを使用
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+      };
+    }
 
     return config;
   },
