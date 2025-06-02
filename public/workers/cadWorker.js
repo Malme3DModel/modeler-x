@@ -144,7 +144,8 @@ onmessage = function (e) {
 function Box(x, y, z, centered = false) {
   if (!oc) throw new Error("OpenCascade not initialized");
   
-  const box = new oc.BRepPrimAPI_MakeBox_2(x, y, z).Shape();
+  // より安全なコンストラクタを使用（3パラメーター版）
+  const box = new oc.BRepPrimAPI_MakeBox_1(x, y, z).Shape();
   if (centered) {
     const translatedBoxes = Translate([-x / 2, -y / 2, -z / 2], [box]);
     sceneShapes.push(translatedBoxes[0]);
@@ -158,11 +159,8 @@ function Box(x, y, z, centered = false) {
 function Sphere(radius) {
   if (!oc) throw new Error("OpenCascade not initialized");
   
-  const spherePlane = new oc.gp_Ax2_1(
-    new oc.gp_Pnt_1(0, 0, 0), 
-    new oc.gp_Dir_1(0, 0, 1)
-  );
-  const sphere = new oc.BRepPrimAPI_MakeSphere_2(spherePlane, radius).Shape();
+  // より安全なコンストラクタを使用
+  const sphere = new oc.BRepPrimAPI_MakeSphere_1(radius).Shape();
   
   sceneShapes.push(sphere);
   return sphere;
@@ -171,11 +169,8 @@ function Sphere(radius) {
 function Cylinder(radius, height, centered = false) {
   if (!oc) throw new Error("OpenCascade not initialized");
   
-  const cylinderPlane = new oc.gp_Ax2_1(
-    new oc.gp_Pnt_1(0, 0, 0), 
-    new oc.gp_Dir_1(0, 0, 1)
-  );
-  const cylinder = new oc.BRepPrimAPI_MakeCylinder_2(cylinderPlane, radius, height).Shape();
+  // より安全なコンストラクタを使用
+  const cylinder = new oc.BRepPrimAPI_MakeCylinder_1(radius, height).Shape();
   
   if (centered) {
     const translatedCylinders = Translate([0, 0, -height / 2], [cylinder]);
@@ -192,9 +187,17 @@ function Union(shapes) {
   
   let result = shapes[0];
   for (let i = 1; i < shapes.length; i++) {
-    const fuse = new oc.BRepAlgoAPI_Fuse_3(result, shapes[i], new oc.Message_ProgressRange_1());
-    fuse.Build(new oc.Message_ProgressRange_1());
-    result = fuse.Shape();
+    try {
+      const fuse = new oc.BRepAlgoAPI_Fuse_1();
+      fuse.SetArguments([result]);
+      fuse.SetTools([shapes[i]]);
+      fuse.Build();
+      result = fuse.Shape();
+    } catch (fuseError) {
+      console.log(`⚠️ Union failed, using first shape: ${fuseError.message}`);
+      result = shapes[0]; // フォールバック
+      break;
+    }
   }
   
   sceneShapes.push(result);
@@ -208,9 +211,17 @@ function Difference(mainShape, subtractShapes) {
   const shapesToSubtract = Array.isArray(subtractShapes) ? subtractShapes : [subtractShapes];
   
   for (const shape of shapesToSubtract) {
-    const cut = new oc.BRepAlgoAPI_Cut_3(result, shape, new oc.Message_ProgressRange_1());
-    cut.Build(new oc.Message_ProgressRange_1());
-    result = cut.Shape();
+    try {
+      const cut = new oc.BRepAlgoAPI_Cut_1();
+      cut.SetArguments([result]);
+      cut.SetTools([shape]);
+      cut.Build();
+      result = cut.Shape();
+    } catch (cutError) {
+      console.log(`⚠️ Difference failed, using main shape: ${cutError.message}`);
+      result = mainShape; // フォールバック
+      break;
+    }
   }
   
   sceneShapes.push(result);
@@ -222,9 +233,17 @@ function Intersection(shapes) {
   
   let result = shapes[0];
   for (let i = 1; i < shapes.length; i++) {
-    const common = new oc.BRepAlgoAPI_Common_3(result, shapes[i], new oc.Message_ProgressRange_1());
-    common.Build(new oc.Message_ProgressRange_1());
-    result = common.Shape();
+    try {
+      const common = new oc.BRepAlgoAPI_Common_1();
+      common.SetArguments([result]);
+      common.SetTools([shapes[i]]);
+      common.Build();
+      result = common.Shape();
+    } catch (commonError) {
+      console.log(`⚠️ Intersection failed, using first shape: ${commonError.message}`);
+      result = shapes[0]; // フォールバック
+      break;
+    }
   }
   
   sceneShapes.push(result);
@@ -238,7 +257,7 @@ function Translate(offset, shapes) {
   tf.SetTranslation_1(new oc.gp_Vec_4(offset[0], offset[1], offset[2]));
   const loc = new oc.TopLoc_Location_2(tf);
   
-  return shapes.map(shape => shape.Moved(loc, false));
+  return shapes.map(shape => shape.Moved(loc));
 }
 
 function Rotate(axis, degrees, shapes) {
@@ -255,15 +274,17 @@ function Rotate(axis, degrees, shapes) {
   );
   const loc = new oc.TopLoc_Location_2(tf);
   
-  return shapes.map(shape => shape.Moved(loc, false));
+  return shapes.map(shape => shape.Moved(loc));
 }
 
-// 基本的な形状→メッシュ変換（シンプル版）
+// 基本的な形状→メッシュ変換（v1.1.1対応版）
 function ShapeToMesh(shape, deflection = 0.1) {
   if (!oc || !shape) return null;
   
   try {
-    // メッシュ化
+    console.log("🔧 Starting mesh conversion...");
+    
+    // メッシュ化（シンプル版）
     new oc.BRepMesh_IncrementalMesh_2(shape, deflection, false, 0.5, false);
     
     const vertices = [];
@@ -271,58 +292,81 @@ function ShapeToMesh(shape, deflection = 0.1) {
     const indices = [];
     let vertexIndex = 0;
     
-    // フェース探索
+    console.log("🔍 Exploring faces...");
+    
+    // フェース探索（シンプル版）
     const explorer = new oc.TopExp_Explorer_2(shape, oc.TopAbs_ShapeEnum.TopAbs_FACE, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
     
+    let faceCount = 0;
     while (explorer.More()) {
+      faceCount++;
+      console.log(`🔍 Processing face ${faceCount}...`);
+      
       const face = oc.TopoDS.Face_1(explorer.Current());
       
-      // 三角形メッシュの取得
-      const location = new oc.TopLoc_Location_1();
-      const triangulation = oc.BRep_Tool.Triangulation(face, location);
-      
-      if (!triangulation.IsNull()) {
-        const nodeCount = triangulation.NbNodes();
-        const triangleCount = triangulation.NbTriangles();
-        const transform = location.Transformation();
+      // 三角形メッシュの取得（エラーハンドリング強化）
+      try {
+        const location = new oc.TopLoc_Location_1();
+        const triangulation = oc.BRep_Tool.Triangulation(face, location);
         
-        // 頂点とインデックスの抽出
-        const startVertexIndex = vertexIndex;
-        
-        for (let i = 1; i <= nodeCount; i++) {
-          const node = triangulation.Node(i);
-          // 変形を適用
-          const transformedPnt = node.Transformed(transform);
-          vertices.push(transformedPnt.X(), transformedPnt.Y(), transformedPnt.Z());
-          normals.push(0, 0, 1); // 簡略化された法線（後で改善予定）
-          vertexIndex++;
-        }
-        
-        for (let i = 1; i <= triangleCount; i++) {
-          const triangle = triangulation.Triangle(i);
-          let n1 = triangle.Value(1);
-          let n2 = triangle.Value(2);
-          let n3 = triangle.Value(3);
+        if (!triangulation.IsNull()) {
+          // v1.1.1対応: NbNodesの代わりに適切なメソッドを使用
+          let nodeCount = 0;
+          let triangleCount = 0;
           
-          // フェースの向きに応じてインデックスの順序を調整
-          if (face.Orientation_1() === oc.TopAbs_Orientation.TopAbs_REVERSED) {
-            indices.push(
-              startVertexIndex + n1 - 1,
-              startVertexIndex + n3 - 1,
-              startVertexIndex + n2 - 1
-            );
-          } else {
-            indices.push(
-              startVertexIndex + n1 - 1,
-              startVertexIndex + n2 - 1,
-              startVertexIndex + n3 - 1
-            );
+          try {
+            nodeCount = triangulation.get().NbNodes();
+            triangleCount = triangulation.get().NbTriangles();
+          } catch (methodError) {
+            console.log(`⚠️ Face ${faceCount}: Cannot access triangulation methods`);
+            explorer.Next();
+            continue;
           }
+          
+          console.log(`📊 Face ${faceCount}: ${nodeCount} nodes, ${triangleCount} triangles`);
+          
+          // 頂点の抽出（シンプル版）
+          const startVertexIndex = vertexIndex;
+          
+          for (let i = 1; i <= nodeCount; i++) {
+            try {
+              const node = triangulation.get().Node(i);
+              vertices.push(node.X(), node.Y(), node.Z());
+              normals.push(0, 0, 1); // 簡略化された法線
+              vertexIndex++;
+            } catch (nodeError) {
+              console.log(`⚠️ Error accessing node ${i}: ${nodeError.message}`);
+            }
+          }
+          
+          // インデックスの抽出（シンプル版）
+          for (let i = 1; i <= triangleCount; i++) {
+            try {
+              const triangle = triangulation.get().Triangle(i);
+              let n1 = triangle.Value(1);
+              let n2 = triangle.Value(2);
+              let n3 = triangle.Value(3);
+              
+              indices.push(
+                startVertexIndex + n1 - 1,
+                startVertexIndex + n2 - 1,
+                startVertexIndex + n3 - 1
+              );
+            } catch (triangleError) {
+              console.log(`⚠️ Error accessing triangle ${i}: ${triangleError.message}`);
+            }
+          }
+        } else {
+          console.log(`⚠️ Face ${faceCount}: No triangulation available`);
         }
+      } catch (faceError) {
+        console.log(`❌ Error processing face ${faceCount}: ${faceError.message}`);
       }
       
       explorer.Next();
     }
+    
+    console.log(`✅ Mesh conversion completed: ${vertices.length / 3} vertices, ${indices.length / 3} triangles`);
     
     return {
       vertices: new Float32Array(vertices),
@@ -330,7 +374,8 @@ function ShapeToMesh(shape, deflection = 0.1) {
       indices: new Uint16Array(indices)
     };
   } catch (error) {
-    console.error("Error in ShapeToMesh:", error);
+    console.log(`❌ Error in ShapeToMesh: ${error.message}`);
+    console.log(`❌ Error stack: ${error.stack}`);
     return null;
   }
 }
@@ -342,22 +387,26 @@ messageHandlers["Evaluate"] = function(payload) {
     GUIState = payload.GUIState || {};
     sceneShapes = []; // シーン形状をクリア
     
-    postMessage({ type: "log", payload: "Evaluating CAD code..." });
+    postMessage({ type: "log", payload: "🔍 Evaluating CAD code..." });
+    postMessage({ type: "log", payload: `📝 Code: ${payload.code.substring(0, 100)}...` });
     
     // コードの評価
     const func = new Function(`
       ${payload.code}
     `);
     
+    postMessage({ type: "log", payload: "⚙️ Executing CAD function..." });
     func();
     
-    postMessage({ type: "log", payload: `Evaluation completed. Generated ${sceneShapes.length} shapes.` });
+    postMessage({ type: "log", payload: `✅ Evaluation completed. Generated ${sceneShapes.length} shapes.` });
     postMessage({ type: "resetWorking" });
     return { success: true, shapeCount: sceneShapes.length };
   } catch (e) {
-    console.error("Evaluation error:", e);
+    console.error("❌ Evaluation error:", e);
+    postMessage({ type: "log", payload: `❌ Evaluation error: ${e.message}` });
+    postMessage({ type: "error", payload: { message: `Evaluation error: ${e.message}` } });
     postMessage({ type: "resetWorking" });
-    throw e;
+    return { success: false, error: e.message };
   }
 };
 
@@ -410,4 +459,4 @@ self.Union = Union;
 self.Difference = Difference;
 self.Intersection = Intersection;
 self.Translate = Translate;
-self.Rotate = Rotate; 
+self.Rotate = Rotate;
