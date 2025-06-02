@@ -43,7 +43,12 @@ const nextConfig = {
   transpilePackages: ['three'],
   experimental: {
     optimizePackageImports: ['three', '@react-three/fiber', '@react-three/drei']
-  }
+  },
+  // SynologyDrive環境での開発用設定
+  devIndicators: {
+    buildActivity: false,
+  },
+  generateBuildId: () => 'build'
 };
 
 export default nextConfig;

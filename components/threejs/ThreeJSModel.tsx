@@ -1,6 +1,6 @@
 import { useGLTF } from '@react-three/drei';
 import { useRef, useEffect } from 'react';
-import { Group, Mesh } from 'three';
+import { Group, Mesh, MeshStandardMaterial } from 'three';
 
 interface ThreeJSModelProps {
   url: string;
@@ -24,8 +24,8 @@ export default function ThreeJSModel({
           child.castShadow = true;
           child.receiveShadow = true;
           
-          // マテリアルの調整
-          if (child.material) {
+          // マテリアルの調整（型安全に）
+          if (child.material && child.material instanceof MeshStandardMaterial) {
             child.material.roughness = 0.7;
             child.material.metalness = 0.3;
           }
