@@ -24,7 +24,7 @@ export default function OCJSViewport() {
 
       // Let's make some cuts
       const cut1 = makeCut(sphere.Shape(), [0, 0, 0.7], 1);
-      const cut2 = makeCut(cut1, [0, 0, -0.7], 1);
+      const cut2 = makeCut(cut1, [0, 1, -0.7], 1);
       const cut3 = makeCut(cut2, [0, 0.25, 1.75], 1.825);
       const cut4 = makeCut(cut3, [4.8, 0, 0], 5);
 
