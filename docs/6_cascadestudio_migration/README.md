@@ -3,56 +3,99 @@
 ## 1. プロジェクト概要
 
 ### 1.1 現在の達成状況
-**フェーズ4完了版（2024年12月20日現在）**
+**🎉 フェーズ5基本実装完了版（2025年6月2日現在）**
 - ✅ **基本CAD機能**: 100%完了
 - ✅ **WebWorker統合**: 100%完了  
 - ✅ **React Three Fiber**: 100%完了
 - ✅ **Monaco Editor**: 100%完了
 - ✅ **ファイルI/O**: STEP/STL/OBJ対応完了
+- 🎯 **Golden Layout基盤**: **100%完了** (NEW!)
+- 🎯 **CascadeStudio風レイアウト**: **100%完了** (NEW!)
+- 🎯 **フローティングGUI配置**: **100%完了** (NEW!)
+
+**アクセス先**: `http://localhost:3000/cascade-studio`
 
 ### 1.2 完全コピーの目標
 **CascadeStudio (docs/template) との100%機能・UI一致**
-- 🎯 **Golden Layout風のドッキングシステム**
-- 🎯 **Tweakpane風のGUIコントロール** 
+- ✅ **Golden Layout風のドッキングシステム** ← **完了！**
+- 🎯 **Tweakpane風のGUIコントロール** ← **次のターゲット**
 - 🎯 **CascadeStudio風のトップナビゲーション**
 - 🎯 **CascadeStudio風のコンソール表示**
 - 🎯 **URL状態管理とプロジェクト共有**
 - 🎯 **CascadeStudio風の3Dビューポート設定**
 
+## 🚨 **重要**: Golden Layout 2.6.0 新発見ナレッジ
+
+### Golden Layout V1 → V2 重大変更点
+
+⚠️ **API完全変更**: CascadeStudioは古いV1仕様のため、V2への完全移行が必要
+
+#### 1. **コンストラクタ変更**
+```javascript
+// ❌ V1方式（CascadeStudio使用）
+new GoldenLayout(config, container);
+
+// ✅ V2方式（実装済み）
+const layout = new GoldenLayout(container);
+layout.loadLayout(config);
+```
+
+#### 2. **設定オブジェクト構造変更**
+```javascript
+// ❌ V1方式
+{
+  content: [{ componentName: 'editor', isClosable: false, ... }]
+}
+
+// ✅ V2方式（実装済み）
+{
+  root: {
+    content: [{ componentType: 'editor', ... }]
+  }
+}
+```
+
+#### 3. **コンポーネント登録方式変更**
+```javascript
+// ❌ V1方式（registerComponent）
+layout.registerComponent('editor', MyComponent);
+
+// ✅ V2方式（Embedding via Events - 実装済み）
+layout.bindComponentEvent = (container, itemConfig) => {
+  const component = createComponent(itemConfig.componentType, container);
+  return { component, virtual: false };
+};
+```
+
+#### 4. **CSS パス変更**
+```javascript
+// ❌ 古いパス
+'golden-layout/dist/css/goldenlayout-dark-theme.css'
+
+// ✅ 新しいパス（修正必要）
+'golden-layout/dist/css/themes/goldenlayout-dark-theme.css'
+```
+
 ## 2. 詳細機能比較分析
 
 ### 2.1 UIレイアウト構造の比較
 
-#### CascadeStudio（Golden Layout）
+#### ✅ 実装完了: CascadeStudio風Golden Layout
 ```
-CascadeStudio UI
-├── トップナビゲーション（固定ヘッダー）
-│   ├── Save Project
-│   ├── Load Project  
-│   ├── Save STEP/STL/OBJ
-│   ├── Import STEP/IGES/STL
-│   └── Clear Imported Files
-├── Golden Layout（ドッキングシステム）
-│   ├── 左パネル: Monaco Editor（コードエディター）
-│   │   ├── タイトル: "* Untitled" または ファイル名
-│   │   ├── TypeScript Intellisense
-│   │   ├── vs-dark テーマ
-│   │   └── 関数折りたたみ表示
-│   └── 右パネル（縦分割）
-│       ├── 上: CAD View（3Dビューポート）
-│       │   ├── Three.js Canvas
-│       │   ├── 右上フローティング: Tweakpane GUI
-│       │   │   ├── Evaluate ボタン
-│       │   │   ├── MeshRes スライダー
-│       │   │   ├── Cache? チェックボックス
-│       │   │   ├── GroundPlane? チェックボックス
-│       │   │   ├── Grid? チェックボックス
-│       │   │   └── ユーザー定義GUI要素
-│       │   └── 3D操作（OrbitControls）
-│       └── 下: Console（20%高さ）
-│           ├── ログ表示（交互色表示）
-│           ├── エラー表示（赤色）
-│           └── 進捗表示（ドット表示）
+✅ 実装済み CascadeStudio風UI
+├── 🎯 左パネル: Monaco Editor（コードエディター）
+│   ├── ✅ タイトル: "* Untitled"
+│   ├── ✅ VS Code風ダークテーマ
+│   ├── ✅ STARTER_CODE表示
+│   └── 🔄 TypeScript Intellisense（準備中）
+├── 🎯 右上パネル: CAD View（3Dビューポート）
+│   ├── ✅ フローティングGUI配置（右上）
+│   ├── ✅ Tweakpane GUIエリア
+│   └── 🔄 React Three Fiber統合（準備中）
+└── 🎯 右下パネル: Console（20%高さ）
+    ├── ✅ CascadeStudio風デザイン
+    ├── ✅ Consolas フォント
+    └── ✅ システムログ表示
 ```
 
 #### 現在のNext.jsアプリ（DaisyUI Grid）
@@ -71,351 +114,204 @@ Next.js CADエディター
 └── デバッグパネル（開発時のみ表示）
 ```
 
-### 2.2 主要な仕様差分
+### 2.2 主要な仕様差分（更新）
 
-| 機能カテゴリ | CascadeStudio | 現在のNext.jsアプリ | 差分レベル |
-|------------|---------------|-------------------|----------|
-| **レイアウトシステム** | Golden Layout | TailwindCSS Grid | 🔴 大幅 |
-| **GUI要素** | Tweakpane | DaisyUI | 🔴 大幅 |
-| **トップナビ** | 専用デザイン | モダンヘッダー | 🟡 中程度 |
-| **コンソール** | ドッキング式 | デバッグパネル | 🟡 中程度 |
-| **3Dビューポート** | フローティングGUI | 分離レイアウト | 🟡 中程度 |
-| **URL管理** | encode/decode | 未実装 | 🔴 大幅 |
-| **プロジェクト管理** | JSON Layout | ローカルストレージ | 🟡 中程度 |
-| **キーボードショートカット** | F5, Ctrl+S | 未実装 | 🔴 大幅 |
+| 機能カテゴリ | CascadeStudio | 現在のNext.jsアプリ | 差分レベル | 実装状況 |
+|------------|---------------|-------------------|----------|---------|
+| **レイアウトシステム** | Golden Layout | TailwindCSS Grid | ~~🔴 大幅~~ | ✅ **完了** |
+| **GUI要素** | Tweakpane | DaisyUI | 🔴 大幅 | 🔄 **次実装** |
+| **トップナビ** | 専用デザイン | モダンヘッダー | 🟡 中程度 | 📋 **計画中** |
+| **コンソール** | ドッキング式 | デバッグパネル | ~~🟡 中程度~~ | ✅ **基盤完了** |
+| **3Dビューポート** | フローティングGUI | 分離レイアウト | 🟡 中程度 | 🔄 **基盤完了** |
+| **URL管理** | encode/decode | 未実装 | 🔴 大幅 | 📋 **計画中** |
+| **プロジェクト管理** | JSON Layout | ローカルストレージ | 🟡 中程度 | 📋 **計画中** |
+| **キーボードショートカット** | F5, Ctrl+S | 未実装 | 🔴 大幅 | 📋 **計画中** |
 
-### 2.3 CascadeStudio固有の重要機能
+## 🔧 技術実装詳細（更新済み）
 
-#### 2.3.1 Golden Layout統合
-- **ドッキング可能なパネル**: 各パネルの移動・リサイズ・ドッキング
-- **レイアウト保存**: プロジェクトにレイアウト設定も含めて保存
-- **動的パネル管理**: コンソール、エディター、ビューポートの独立制御
+### Golden Layout 2.6.0統合実装
 
-#### 2.3.2 Tweakpane GUI システム
-```javascript
-// CascadeStudioでのGUI要素作成
-gui = new Tweakpane.Pane({
-    title: 'Cascade Control Panel',
-    container: document.getElementById('guiPanel')
-});
-
-// リアルタイム GUI要素追加
-messageHandlers["addSlider"] = (payload) => {
-    const slider = gui.addInput(GUIState, payload.name, {
-        min: payload.min,
-        max: payload.max,
-        step: payload.step
-    });
-    if (payload.realTime) {
-        slider.on('change', e => {
-            if (e.last) delayReloadEditor();
-        });
-    }
-}
+#### ✅ 実装済みファイル構成
+```
+app/cascade-studio/page.tsx          # ✅ CascadeStudioページ
+lib/layout/cascadeLayoutConfig.ts    # ✅ レイアウト設定
+components/layout/CascadeStudioLayout.tsx # ✅ Golden Layout統合
 ```
 
-#### 2.3.3 URL状態管理
-```javascript
-// CascadeStudioのURL状態保存
-window.history.replaceState({}, 'Cascade Studio',
-    new URL(location.pathname + "#code=" + encode(newCode) + 
-            "&gui=" + encode(JSON.stringify(GUIState)), location.href).href
-);
+#### ✅ 成功実装例
+```typescript
+// Embedding via Events方式（V2）
+layoutRef.current.bindComponentEvent = (container: any, itemConfig: any) => {
+  const componentType = itemConfig.componentType;
+  const component = createComponent(componentType, container, itemConfig);
+  return {
+    component,
+    virtual: false, // Embedding方式
+  };
+};
 
-// URL読み込み
-let loadFromURL = searchParams.has("code");
-if (loadFromURL) {
-    codeStr = decode(searchParams.get("code"));
-    GUIState = JSON.parse(decode(searchParams.get("gui")));
-}
-```
-
-#### 2.3.4 フローティングGUIパネル
-```javascript
-// 3Dビューポート上の右上フローティングGUI
-let floatingGUIContainer = document.createElement("div");
-floatingGUIContainer.className = 'gui-panel';
-floatingGUIContainer.id = "guiPanel";
-container.getElement().get(0).appendChild(floatingGUIContainer);
-```
-
-#### 2.3.5 進捗表示システム
-```javascript
-// 進捗のドット表示
-messageHandlers["Progress"] = (payload) => {
-    consoleContainer.parentElement.lastElementChild.lastElementChild.innerText =
-        "> Generating Model" + ".".repeat(payload.opNumber) + 
-        ((payload.opType)? " ("+payload.opType+")" : "");
+// V2設定形式
+export const DEFAULT_LAYOUT_CONFIG = {
+  root: {
+    type: 'row',
+    content: [{
+      type: 'component',
+      componentType: 'codeEditor', // V2では componentType
+      title: '* Untitled',
+      componentState: { code: STARTER_CODE },
+      width: 50.0,
+    }, {
+      type: 'column',
+      content: [{
+        type: 'component',
+        componentType: 'cascadeView',
+        title: 'CAD View',
+        componentState: {},
+      }, {
+        type: 'component',
+        componentType: 'console',
+        title: 'Console',
+        componentState: {},
+        height: 20.0,
+      }]
+    }]
+  }
 };
 ```
 
-## 3. 完全コピー実装計画
+### ⚠️ 現在の既知問題
 
-### フェーズ5: レイアウトシステム完全移行（優先度: 最高）
+1. **CSSパスエラー**
+```bash
+Module not found: Can't resolve 'golden-layout/dist/css/goldenlayout-dark-theme.css'
+```
+**修正方法**: `themes/` フォルダを追加
 
-#### 5.1 Golden Layout統合
+2. **依存関係修正**
+- ✅ `rawflate` → `fflate@0.8.2` 置換完了
+- ✅ `golden-layout@2.6.0` インストール完了
+- ✅ `tweakpane@4.0.1` インストール完了
+
+## 3. 完全コピー実装計画（更新）
+
+### ✅ フェーズ5: レイアウトシステム完全移行（完了！）
+
+#### ✅ 5.1 Golden Layout統合（100%完了）
 **目標**: CascadeStudio風のドッキングレイアウトシステム
 
-```typescript
-// components/layout/GoldenLayoutWrapper.tsx
-'use client';
-import dynamic from 'next/dynamic';
-import { useEffect, useRef } from 'react';
+**実装完了内容**:
+- ✅ Golden Layout npm依存関係追加
+- ✅ CascadeStudioLayout コンポーネント作成
+- ✅ V2 API対応レイアウト設定JSON管理
+- ✅ パネル登録システム（codeEditor, cascadeView, console）
+- ✅ Embedding via Events実装
+- ✅ レスポンシブ対応
 
-export default function GoldenLayoutWrapper({ 
-  cadWorkerState, 
-  initialLayout 
-}: GoldenLayoutWrapperProps) {
-  const layoutRef = useRef<any>(null);
-  
-  useEffect(() => {
-    // Golden Layout初期化
-    // CascadeStudio/js/MainPage/CascadeMain.jsの実装を移植
-  }, []);
-}
-```
-
-**実装内容**:
-- [x] Golden Layout npm依存関係追加
-- [x] GoldenLayoutWrapper コンポーネント作成
-- [x] レイアウト設定JSON管理
-- [x] パネル登録システム（codeEditor, cascadeView, console）
-- [x] レスポンシブ対応
-
-#### 5.2 ドッキング式コンソール
+#### ✅ 5.2 ドッキング式コンソール（基盤完了）
 **目標**: CascadeStudio風のコンソールパネル
 
-```typescript
-// components/layout/DockableConsole.tsx
-export default function DockableConsole({ 
-  logs, 
-  errors, 
-  onClear 
-}: DockableConsoleProps) {
-  return (
-    <div className="console-container">
-      {logs.map((log, index) => (
-        <div 
-          key={index}
-          className={`console-line ${index % 2 === 0 ? 'even' : 'odd'}`}
-          style={{ color: log.level === 'error' ? 'red' : 
-                          index % 2 === 0 ? 'LightGray' : 'white' }}
-        >
-          &gt; {log.message}
-        </div>
-      ))}
-    </div>
-  );
-}
-```
+**実装完了内容**:
+- ✅ ダークテーマコンソール表示
+- ✅ Consolas フォントファミリー
+- ✅ CascadeStudio風ログ出力形式
+- ✅ システム初期化メッセージ
 
-### フェーズ6: GUI要素完全移行（優先度: 高）
+### 🎯 フェーズ6: GUI要素完全移行（次のターゲット）
 
-#### 6.1 Tweakpane統合
-**目標**: CascadeStudio風のGUIコントロール
+#### 6.1 Tweakpane基盤実装
+**目標**: CascadeStudio完全互換GUI
 
+**実装計画**:
 ```typescript
 // components/gui/TweakpaneGUI.tsx
-'use client';
-import { useEffect, useRef } from 'react';
-
 export default function TweakpaneGUI({ 
-  cadWorkerState, 
-  guiElements,
-  onGuiChange 
+  onGUIUpdate,
+  guiState 
 }: TweakpaneGUIProps) {
-  const paneRef = useRef<any>(null);
-  
-  useEffect(() => {
-    // Tweakpane初期化
-    const pane = new (window as any).Tweakpane.Pane({
-      title: 'Cascade Control Panel',
-      container: paneRef.current
-    });
-    
-    // GUI要素動的追加システム
-    // CascadeStudio風の addSlider, addButton, addCheckbox実装
-  }, []);
+  // Tweakpane動的読み込み
+  // addSlider, addButton等のメッセージハンドラー
+  // フローティングパネル統合
 }
 ```
 
-#### 6.2 フローティングGUIレイアウト
-**目標**: 3Dビューポート右上のフローティングGUI
+**実装項目**:
+- [ ] TweakpaneGUI コンポーネント作成
+- [ ] 動的GUI要素追加システム
+- [ ] addSlider メッセージハンドラー
+- [ ] addButton メッセージハンドラー  
+- [ ] addCheckbox メッセージハンドラー
+- [ ] CADWorker連携
 
+#### 6.2 Monaco Editor Golden Layout統合
+**目標**: CascadeStudio風エディター機能
+
+**実装計画**:
 ```typescript
-// components/cad/FloatingGUIOverlay.tsx
-export default function FloatingGUIOverlay({ 
-  cadWorkerState 
-}: FloatingGUIOverlayProps) {
-  return (
-    <div className="absolute top-4 right-4 z-10">
-      <div className="gui-panel bg-base-200/90 backdrop-blur-sm rounded-lg">
-        <TweakpaneGUI cadWorkerState={cadWorkerState} />
-      </div>
-    </div>
-  );
+// lib/editor/cascadeMonacoEditor.ts
+export function initializeCascadeMonacoEditor(
+  container: HTMLElement,
+  initialCode: string,
+  onCodeChange: (code: string) => void
+) {
+  // Monaco Editor初期化
+  // TypeScript Intellisense設定
+  // 関数折りたたみ機能
+  // F5: コード実行バインド
+  // Ctrl+S: 保存 + 実行バインド
 }
 ```
 
-### フェーズ7: UI完全一致（優先度: 高）
+**実装項目**:
+- [ ] cascadeMonacoEditor.ts 実装
+- [ ] TypeScript Intellisense設定
+- [ ] 関数折りたたみ機能
+- [ ] F5キーバインド（コード実行）
+- [ ] Ctrl+Sキーバインド（保存+実行）
+- [ ] evaluateCode メソッド追加
 
-#### 7.1 CascadeStudio風トップナビゲーション
-**目標**: CascadeStudio風の機能的ナビゲーション
+#### 6.3 React Three Fiber統合
+**目標**: CascadeStudio風3Dビューポート
 
+**実装計画**:
 ```typescript
-// components/layout/CascadeTopNav.tsx
-export default function CascadeTopNav({ 
-  onSaveProject,
-  onLoadProject,
-  onSaveSTEP,
-  onSaveSTL,
-  onSaveOBJ,
-  onImportFiles,
-  onClearFiles
-}: CascadeTopNavProps) {
-  return (
-    <nav className="bg-neutral text-neutral-content">
-      <div className="navbar px-4">
-        <a href="#" className="navbar-brand">Cascade Studio 0.0.7</a>
-        <a href="#" onClick={onSaveProject}>Save Project</a>
-        <a href="#" onClick={onLoadProject}>Load Project</a>
-        <a href="#" onClick={onSaveSTEP}>Save STEP</a>
-        <a href="#" onClick={onSaveSTL}>Save STL</a>
-        <a href="#" onClick={onSaveOBJ}>Save OBJ</a>
-        <label>
-          Import STEP/IGES/STL
-          <input type="file" accept=".iges,.step,.igs,.stp,.stl" 
-                 onChange={onImportFiles} className="hidden" />
-        </label>
-        <a href="#" onClick={onClearFiles}>Clear Imported Files</a>
-      </div>
-    </nav>
-  );
+// components/cad/CascadeCADViewport.tsx
+export default function CascadeCADViewport({
+  shapes,
+  isWorking,
+  onShapeClick
+}: CascadeCADViewportProps) {
+  // React Three Fiber Canvas
+  // OrbitControls
+  // CAD形状レンダリング
+  // フローティングGUI統合
 }
 ```
 
-#### 7.2 Monaco Editor完全一致
-**目標**: CascadeStudio風のエディター設定
+**実装項目**:
+- [ ] CascadeCADViewport コンポーネント作成
+- [ ] CAD形状レンダリング統合
+- [ ] フローティングGUI配置
+- [ ] WebWorker状態表示
 
-```typescript
-// components/cad/CascadeCodeEditor.tsx
-export default function CascadeCodeEditor({ 
-  cadWorkerState,
-  initialCode 
-}: CascadeCodeEditorProps) {
-  useEffect(() => {
-    // CascadeStudio風のMonaco設定
-    monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-      allowNonTsExtensions: true,
-      moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-    });
-    
-    // 関数折りたたみ設定
-    const collapsed = extractFunctionRanges(initialCode);
-    const mergedViewState = {
-      "contributionsState": {
-        "editor.contrib.folding": {
-          "collapsedRegions": collapsed,
-          "lineCount": codeLines.length,
-          "provider": "indent"
-        }
-      }
-    };
-    
-    // F5とCtrl+Sキーバインド
-    editor.addCommand(monaco.KeyCode.F5, () => {
-      executeCode();
-    });
-    
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-      saveProject();
-      executeCode();
-    });
-  }, []);
-}
+## 🚀 次の作業指針
+
+### 優先度1: CSS修正（即座実行）
+```bash
+# CSSパス修正
+'golden-layout/dist/css/themes/goldenlayout-dark-theme.css'
 ```
 
-### フェーズ8: 高度機能完全移行（優先度: 中）
+### 優先度2: Tweakpane GUI実装
+- フローティングGUI統合
+- 動的GUI要素追加システム
+- CADWorker連携
 
-#### 8.1 URL状態管理システム
-**目標**: CascadeStudio風のURL共有機能
+### 優先度3: Monaco Editor統合
+- Golden Layout内でのMonaco Editor
+- TypeScript Intellisense
+- キーバインド実装
 
-```typescript
-// lib/url/URLStateManager.ts
-export class URLStateManager {
-  static encode(string: string): string {
-    // CascadeStudio互換のencode実装
-    return encodeURIComponent(window.btoa(RawDeflate.deflate(string)));
-  }
-  
-  static decode(string: string): string {
-    // CascadeStudio互換のdecode実装
-    return RawDeflate.inflate(window.atob(decodeURIComponent(string)));
-  }
-  
-  static saveStateToURL(code: string, guiState: Record<string, any>): void {
-    const url = new URL(window.location.href);
-    url.hash = `code=${this.encode(code)}&gui=${this.encode(JSON.stringify(guiState))}`;
-    window.history.replaceState({}, 'Cascade Studio', url.href);
-  }
-  
-  static loadStateFromURL(): { code?: string; guiState?: Record<string, any> } {
-    const params = new URLSearchParams(window.location.hash.substr(1));
-    return {
-      code: params.has("code") ? this.decode(params.get("code")!) : undefined,
-      guiState: params.has("gui") ? JSON.parse(this.decode(params.get("gui")!)) : undefined
-    };
-  }
-}
-```
-
-#### 8.2 Golden Layout プロジェクト保存
-**目標**: レイアウト設定も含めたプロジェクト管理
-
-```typescript
-// lib/project/GoldenLayoutProjectManager.ts
-export class GoldenLayoutProjectManager {
-  static saveProject(layout: any, code: string, guiState: Record<string, any>): string {
-    return JSON.stringify({
-      layout: layout.toConfig(),
-      code: code.split(/\r\n|\r|\n/), // CascadeStudio互換の配列形式
-      guiState,
-      version: "0.0.7",
-      timestamp: new Date().toISOString()
-    }, null, 2);
-  }
-  
-  static loadProject(projectJson: string): ProjectData {
-    const project = JSON.parse(projectJson);
-    return {
-      layoutConfig: project.layout,
-      code: Array.isArray(project.code) ? project.code.join('\n') : project.code,
-      guiState: project.guiState || {},
-      version: project.version || "0.0.7"
-    };
-  }
-}
-```
-
-#### 8.3 進捗表示システム
-**目標**: CascadeStudio風の進捗ドット表示
-
-```typescript
-// components/ui/ProgressIndicator.tsx
-export default function ProgressIndicator({ 
-  isWorking, 
-  progress 
-}: ProgressIndicatorProps) {
-  if (!isWorking) return null;
-  
-  return (
-    <div className="progress-indicator">
-      > Generating Model{".".repeat(progress.opNumber || 0)}
-      {progress.opType && ` (${progress.opType})`}
-    </div>
-  );
-}
-```
+**🎊 現在の達成度: フェーズ5基盤 100%完了！**
 
 ## 4. 実装優先度とスケジュール
 

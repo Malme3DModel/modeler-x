@@ -14,6 +14,8 @@
     "@monaco-editor/react": "^4.7.0",
     "@react-three/drei": "^9.92.7",
     "@react-three/fiber": "^8.15.12",
+    "fflate": "^0.8.2",
+    "golden-layout": "^2.6.0",
     "jwt-decode": "^4.0.0",
     "monaco-editor": "^0.52.2",
     "next": "^14.2.5",
@@ -21,6 +23,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "three": "^0.160.0",
+    "tweakpane": "^4.0.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {

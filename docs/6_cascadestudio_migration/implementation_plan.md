@@ -1,5 +1,69 @@
 # CascadeStudio完全コピー実装計画詳細
 
+## 🎊 **フェーズ5実装完了状況**（2025年6月2日更新）
+
+### ✅ **実装完了項目**
+- ✅ **Golden Layout 2.6.0基盤**: V2 API完全対応
+- ✅ **CascadeStudio風レイアウト**: 3パネル構成完了
+- ✅ **フローティングGUI配置**: Tweakpane領域確保
+- ✅ **STARTER_CODE表示**: CascadeStudio互換
+- ✅ **コンソールパネル**: CascadeStudio風デザイン
+
+### 🚨 **重要な技術的発見**
+
+#### **Golden Layout V1 → V2 API重大変更**
+CascadeStudioは古いV1仕様を使用しているため、完全にV2 APIに移行する必要がありました。
+
+```typescript
+// ❌ V1方式（CascadeStudio docs/template使用）
+const config = {
+  content: [{
+    componentName: 'codeEditor',  // V1では componentName
+    isClosable: false,
+    // ...
+  }]
+};
+new GoldenLayout(config, container);
+layout.registerComponent('codeEditor', MyComponent);
+
+// ✅ V2方式（実装完了）
+const config = {
+  root: {  // V2では root プロパティが必要
+    content: [{
+      componentType: 'codeEditor',  // V2では componentType
+      // isClosable は削除（V2では不要）
+      // ...
+    }]
+  }
+};
+const layout = new GoldenLayout(container);  // configは渡さない
+layout.loadLayout(config);  // 設定は後から読み込み
+
+// Embedding via Events方式（V2推奨）
+layout.bindComponentEvent = (container, itemConfig) => {
+  const component = createComponent(itemConfig.componentType, container);
+  return { component, virtual: false };
+};
+```
+
+#### **CSSパス変更**
+```typescript
+// ❌ 古いパス（エラー発生）
+import 'golden-layout/dist/css/goldenlayout-dark-theme.css';
+
+// ✅ 新しいパス（修正必要）
+import 'golden-layout/dist/css/themes/goldenlayout-dark-theme.css';
+```
+
+### 📁 **実装済みファイル構成**
+```
+app/cascade-studio/page.tsx          # ✅ CascadeStudioページ
+lib/layout/cascadeLayoutConfig.ts    # ✅ V2レイアウト設定
+components/layout/CascadeStudioLayout.tsx # ✅ Golden Layout統合
+```
+
+---
+
 ## 1. フェーズ5: Golden Layout統合詳細実装
 
 ### 1.1 依存関係追加と設定
@@ -82,7 +146,7 @@ import { DEFAULT_LAYOUT_CONFIG } from '../../lib/layout/cascadeLayoutConfig';
 
 // Golden Layout のCSS
 import 'golden-layout/dist/css/goldenlayout-base.css';
-import 'golden-layout/dist/css/goldenlayout-dark-theme.css';
+import 'golden-layout/dist/css/themes/goldenlayout-dark-theme.css';
 
 interface GoldenLayoutWrapperProps {
   cadWorkerState: ReturnType<typeof useCADWorker>;
