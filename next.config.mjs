@@ -10,6 +10,7 @@ const nextConfig = {
     ],
   },
   webpack: (config, { isServer }) => {
+    // WASM ファイルサポート
     config.module.rules.push(
       {
         test: /\.wasm$/,
@@ -25,18 +26,35 @@ const nextConfig = {
       }
     );
 
-    // Three.js の重複インスタンス問題を解決
+    // OpenCascade.js サポート
     if (!isServer) {
+      // Three.js の重複インスタンス問題を解決
       config.resolve.alias = {
         ...config.resolve.alias,
         'three': 'three',
       };
       
-      // Three.js の重複を避けるため、確実に単一のインスタンスを使用
+      // WebWorker環境でのNode.jsモジュール無効化
       config.resolve.fallback = {
         ...config.resolve.fallback,
+        fs: false,
+        path: false,
+        crypto: false,
+        stream: false,
+        perf_hooks: false,
+        os: false,
+        worker_threads: false,
       };
     }
+
+    // OpenCascade.js ファイルを static/chunks に配置
+    config.module.rules.push({
+      test: /opencascade\.full\.(js|wasm)$/,
+      type: "asset/resource",
+      generator: {
+        filename: "static/chunks/[name][ext]"
+      }
+    });
 
     return config;
   },

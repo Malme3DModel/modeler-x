@@ -15,7 +15,7 @@
     "@react-three/fiber": "^8.15.12",
     "jwt-decode": "^4.0.0",
     "next": "^14.2.5",
-    "opencascade.js": "2.0.0-beta.c301f5e",
+    "opencascade.js": "1.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "three": "^0.160.0",
