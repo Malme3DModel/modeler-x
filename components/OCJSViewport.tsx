@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import shapeToUrl from "@/lib/shapeToUrl";
+import shapeToUrl from "../lib/shapeToUrl";
 import initOpenCascade from "opencascade.js";
 import "@google/model-viewer";
 

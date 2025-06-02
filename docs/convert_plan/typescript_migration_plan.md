@@ -241,3 +241,51 @@ JavaScriptベースの Next.js プロジェクトを TypeScript 化し、型安�
 - `@/` エイリアスは tsconfig.json で設定済みだが、Next.js 12では一部制限があるため相対パスも併用
 
 --- 
+
+## 【2025/06/02時点】TypeScript移行作業の最終報告・引継ぎメモ
+
+### 実施済み内容
+
+- 本計画書記載の全マイルストーン（ブランチ作成、環境構築、ファイルリネーム、型注釈、ビルド・型チェック、構成整理、CI/CD、ドキュメント更新、不要ファイル削除）を完了済み。
+- `npm run type-check`・`npm run build`・`npm run dev` すべて正常動作確認済み。
+- ブラウザ上でもエラーなしでアプリが起動することを確認済み。
+- 主要な作業用スクリプトは `docs/convert_plan/tools/` に格納済み。
+- README.md もTypeScript対応内容に更新済み。
+- CI（GitHub Actions）もTypeScript型チェックを含めて設定済み。
+
+### 現状のディレクトリ構成（2025/06/02時点）
+
+```
+├── pages/              # Next.js Pages Router
+│   ├── api/           # API routes
+│   ├── _app.tsx       # App component (TypeScript)
+│   └── index.tsx      # Home page (TypeScript)
+├── components/         # React components
+│   └── OCJSViewport.tsx
+├── lib/               # Library code
+│   └── shapeToUrl.ts
+├── styles/            # CSS styles
+├── public/            # Static files
+├── types/             # TypeScript type definitions
+├── utils/             # Utility functions
+├── tsconfig.json      # TypeScript設定
+├── next.config.mjs    # Next.js設定（ES Module形式）
+├── package.json       # 依存関係（TypeScript対応）
+├── .github/workflows/ci.yml # CI/CD
+└── docs/convert_plan/ # 計画書・ツール・ガイド
+```
+
+### 注意点・次の実装者へのメモ
+
+- Next.js 12.x のため **App Router ではなく Pages Router 構成**です。
+- `@/` エイリアスは `tsconfig.json` で設定していますが、Next.js 12では一部制限があるため、**相対パス推奨**です。
+- 型注釈のガイドは `docs/convert_plan/tools/type-fix-guide.md` にまとめてあります。
+- 主要な移行・整理スクリプトは `docs/convert_plan/tools/` に格納されています。
+- テンプレート由来の不要ファイルはすべて削除済みです。
+- CI/CD（GitHub Actions）は `npm run type-check`・`npm run build`・`npm run lint` を自動実行します。
+- 追加の型定義が必要な場合は `@types/xxx` を適宜追加してください。
+- 何か不明点があればこの計画書の該当セクション番号を参照し、履歴・スクリプトも確認してください。
+
+---
+
+**この状態から次の開発・実装を進めてください。** 
