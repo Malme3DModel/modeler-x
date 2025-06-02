@@ -11,11 +11,13 @@
     "clean": "rmdir /s /q .next"
   },
   "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
     "@react-three/drei": "^9.92.7",
     "@react-three/fiber": "^8.15.12",
     "jwt-decode": "^4.0.0",
+    "monaco-editor": "^0.52.2",
     "next": "^14.2.5",
-    "opencascade.js": "2.0.0-beta.c301f5e",
+    "opencascade.js": "1.1.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "three": "^0.160.0",
