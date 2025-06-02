@@ -2,7 +2,7 @@
 
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, Plane } from '@react-three/drei';
-import { Suspense, useMemo } from 'react';
+import { Suspense, useMemo, useEffect } from 'react';
 import { useCADWorker } from '@/hooks/useCADWorker';
 import * as THREE from 'three';
 import type { CADShape } from '@/types/worker';
@@ -170,6 +170,7 @@ interface CADViewportProps {
   showGroundPlane?: boolean;
   cameraPosition?: [number, number, number];
   cameraTarget?: [number, number, number];
+  cadWorkerState: ReturnType<typeof useCADWorker>;
 }
 
 export default function CADViewport({
@@ -177,9 +178,20 @@ export default function CADViewport({
   showGrid = true,
   showGroundPlane = true,
   cameraPosition = [50, 100, 150],
-  cameraTarget = [0, 45, 0]
+  cameraTarget = [0, 45, 0],
+  cadWorkerState
 }: CADViewportProps) {
-  const { shapes, isWorking, error } = useCADWorker();
+  const { shapes, isWorking, error } = cadWorkerState;
+
+  // shapes配列の変更を監視するuseEffect
+  useEffect(() => {
+    console.log('🔄 [CADViewport] Shapes array updated:', shapes);
+    console.log('🔄 [CADViewport] Shapes count:', shapes.length);
+    if (shapes.length > 0) {
+      console.log('🔄 [CADViewport] First shape:', shapes[0]);
+      console.log('🔄 [CADViewport] First shape mesh:', shapes[0]?.mesh);
+    }
+  }, [shapes]);
 
   // デバッグログを追加
   console.log('🖼️ [CADViewport] Rendering viewport');

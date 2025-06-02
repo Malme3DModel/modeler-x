@@ -1,9 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCADWorker } from '@/hooks/useCADWorker';
 
-export default function CADTester() {
+interface CADTesterProps {
+  cadWorkerState: ReturnType<typeof useCADWorker>;
+}
+
+export default function CADTester({ cadWorkerState }: CADTesterProps) {
   const { 
     isWorkerReady, 
     isWorking, 
@@ -15,7 +19,7 @@ export default function CADTester() {
     combineAndRender,
     clearLogs,
     clearError
-  } = useCADWorker();
+  } = cadWorkerState;
 
   const [code, setCode] = useState(`
 // 基本的なCAD形状のテスト
@@ -24,6 +28,15 @@ const sphere = Sphere(8);
 const result = Difference(box, [sphere]);
 return result;
   `.trim());
+
+  useEffect(() => {
+    console.log('🎮 [CADTester] Component mounted successfully');
+    console.log('🎮 [CADTester] useCADWorker hook loaded:', { isWorkerReady, isWorking, shapes: shapes.length });
+  }, []);
+
+  useEffect(() => {
+    console.log('🎮 [CADTester] Worker state changed:', { isWorkerReady, isWorking, shapesCount: shapes.length });
+  }, [isWorkerReady, isWorking, shapes]);
 
   const handleExecute = async () => {
     try {

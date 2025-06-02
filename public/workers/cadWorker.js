@@ -399,7 +399,31 @@ messageHandlers["Evaluate"] = function(payload) {
     func();
     
     postMessage({ type: "log", payload: `✅ Evaluation completed. Generated ${sceneShapes.length} shapes.` });
+    
+    // 自動的にメッシュ変換と表示を実行
+    if (sceneShapes.length > 0) {
+      postMessage({ type: "log", payload: "🎨 Auto-rendering shapes..." });
+      
+      // combineAndRenderShapesを自動実行
+      const renderResult = messageHandlers["combineAndRenderShapes"]({
+        maxDeviation: GUIState["MeshRes"] || 0.1,
+        sceneOptions: {}
+      });
+      
+      if (renderResult) {
+        postMessage({ 
+          type: "combineAndRenderShapes", 
+          payload: renderResult 
+        });
+      }
+    }
+    
     postMessage({ type: "resetWorking" });
+    postMessage({ 
+      type: "Evaluate", 
+      payload: { success: true, shapeCount: sceneShapes.length } 
+    });
+    
     return { success: true, shapeCount: sceneShapes.length };
   } catch (e) {
     console.error("❌ Evaluation error:", e);
