@@ -1,13 +1,18 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useCADWorker } from '../../hooks/useCADWorker';
 import CodeEditor from '../../components/cad/CodeEditor';
 import CADViewport from '../../components/cad/CADViewport';
+import FileManager from '../../components/cad/FileManager';
+import GUIControls from '../../components/cad/GUIControls';
+import ProjectPanel from '../../components/cad/ProjectPanel';
 
 export default function CADEditorPage() {
   // 単一useCADWorkerインスタンス（フェーズ2で確立されたパターン）
   const cadWorkerState = useCADWorker();
+  const [currentCode, setCurrentCode] = useState('');
+  const [guiValues, setGUIValues] = useState<Record<string, any>>({});
 
   return (
     <div className="min-h-screen bg-base-100">
@@ -19,6 +24,7 @@ export default function CADEditorPage() {
               <h1 className="text-2xl font-bold text-primary">🎯 CADエディター</h1>
               <div className="badge badge-secondary">Next.js + OpenCascade.js</div>
               <div className="badge badge-accent">TypeScript</div>
+              <div className="badge badge-success">フェーズ4: 完全版</div>
             </div>
             <div className="flex items-center gap-2">
               {/* ワーカー状態インジケーター */}
@@ -44,13 +50,13 @@ export default function CADEditorPage() {
 
       {/* メインコンテンツ */}
       <main className="container mx-auto p-4 h-[calc(100vh-80px)]">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-full">
+        <div className="grid grid-cols-1 2xl:grid-cols-5 gap-4 h-full">
           {/* 左パネル: コードエディター */}
-          <div className="bg-base-100 rounded-lg shadow-lg border border-base-300 overflow-hidden">
+          <div className="2xl:col-span-2 bg-base-100 rounded-lg shadow-lg border border-base-300 overflow-hidden">
             <CodeEditor cadWorkerState={cadWorkerState} />
           </div>
 
-          {/* 右パネル: 3Dビューポート */}
+          {/* 中央パネル: 3Dビューポート */}
           <div className="bg-base-100 rounded-lg shadow-lg border border-base-300 overflow-hidden">
             <div className="flex flex-col h-full">
               {/* 3Dビューポートヘッダー */}
@@ -73,6 +79,37 @@ export default function CADEditorPage() {
               </div>
             </div>
           </div>
+
+          {/* 右パネル: 管理機能 */}
+          <div className="2xl:col-span-2 flex flex-col gap-4 h-full">
+            {/* タブ切り替え */}
+            <div className="tabs tabs-boxed bg-base-200">
+              <input type="radio" name="right_panel_tabs" className="tab" aria-label="GUI制御" defaultChecked />
+              <div className="tab-content bg-base-100 border-base-300 rounded-box p-4">
+                <div className="h-[300px] overflow-y-auto">
+                  <GUIControls cadWorkerState={cadWorkerState} />
+                </div>
+              </div>
+
+              <input type="radio" name="right_panel_tabs" className="tab" aria-label="プロジェクト" />
+              <div className="tab-content bg-base-100 border-base-300 rounded-box p-4">
+                <div className="h-[300px] overflow-y-auto">
+                  <ProjectPanel 
+                    cadWorkerState={cadWorkerState}
+                    currentCode={currentCode}
+                    guiValues={guiValues}
+                  />
+                </div>
+              </div>
+
+              <input type="radio" name="right_panel_tabs" className="tab" aria-label="ファイル" />
+              <div className="tab-content bg-base-100 border-base-300 rounded-box p-4">
+                <div className="h-[300px] overflow-y-auto">
+                  <FileManager cadWorkerState={cadWorkerState} />
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* デバッグパネル（開発時のみ表示） */}
@@ -83,7 +120,7 @@ export default function CADEditorPage() {
                 🔧 デバッグ情報
               </summary>
               <div className="collapse-content">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-4">
                   {/* ワーカー状態 */}
                   <div className="bg-base-100 p-3 rounded border">
                     <h4 className="font-semibold mb-2">ワーカー状態</h4>
@@ -104,6 +141,19 @@ export default function CADEditorPage() {
                           形状{index + 1}: {shape.mesh ? '✅ メッシュ' : '❌'} {shape.edges ? '✅ エッジ' : '❌'}
                         </div>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* GUI状態 */}
+                  <div className="bg-base-100 p-3 rounded border">
+                    <h4 className="font-semibold mb-2">GUI状態</h4>
+                    <div className="text-sm space-y-1">
+                      <div>要素数: {Object.keys(guiValues).length}</div>
+                      <div className="text-xs max-h-16 overflow-y-auto">
+                        {Object.entries(guiValues).map(([key, value]) => (
+                          <div key={key}>{key}: {String(value)}</div>
+                        ))}
+                      </div>
                     </div>
                   </div>
 
@@ -147,7 +197,7 @@ export default function CADEditorPage() {
           <div className="flex items-center justify-between text-sm text-base-content/70">
             <div className="flex items-center gap-4">
               <span>🎯 CascadeStudio機能移行プロジェクト</span>
-              <span>フェーズ3: Monaco Editor統合</span>
+              <span>🎉 フェーズ4: 完全完了 (100%)</span>
             </div>
             <div className="flex items-center gap-2">
               <span>Next.js 14 + TypeScript + OpenCascade.js v1.1.1</span>
