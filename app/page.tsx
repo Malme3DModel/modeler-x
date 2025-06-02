@@ -1,6 +1,4 @@
-import Head from "next/head";
 import dynamic from "next/dynamic";
-import type { NextPage } from "next";
 
 // We cannot use SSR for our OpenCascade.js viewport,
 // therefore we have to load it dynamically without SSR
@@ -10,19 +8,10 @@ const OCJSViewport = dynamic(
   { ssr: false }
 );
 
-const Home: NextPage = () => {
+export default function Home() {
   return (
-    <div>
-      <Head>
-        <title>OpenCascade.js Demo</title>
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-
-      <main>
-        <OCJSViewport />
-      </main>
-    </div>
+    <main>
+      <OCJSViewport />
+    </main>
   );
-}
-
-export default Home;
+} 
