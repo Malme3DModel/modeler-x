@@ -12,17 +12,21 @@
   },
   "dependencies": {
     "@google/model-viewer": "^1.11.1",
+    "@react-three/drei": "^9.92.7",
+    "@react-three/fiber": "^8.15.12",
     "jwt-decode": "^4.0.0",
     "next": "^14.2.5",
     "opencascade.js": "2.0.0-beta.c301f5e",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "three": "^0.160.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20.17.57",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
+    "@types/three": "^0.176.0",
     "autoprefixer": "^10",
     "daisyui": "^4.12.10",
     "eslint": "8.13.0",

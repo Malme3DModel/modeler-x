@@ -8,10 +8,19 @@ const OCJSViewport = dynamic(
   { ssr: false }
 );
 
+// 新しいThree.jsコンポーネント
+const ThreeJSViewport = dynamic(
+  () => import("../components/threejs/ThreeJSViewport"),
+  { ssr: false }
+);
+
 export default function Home() {
+  // 環境変数による切り替え
+  const useThreeJS = process.env.NEXT_PUBLIC_USE_THREEJS === 'true';
+  
   return (
     <main>
-      <OCJSViewport />
+      {useThreeJS ? <ThreeJSViewport /> : <OCJSViewport />}
     </main>
   );
 } 
