@@ -196,6 +196,7 @@ function RaycastingHandler({ isRaycastingEnabled = true, setIsRaycastingEnabled 
 
     // テスト用のアクセス機能追加
     (window as any).cascadeTestUtils = {
+      ...(window as any).cascadeTestUtils || {},
       getRaycastingState: () => ({
         isEnabled: isRaycastingEnabled,
         hoveredObject: hoveredObject?.uuid || null,
@@ -207,11 +208,10 @@ function RaycastingHandler({ isRaycastingEnabled = true, setIsRaycastingEnabled 
 
     // デバッグログ
     console.log('🎯 レイキャスティングハンドラー初期化完了');
-    console.log('✅ cascadeTestUtils, cascadeRaycastingUtils 登録完了');
+    console.log('✅ cascadeRaycastingUtils 登録完了');
 
     return () => {
       delete (window as any).cascadeRaycastingUtils;
-      delete (window as any).cascadeTestUtils;
     };
   }, [isRaycastingEnabled, hoveredObject, hoveredFace, setIsRaycastingEnabled]);
 
@@ -226,6 +226,72 @@ function RaycastingHandler({ isRaycastingEnabled = true, setIsRaycastingEnabled 
   }, [hoveredObject, hoveredFace]);
 
   return null;
+}
+
+// テスト用のグローバルユーティリティ関数を初期化
+if (typeof window !== 'undefined') {
+  // グローバルオブジェクトにテスト用ユーティリティを登録
+  (window as any).cascadeTestUtils = {
+    ...(window as any).cascadeTestUtils || {},
+    
+    // マテリアル情報を取得
+    getMaterialInfo: () => {
+      const scene = (window as any).cascadeScene;
+      if (!scene) return null;
+      
+      const meshes = scene.children.filter((child: any) => 
+        child.type === 'Mesh' || 
+        (child.type === 'Group' && child.children.some((c: any) => c.type === 'Mesh'))
+      );
+      
+      if (meshes.length === 0) return null;
+      
+      const mesh = meshes[0].type === 'Mesh' ? 
+        meshes[0] : 
+        meshes[0].children.find((c: any) => c.type === 'Mesh');
+      
+      if (!mesh || !mesh.material) return null;
+      
+      return {
+        type: mesh.material.type,
+        color: mesh.material.color?.getHexString(),
+        hasMatcap: !!(mesh.material as THREE.MeshMatcapMaterial).matcap
+      };
+    },
+    
+    // ライティング情報を取得
+    getLightingInfo: () => {
+      const scene = (window as any).cascadeScene;
+      if (!scene) return null;
+      
+      const lights = scene.children.filter((child: any) => 
+        child.type.includes('Light')
+      );
+      
+      return {
+        lightCount: lights.length,
+        hasHemisphereLight: lights.some((light: any) => light.type === 'HemisphereLight'),
+        hasDirectionalLight: lights.some((light: any) => light.type === 'DirectionalLight'),
+        hasAmbientLight: lights.some((light: any) => light.type === 'AmbientLight')
+      };
+    },
+    
+    // フォグ情報を取得
+    getFogInfo: () => {
+      const scene = (window as any).cascadeScene;
+      if (!scene) return null;
+      
+      return {
+        hasFog: !!scene.fog,
+        fogType: scene.fog?.type,
+        fogColor: scene.fog ? `#${scene.fog.color.getHexString()}` : null,
+        fogNear: scene.fog?.near,
+        fogFar: scene.fog?.far
+      };
+    }
+  };
+  
+  console.log('✅ テスト用グローバルユーティリティ関数を初期化: getMaterialInfo, getLightingInfo, getFogInfo');
 }
 
 export default function ThreeJSViewport({ 
@@ -291,70 +357,6 @@ export default function ThreeJSViewport({
     
     return () => {
       console.log('👋 ThreeJSViewport アンマウント');
-    };
-  }, []);
-
-  // テスト用のアクセス機能を追加
-  useEffect(() => {
-    // 既存のcascadeTestUtilsに追加
-    (window as any).cascadeTestUtils = {
-      ...(window as any).cascadeTestUtils || {},
-      
-      // マテリアル情報を取得
-      getMaterialInfo: () => {
-        const scene = (window as any).cascadeScene;
-        if (!scene) return null;
-        
-        const meshes = scene.children.filter((child: any) => 
-          child.type === 'Mesh' || 
-          (child.type === 'Group' && child.children.some((c: any) => c.type === 'Mesh'))
-        );
-        
-        if (meshes.length === 0) return null;
-        
-        const mesh = meshes[0].type === 'Mesh' ? 
-          meshes[0] : 
-          meshes[0].children.find((c: any) => c.type === 'Mesh');
-        
-        if (!mesh || !mesh.material) return null;
-        
-        return {
-          type: mesh.material.type,
-          color: mesh.material.color?.getHexString(),
-          hasMatcap: !!mesh.material.matcap
-        };
-      },
-      
-      // ライティング情報を取得
-      getLightingInfo: () => {
-        const scene = (window as any).cascadeScene;
-        if (!scene) return null;
-        
-        const lights = scene.children.filter((child: any) => 
-          child.type.includes('Light')
-        );
-        
-        return {
-          lightCount: lights.length,
-          hasHemisphereLight: lights.some((light: any) => light.type === 'HemisphereLight'),
-          hasDirectionalLight: lights.some((light: any) => light.type === 'DirectionalLight'),
-          hasAmbientLight: lights.some((light: any) => light.type === 'AmbientLight')
-        };
-      },
-      
-      // フォグ情報を取得
-      getFogInfo: () => {
-        const scene = (window as any).cascadeScene;
-        if (!scene) return null;
-        
-        return {
-          hasFog: !!scene.fog,
-          fogType: scene.fog?.type,
-          fogColor: scene.fog ? `#${scene.fog.color.getHexString()}` : null,
-          fogNear: scene.fog?.near,
-          fogFar: scene.fog?.far
-        };
-      }
     };
   }, []);
 
