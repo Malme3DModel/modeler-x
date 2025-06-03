@@ -276,6 +276,53 @@ function TransformGizmo({ selectedObject, mode }) {
   - 回帰テストの実装
   - パフォーマンステスト
 
+### 🔧 3.1 標準ライブラリの完全移植
+
+#### タスク3.1.1: OpenCascade.js v1.1.1互換性対応 - ✅ 完了
+- **ファイル**: `public/workers/cadWorker.js`
+- **期間**: 1日
+- **内容**:
+  - gp_Pnt_1コンストラクタのパラメータ問題修正 ✅
+  - createPoint()、createDirection()ヘルパー関数の実装 ✅
+  - 他の問題のあるコンストラクタの検証と対応 ✅
+- **実装状況**:
+  - Rotate関数内のgp_Pnt_1使用を修正済み
+  - 安全な点・方向ベクトル作成関数を実装済み
+  - エラーハンドリングを強化
+
+```javascript
+// 実装例
+// 🔥 OpenCascade.js v1.1.1 用の安全なポイント作成ヘルパー関数
+function createPoint(x = 0, y = 0, z = 0) {
+  try {
+    // まずパラメータなしでインスタンス化
+    const point = new oc.gp_Pnt_1();
+    // 次に座標を設定
+    point.SetX(x);
+    point.SetY(y);
+    point.SetZ(z);
+    return point;
+  } catch (error) {
+    console.error("❌ Point creation failed:", error);
+    throw error;
+  }
+}
+```
+
+#### タスク3.1.2: Monaco Editorのモンキーパッチ対応
+- **ファイル**: `public/monaco-editor-workers/monaco.config.js`
+- **期間**: 1日
+- **内容**:
+  - FileAccessImplのtoUrlエラー修正
+  - モンキーパッチの実装
+  - エラー処理の強化
+- **実装状況**:
+  - FileAccessImplをモンキーパッチで差し替え
+  - エラーログを追加
+  - コードエディタの正常動作を確認
+
+#### タスク3.1.3: 残りのCAD標準ライブラリ機能の確認
+
 ## フェーズ4: UI/UX機能 (1週間)
 
 ### ⌨️ 4.1 キーボードショートカットの実装

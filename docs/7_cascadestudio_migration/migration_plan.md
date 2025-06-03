@@ -238,6 +238,20 @@
 - OpenCascade.jsの読み込みエラーに対応するエラーハンドリング
 - 条件付きテスト実行によるテスト安定性の向上
 
+### 5. OpenCascade.js v1.1.1の問題点
+- **gp_Pntコンストラクタの問題**: v1.1.1では`new oc.gp_Pnt_1(x, y, z)`形式でパラメータを渡せない
+- **解決策**: パラメータなしでインスタンス化してから座標を設定する方法を採用
+  ```javascript
+  // 問題のあるコード
+  const point = new oc.gp_Pnt_1(x, y, z); // これは動作しない
+  
+  // 修正済みコード
+  const point = new oc.gp_Pnt_1(); // パラメータなしでインスタンス化
+  point.SetX(x); point.SetY(y); point.SetZ(z); // 後から座標を設定
+  ```
+- **互換性関数**: createPoint(), createDirection()のようなヘルパー関数を追加
+- **Monaco Editor対応**: FileAccessImplのtoUrlエラーに対するモンキーパッチを実装
+
 ## 完成時の期待される機能
 
 ✅ **完全な元機能の再現**
