@@ -10,23 +10,17 @@ import { URLStateManager } from '@/lib/layout/urlStateManager';
 import { GUIState } from '@/types/gui';
 import { useCADWorker } from '@/hooks/useCADWorker';
 import { CascadeConsole, CascadeConsoleRef } from '@/components/layout/CascadeConsole';
-import { MonacoCodeEditor, MonacoCodeEditorRef } from '@/components/cad/MonacoCodeEditor';
+import type { MonacoCodeEditorRef } from '@/components/cad/MonacoCodeEditor';
 
 // Golden Layout CSS
 import 'golden-layout/dist/css/goldenlayout-base.css';
 import 'golden-layout/dist/css/themes/goldenlayout-dark-theme.css';
 
-// Monaco Editorのグローバル型拡張
-declare global {
-  interface Window {
-    monaco: any;
-    MonacoEnvironment?: any;
-    monacoConfig?: {
-      version: string;
-      baseUrl: string;
-    };
-  }
-}
+// MonacoCodeEditorを動的インポート
+const MonacoCodeEditor = dynamic(
+  () => import('@/components/cad/MonacoCodeEditor'),
+  { ssr: false }
+);
 
 // TweakpaneGUIを動的インポート
 const TweakpaneGUI = dynamic(() => import('@/components/gui/TweakpaneGUI'), {

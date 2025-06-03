@@ -477,3 +477,122 @@ messageHandlers["Evaluate"] = function(payload) {
     return { success: false, error: e.message };
   }
 };
+
+// メッセージハンドラーを登録
+messageHandlers["resetCache"] = function() {
+  sceneShapes = [];
+  return "";
+};
+
+messageHandlers["getGUIState"] = function() {
+  return GUIState;
+};
+
+messageHandlers["evaluateCode"] = function(payload) {
+  // 受け取ったコードを評価
+  try {
+    sceneShapes = [];
+    GUIState = payload.guiState || {};
+    
+    // グローバル変数としてUI関数を定義
+    self.GUIState = GUIState;
+    
+    console.log(`📝 Evaluating code: ${payload.code.substring(0, 50)}...`);
+    eval(payload.code);
+    console.log(`✅ Code evaluation successful, found ${sceneShapes.length} shapes`);
+    
+    // 生成された形状をJSONとして送信できる形式に変換
+    const meshes = sceneShapes.map(shape => ShapeToMesh(shape));
+    console.log(`🔷 Converted ${meshes.length} shapes to meshes`);
+    
+    return {
+      meshes: meshes,
+      guiState: GUIState
+    };
+  } catch (error) {
+    console.error(`❌ Evaluation error:`, error);
+    postMessage({ 
+      type: "error", 
+      payload: { message: `Evaluation error: ${error.message}` } 
+    });
+    return { meshes: [], guiState: GUIState };
+  }
+};
+
+// グローバル関数として標準ライブラリ関数を定義
+self.Box = Box;
+self.Sphere = Sphere;
+self.Cylinder = Cylinder;
+self.Union = Union;
+self.Difference = Difference;
+self.Intersection = Intersection;
+self.Translate = Translate;
+self.Rotate = Rotate;
+
+// UI関連の関数を追加
+function Slider(name, defaultValue, min, max, step = 1) {
+  if (GUIState && name in GUIState) {
+    return GUIState[name];
+  }
+  GUIState[name] = defaultValue;
+  return defaultValue;
+}
+
+function Checkbox(name, defaultValue) {
+  if (GUIState && name in GUIState) {
+    return GUIState[name];
+  }
+  GUIState[name] = defaultValue;
+  return defaultValue;
+}
+
+function TextInput(name, defaultValue) {
+  if (GUIState && name in GUIState) {
+    return GUIState[name];
+  }
+  GUIState[name] = defaultValue;
+  return defaultValue;
+}
+
+function Dropdown(name, options, defaultIndex) {
+  if (GUIState && name in GUIState) {
+    return GUIState[name];
+  }
+  
+  const defaultValue = options[defaultIndex] || options[0];
+  GUIState[name] = defaultValue;
+  return defaultValue;
+}
+
+function Button(name) {
+  return GUIState && name in GUIState ? GUIState[name] : false;
+}
+
+function Text3D(text, size, height, fontName = 'Arial') {
+  // 簡易版のテキスト3D実装（OpenCascade v1.1.1互換）
+  try {
+    // v1.1.1対応: gp_Pnt_1コンストラクタに問題があるので、使用を避ける
+    const textLength = text.length;
+    const textWidth = textLength * size * 0.6;
+    
+    console.log(`Creating simple text box for "${text}" (size: ${size}, height: ${height})`);
+    
+    // 単純なボックスの作成（Text3Dの代替として）
+    const box = new oc.BRepPrimAPI_MakeBox_1(textWidth, size, height).Shape();
+    sceneShapes.push(box);
+    
+    return box;
+  } catch (error) {
+    console.error("Text3D error:", error);
+    // エラー時はフォールバックとして小さなボックスを返す
+    return Box(5, 5, 5);
+  }
+}
+
+// グローバル関数としてUIライブラリ関数を定義
+self.Slider = Slider;
+self.Checkbox = Checkbox;
+self.TextInput = TextInput;
+self.Dropdown = Dropdown;
+self.Button = Button;
+self.Text3D = Text3D;
