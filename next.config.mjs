@@ -9,16 +9,6 @@ const nextConfig = {
       },
     ],
   },
-  // ルートから/cascade-studioへのリダイレクトを追加
-  async redirects() {
-    return [
-      {
-        source: '/',
-        destination: '/cascade-studio',
-        permanent: true,
-      },
-    ];
-  },
   webpack: (config, { isServer }) => {
     // WASM ファイルサポート
     config.module.rules.push(
