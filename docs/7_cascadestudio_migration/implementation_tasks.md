@@ -218,7 +218,48 @@ function TransformGizmo({ selectedObject, mode }) {
   - STEPエクスポート機能の改善
   - エラーハンドリングの強化
 
-#### タスク3.1.2: IGESファイル対応
+#### タスク3.1.2: Monaco Editorのモダン実装 - ✅ 完了
+- **ファイル**: `components/cad/MonacoCodeEditor.tsx`, `package.json`
+- **期間**: 1日
+- **内容**:
+  - `@monaco-editor/react`パッケージの導入
+  - FileAccessImplエラーの根本的解決
+  - 複雑なモンキーパッチコードの削除
+  - Next.js対応のSSR無効化実装
+- **実装状況**:
+  - 従来の`monaco-editor`パッケージを`@monaco-editor/react`に置き換え ✅
+  - `monaco.config.js`ファイルの削除 ✅
+  - 300行以上のモンキーパッチコードを削除し、シンプルな実装に変更 ✅
+  - 動的インポート（`{ ssr: false }`）でNext.js互換性を確保 ✅
+  - TypeScript syntax highlightingが正常に動作 ✅
+
+```typescript
+// 実装例 - シンプルでクリーンな@monaco-editor/react実装
+import Editor from '@monaco-editor/react';
+
+export const MonacoCodeEditor = forwardRef<MonacoCodeEditorRef, MonacoCodeEditorProps>(
+  ({ initialCode = '', onEvaluate }, ref) => {
+    // 複雑なmonkeypatchingやFileAccessImplの対応は一切不要
+    return (
+      <Editor
+        height="100%"
+        defaultLanguage="typescript"
+        defaultValue={initialCode}
+        theme="vs-dark"
+        options={{
+          minimap: { enabled: false },
+          fontSize: 14,
+          lineNumbers: 'on',
+          wordWrap: 'on'
+        }}
+        onMount={handleEditorDidMount}
+      />
+    );
+  }
+);
+```
+
+#### タスク3.1.3: IGESファイル対応
 - **ファイル**: `public/workers/cadWorker.js`
 - **期間**: 3日
 - **内容**:
@@ -226,7 +267,7 @@ function TransformGizmo({ selectedObject, mode }) {
   - ファイル形式の検証
   - 互換性の向上
 
-#### タスク3.1.3: STL/OBJエクスポートの改善
+#### タスク3.1.4: STL/OBJエクスポートの改善
 - **ファイル**: `public/workers/cadWorker.js`
 - **期間**: 2日
 - **内容**:
@@ -234,7 +275,7 @@ function TransformGizmo({ selectedObject, mode }) {
   - OBJエクスポートの品質向上
   - ファイルサイズの最適化
 
-#### タスク3.1.4: 外部ファイル管理システム
+#### タスク3.1.5: 外部ファイル管理システム
 - **ファイル**: `lib/fileManager.ts` (新規作成)
 - **期間**: 3日
 - **内容**:
@@ -309,17 +350,46 @@ function createPoint(x = 0, y = 0, z = 0) {
 }
 ```
 
-#### タスク3.1.2: Monaco Editorのモンキーパッチ対応
-- **ファイル**: `public/monaco-editor-workers/monaco.config.js`
+#### タスク3.1.2: Monaco Editorのモダン実装 - ✅ 完了
+- **ファイル**: `components/cad/MonacoCodeEditor.tsx`, `package.json`
 - **期間**: 1日
 - **内容**:
-  - FileAccessImplのtoUrlエラー修正
-  - モンキーパッチの実装
-  - エラー処理の強化
+  - `@monaco-editor/react`パッケージの導入
+  - FileAccessImplエラーの根本的解決
+  - 複雑なモンキーパッチコードの削除
+  - Next.js対応のSSR無効化実装
 - **実装状況**:
-  - FileAccessImplをモンキーパッチで差し替え
-  - エラーログを追加
-  - コードエディタの正常動作を確認
+  - 従来の`monaco-editor`パッケージを`@monaco-editor/react`に置き換え ✅
+  - `monaco.config.js`ファイルの削除 ✅
+  - 300行以上のモンキーパッチコードを削除し、シンプルな実装に変更 ✅
+  - 動的インポート（`{ ssr: false }`）でNext.js互換性を確保 ✅
+  - TypeScript syntax highlightingが正常に動作 ✅
+
+```typescript
+// 実装例 - シンプルでクリーンな@monaco-editor/react実装
+import Editor from '@monaco-editor/react';
+
+export const MonacoCodeEditor = forwardRef<MonacoCodeEditorRef, MonacoCodeEditorProps>(
+  ({ initialCode = '', onEvaluate }, ref) => {
+    // 複雑なmonkeypatchingやFileAccessImplの対応は一切不要
+    return (
+      <Editor
+        height="100%"
+        defaultLanguage="typescript"
+        defaultValue={initialCode}
+        theme="vs-dark"
+        options={{
+          minimap: { enabled: false },
+          fontSize: 14,
+          lineNumbers: 'on',
+          wordWrap: 'on'
+        }}
+        onMount={handleEditorDidMount}
+      />
+    );
+  }
+);
+```
 
 #### タスク3.1.3: 残りのCAD標準ライブラリ機能の確認
 
@@ -401,79 +471,4 @@ useEffect(() => {
 ### 📱 5.1 Service Workerの実装
 
 #### タスク5.1.1: Service Worker基盤
-- **ファイル**: `public/sw.js` (新規作成)
-- **期間**: 2日
-- **内容**:
-  - Service Worker登録
-  - キャッシュ戦略の実装
-  - オフライン対応
-
-#### タスク5.1.2: アップデート機能
-- **ファイル**: `components/ui/UpdateNotification.tsx` (新規作成)
-- **期間**: 1日
-- **内容**:
-  - 新バージョン通知
-  - 手動アップデート機能
-  - リロード促進UI
-
-### 📲 5.2 PWAマニフェスト
-
-#### タスク5.2.1: Web App Manifest
-- **ファイル**: `public/manifest.json` (新規作成)
-- **期間**: 1日
-- **内容**:
-  - PWAマニフェストの作成
-  - アプリメタデータの設定
-  - インストール設定
-
-#### タスク5.2.2: アイコンの作成
-- **ファイル**: `public/icons/` (新規作成)
-- **期間**: 1日
-- **内容**:
-  - 各サイズのアプリアイコン
-  - ファビコンの作成
-  - スプラッシュスクリーンの設計
-
-#### タスク5.2.3: インストール促進
-- **ファイル**: `components/ui/InstallPrompt.tsx` (新規作成)
-- **期間**: 2日
-- **内容**:
-  - インストール促進バナー
-  - ユーザーエクスペリエンスの向上
-  - インストール統計
-
-## テスト・品質管理
-
-### 🧪 自動テスト
-- **E2Eテスト**: 各フェーズでPlaywrightテストを追加
-- **ユニットテスト**: 重要な関数のテスト実装
-- **統合テスト**: CADワーカーとUIの統合テスト
-
-### 📈 パフォーマンス監視
-- **レンダリング最適化**: React Three Fiberのパフォーマンステスト
-- **メモリ使用量**: WebWorkerメモリリークの監視
-- **読み込み時間**: アプリケーション起動時間の測定
-
-### 🔍 品質チェック
-- **コードレビュー**: 各タスク完了時のレビュー
-- **TypeScript型チェック**: 厳密な型安全性の確保
-- **アクセシビリティ**: WCAG準拠の確認
-
-## 完了条件
-
-各フェーズの完了条件：
-
-1. **フェーズ1**: ホバーハイライトが元のCascadeStudioと同等に動作
-2. **フェーズ2**: トランスフォームギズモが正常に機能
-3. **フェーズ3**: 全ファイルI/O機能が動作し、CAD関数がテストを通過
-4. **フェーズ4**: 全キーボードショートカットが動作
-5. **フェーズ5**: PWAとしてインストール可能
-
-## 納期とリソース
-
-- **総期間**: 9週間
-- **開発者**: 1-2名
-- **レビュー**: 各フェーズ終了時
-- **デプロイ**: フェーズ1完了後、継続的デプロイ
-
-この計画に従って実装を進めることで、元のCascadeStudioと完全に同等の機能を持つモダンなWebアプリケーションを完成させることができます。 
+- **ファイル**: `

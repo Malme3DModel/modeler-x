@@ -250,7 +250,7 @@
   point.SetX(x); point.SetY(y); point.SetZ(z); // 後から座標を設定
   ```
 - **互換性関数**: createPoint(), createDirection()のようなヘルパー関数を追加
-- **Monaco Editor対応**: FileAccessImplのtoUrlエラーに対するモンキーパッチを実装
+- **Monaco Editor対応**: `@monaco-editor/react`を使用したモダンな実装への移行、FileAccessImplエラーを根本解決
 
 ## 完成時の期待される機能
 
