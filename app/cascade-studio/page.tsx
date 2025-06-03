@@ -4,7 +4,7 @@ import { Suspense } from 'react';
 import dynamic from 'next/dynamic';
 
 // Golden Layout統合コンポーネントを動的インポート
-const CascadeStudioLayout = dynamic(() => import('../../components/layout/CascadeStudioLayout'), {
+const CascadeStudioLayout = dynamic(() => import('@/components/layout/CascadeStudioLayout'), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center h-screen bg-gray-900">

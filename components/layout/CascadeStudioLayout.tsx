@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { DEFAULT_LAYOUT_CONFIG, STARTER_CODE } from '../../lib/layout/cascadeLayoutConfig';
+import { DEFAULT_LAYOUT_CONFIG, STARTER_CODE } from '@/lib/layout/cascadeLayoutConfig';
 import dynamic from 'next/dynamic';
 
 // Golden Layout CSS
@@ -9,7 +9,7 @@ import 'golden-layout/dist/css/goldenlayout-base.css';
 import 'golden-layout/dist/css/themes/goldenlayout-dark-theme.css';
 
 // TweakpaneGUIを動的インポート
-const TweakpaneGUI = dynamic(() => import('../gui/TweakpaneGUI'), {
+const TweakpaneGUI = dynamic(() => import('@/components/gui/TweakpaneGUI'), {
   ssr: false,
   loading: () => <div style={{ color: '#a0a0a0', fontSize: '12px', padding: '12px' }}>Tweakpane初期化中...</div>
 });
@@ -26,6 +26,7 @@ export default function CascadeStudioLayout({
   const [isLayoutReady, setIsLayoutReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guiState, setGuiState] = useState<Record<string, any>>({});
+  const [consoleElement, setConsoleElement] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -62,6 +63,8 @@ export default function CascadeStudioLayout({
               break;
             case 'console':
               container.element.innerHTML = createConsoleHTML();
+              // コンソール要素への参照を保存
+              setConsoleElement(container.element.querySelector('.cascade-console'));
               break;
           }
           
@@ -101,7 +104,42 @@ export default function CascadeStudioLayout({
   const handleGUIUpdate = (newGuiState: Record<string, any>) => {
     setGuiState(newGuiState);
     console.log('🎛️ [CascadeStudioLayout] GUI状態更新:', newGuiState);
-    // ここで後でCADWorkerにGUI状態を送信する
+    
+    // コンソールにログを追加
+    appendConsoleMessage('🔄 Evaluate: CADコードを実行中...', 'info');
+    appendConsoleMessage('🎮 GUI状態更新: ' + JSON.stringify(newGuiState, null, 2), 'debug');
+    
+    // ここで後でCADWorkerにGUI状態を送信して、コードを実行
+    // executeCADCode(editor.getValue(), newGuiState);
+  };
+
+  // コンソールにメッセージを追加
+  const appendConsoleMessage = (message: string, type: 'info' | 'error' | 'success' | 'debug' = 'info') => {
+    if (!consoleElement) return;
+    
+    const messageElement = document.createElement('div');
+    messageElement.style.marginTop = '4px';
+    
+    // メッセージタイプに応じたスタイル
+    switch (type) {
+      case 'error':
+        messageElement.style.color = '#f87171';
+        break;
+      case 'success':
+        messageElement.style.color = '#4fd1c7';
+        break;
+      case 'debug':
+        messageElement.style.color = '#f0db4f';
+        break;
+      default:
+        messageElement.style.color = '#dcdcaa';
+    }
+    
+    messageElement.textContent = `> ${message}`;
+    consoleElement.appendChild(messageElement);
+    
+    // 自動スクロール
+    consoleElement.scrollTop = consoleElement.scrollHeight;
   };
 
   // エラーが発生した場合の表示
@@ -211,7 +249,7 @@ function createConsoleHTML(): string {
       font-size: 14px;
       padding: 12px;
       color: #d4d4d4;
-    ">
+    " class="cascade-console">
       <div style="border-bottom: 1px solid #333; padding-bottom: 8px; margin-bottom: 8px;">
         <span style="color: #4fc1ff;">🖥️ CascadeStudio Console</span>
       </div>

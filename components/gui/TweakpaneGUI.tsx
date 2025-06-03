@@ -1,27 +1,24 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-
-interface TweakpaneGUIProps {
-  onGUIUpdate?: (guiState: Record<string, any>) => void;
-  initialState?: Record<string, any>;
-  cadWorkerReady?: boolean;
-}
+import { CascadeGUIHandlers } from '@/lib/gui/cascadeGUIHandlers';
+import { GUIState, TweakpaneProps } from '@/types/gui';
 
 export default function TweakpaneGUI({ 
   onGUIUpdate,
   initialState = {},
   cadWorkerReady = false
-}: TweakpaneGUIProps) {
+}: TweakpaneProps) {
   const paneRef = useRef<HTMLDivElement>(null);
   const [pane, setPane] = useState<any>(null);
-  const [guiState, setGuiState] = useState<Record<string, any>>({
+  const [guiState, setGuiState] = useState<GUIState>({
     "Cache?": true,
     "MeshRes": 0.1,
     "GroundPlane?": true,
     "Grid?": true,
     ...initialState
   });
+  const guiHandlersRef = useRef<CascadeGUIHandlers | null>(null);
 
   // Tweakpane動的インポート
   useEffect(() => {
@@ -49,6 +46,24 @@ export default function TweakpaneGUI({
         setPane(newPane);
         console.log('✅ [TweakpaneGUI] Tweakpane initialized successfully');
 
+        // CascadeGUIHandlersの初期化
+        const handlers = new CascadeGUIHandlers(newPane, guiState, handleGUIUpdate);
+        guiHandlersRef.current = handlers;
+        
+        // グローバルハンドラーを登録（CascadeStudio互換）
+        handlers.registerGlobalHandlers();
+        console.log('✅ [TweakpaneGUI] CascadeGUIHandlers initialized');
+
+        // STARTER_CODEを評価してDynamic GUIを生成するためのイベント発火
+        if (cadWorkerReady) {
+          console.log('✅ [TweakpaneGUI] CAD Worker ready, will evaluate code soon...');
+          setTimeout(() => {
+            // Evaluateボタンをクリックしてコードを実行
+            console.log('🔄 [TweakpaneGUI] Auto-triggering Evaluate');
+            onGUIUpdate?.(guiState);
+          }, 1000);
+        }
+
       } catch (error) {
         console.error('❌ [TweakpaneGUI] Failed to initialize Tweakpane:', error);
       }
@@ -58,11 +73,14 @@ export default function TweakpaneGUI({
 
     // クリーンアップ
     return () => {
+      if (guiHandlersRef.current) {
+        guiHandlersRef.current.unregisterGlobalHandlers();
+      }
       if (pane) {
         pane.dispose();
       }
     };
-  }, []);
+  }, [cadWorkerReady]);
 
   // 基本GUI要素の追加
   const addBasicGUIElements = useCallback((pane: any) => {
@@ -72,7 +90,7 @@ export default function TweakpaneGUI({
       label: '🔄 Evaluate'
     }).on('click', () => {
       console.log('🎯 [TweakpaneGUI] Evaluate button clicked');
-      onGUIUpdate?.(guiState);
+      handleGUIUpdate(guiState);
     });
 
     // Mesh Resolution スライダー
@@ -119,97 +137,24 @@ export default function TweakpaneGUI({
       expanded: true
     });
 
-    // 動的GUI要素を追加するためのプレースホルダー
-    // この部分は後でaddSlider, addButton等のメッセージハンドラーで動的に追加される
     console.log('🎛️ [TweakpaneGUI] Basic GUI elements added');
 
-  }, [guiState, onGUIUpdate]);
+  }, [guiState]);
 
   // GUI状態更新
   const updateGUIState = useCallback((key: string, value: any) => {
     setGuiState(prev => {
       const newState = { ...prev, [key]: value };
-      onGUIUpdate?.(newState);
       return newState;
     });
+  }, []);
+
+  // GUI状態更新ハンドラー（親コンポーネントに通知）
+  const handleGUIUpdate = useCallback((newState: GUIState) => {
+    setGuiState(newState);
+    onGUIUpdate?.(newState);
+    console.log('🔄 [TweakpaneGUI] GUI state updated:', newState);
   }, [onGUIUpdate]);
-
-  // CascadeStudio互換のメッセージハンドラー
-  const addSlider = useCallback((name: string, defaultValue: number, min: number, max: number, step?: number) => {
-    if (!pane) return;
-
-    const folder = pane.children.find((child: any) => child.title === 'Dynamic Controls');
-    if (!folder) return;
-
-    // GUI状態に追加
-    const newGuiState = { ...guiState, [name]: defaultValue };
-    setGuiState(newGuiState);
-
-    // Tweakpaneスライダー追加
-    folder.addInput(newGuiState, name, {
-      min,
-      max,
-      step: step || 0.1,
-      label: name
-    }).on('change', (ev: any) => {
-      updateGUIState(name, ev.value);
-    });
-
-    console.log(`🎛️ [TweakpaneGUI] Added slider: ${name} (${defaultValue}, ${min}-${max})`);
-  }, [pane, guiState, updateGUIState]);
-
-  const addButton = useCallback((name: string, callback?: () => void) => {
-    if (!pane) return;
-
-    const folder = pane.children.find((child: any) => child.title === 'Dynamic Controls');
-    if (!folder) return;
-
-    folder.addButton({
-      title: name,
-      label: name
-    }).on('click', () => {
-      console.log(`🎯 [TweakpaneGUI] Button clicked: ${name}`);
-      callback?.();
-    });
-
-    console.log(`🎛️ [TweakpaneGUI] Added button: ${name}`);
-  }, [pane]);
-
-  const addCheckbox = useCallback((name: string, defaultValue: boolean = false) => {
-    if (!pane) return;
-
-    const folder = pane.children.find((child: any) => child.title === 'Dynamic Controls');
-    if (!folder) return;
-
-    // GUI状態に追加
-    const newGuiState = { ...guiState, [name]: defaultValue };
-    setGuiState(newGuiState);
-
-    folder.addInput(newGuiState, name, {
-      label: name
-    }).on('change', (ev: any) => {
-      updateGUIState(name, ev.value);
-    });
-
-    console.log(`🎛️ [TweakpaneGUI] Added checkbox: ${name} (${defaultValue})`);
-  }, [pane, guiState, updateGUIState]);
-
-  // 外部からアクセス可能な関数をwindowオブジェクトに追加（CascadeStudio互換）
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      (window as any).addSlider = addSlider;
-      (window as any).addButton = addButton;
-      (window as any).addCheckbox = addCheckbox;
-    }
-
-    return () => {
-      if (typeof window !== 'undefined') {
-        delete (window as any).addSlider;
-        delete (window as any).addButton;
-        delete (window as any).addCheckbox;
-      }
-    };
-  }, [addSlider, addButton, addCheckbox]);
 
   return (
     <div 
