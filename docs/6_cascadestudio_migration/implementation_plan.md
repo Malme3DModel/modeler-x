@@ -16,11 +16,15 @@
 - ✅ **トップナビゲーション**: CascadeNavigation実装完了
 - ✅ **3Dビューポート機能**: カメラコントロール・表示設定実装完了
 - ✅ **ファイルI/O機能**: STEP/STL/OBJ対応完了
+- ✅ **型安全・パフォーマンス最適化**: 型安全性の強化と不要なconsole.logの削除
 
 ### 📋 **今後の改善項目**
+- 📋 **URLハッシュ更新の修正**: F5キー押下時の更新不具合修正
+- 📋 **opencascade.jsインポートエラー解決**: 正しいインポート方法の実装
 - 📋 **コード品質向上**: リファクタリングとパフォーマンス最適化
 - 📋 **ドキュメント整備**: API仕様書と使い方ガイド作成
 - 📋 **テスト強化**: 単体テストとE2Eテストの追加
+- 📋 **CI/CD統合**: GitHub Actionsでの自動テスト実行設定
 
 ### 🚨 **新発見ナレッジ**
 
@@ -205,6 +209,102 @@ if (typeof window !== 'undefined') {
     }
   };
 }
+```
+
+#### **5. Playwright MCPによるテスト実装**
+
+Playwright MCPを使用してCascadeStudioの自動テストを実装しました。特に重要なポイントは以下の通りです：
+
+```typescript
+// tests/cascade-studio-test.spec.ts
+test('CascadeStudioページが表示される', async ({ page }) => {
+  await page.goto('http://localhost:3000/cascade-studio');
+  const title = await page.title();
+  expect(title).toContain('OpenCascade.js Demo');
+  
+  // スクリーンショット取得
+  await page.screenshot({ path: 'test-results/cascade-studio-page.png' });
+});
+
+// Golden Layoutが表示されるかテスト
+test('Golden Layoutが表示される', async ({ page }) => {
+  await page.goto('http://localhost:3000/cascade-studio');
+  
+  // レイアウトが表示されるまで待機
+  await page.waitForSelector('.lm_goldenlayout', { timeout: 10000 });
+  
+  // レイアウトが表示されていることを確認
+  const layout = await page.locator('.lm_goldenlayout');
+  await expect(layout).toBeVisible();
+  
+  // スクリーンショット取得
+  await page.screenshot({ path: 'test-results/golden-layout.png' });
+});
+```
+
+テスト実施中に以下の課題が見つかりました：
+
+1. **セレクターの具体性**: より具体的なセレクターを使用する必要がある
+   ```typescript
+   // 不十分なセレクター
+   await page.locator('.lm_item:has-text("* Untitled")').click();
+   
+   // より具体的なセレクター
+   await page.locator('.lm_item.lm_stack').filter({ hasText: '* Untitled' }).first().click();
+   ```
+
+2. **URLハッシュ更新の問題**: F5キーでコード実行後、URLハッシュが更新されない問題
+   ```typescript
+   // テスト例
+   test('URLハッシュが更新される', async ({ page }) => {
+     await page.goto('http://localhost:3000/cascade-studio');
+     await page.locator('.monaco-editor').click();
+     await page.keyboard.press('F5');
+     
+     // 十分な待機時間が必要
+     await page.waitForTimeout(3000);
+     
+     const url = page.url();
+     console.log('更新後URL:', url);
+     
+     // URLハッシュ更新の確認（緩やかな条件）
+     if (url.includes('#')) {
+       console.log('URLハッシュが更新されました');
+     } else {
+       console.log('URLハッシュは更新されませんでした - 実装の問題');
+     }
+   });
+   ```
+
+3. **同時実行の問題**: 複数のブラウザで同時にテストを実行すると不安定になる
+   ```typescript
+   // playwright.config.ts
+   export default defineConfig({
+     // 同時実行を避ける
+     fullyParallel: false,
+     // 1つのワーカーで実行
+     workers: 1,
+   });
+   ```
+
+#### **6. opencascade.jsのインポートエラー**
+
+`hooks/useOpenCascade.ts`において、以下のエラーが発生しています：
+
+```
+Attempted import error: 'opencascade.js' does not contain a default export (imported as 'initOpenCascade').
+```
+
+このエラーの原因はopencascade.jsがデフォルトエクスポートを提供していないことです。修正方法は以下の通りです：
+
+```typescript
+// 誤ったインポート方法
+import initOpenCascade from 'opencascade.js';
+
+// 正しいインポート方法
+import * as OpenCascadeModule from 'opencascade.js';
+// または名前付きインポート
+import { initOpenCascade } from 'opencascade.js';
 ```
 
 ## 1. 完全統合されたCascadeStudioレイアウト
@@ -519,28 +619,110 @@ useEffect(() => {
 
 ## 4. 今後の改善計画
 
-### 4.1 コード品質向上（2025年6月16日〜22日）
+### 4.1 優先タスク（2025年6月16日〜22日）
+
+- **URLハッシュ更新機能の修正**: F5キー押下時に更新されない問題を解決
+  ```typescript
+  // 問題の修正例 - URLStateManager.ts
+  static saveStateToURL(state: URLState): void {
+    // コード評価後に適切な遅延をもって実行
+    setTimeout(() => {
+      const json = JSON.stringify(state);
+      const encoded = this.encodeToBase64(json);
+      window.location.hash = encoded;
+      console.log('URLハッシュを更新:', window.location.hash);
+    }, 1000); // 1秒の遅延で安定性向上
+  }
+  ```
+
+- **opencascade.jsのインポートエラー修正**: 正しいインポート方法の適用
+  ```typescript
+  // hooks/useOpenCascade.ts の修正
+  // import initOpenCascade from 'opencascade.js'; // 誤った方法
+  import * as OpenCascadeModule from 'opencascade.js'; // 正しい方法
+  
+  // 使用例
+  const ocInstance = await OpenCascadeModule.default();
+  ```
+
+- **Playwright MCPテスト強化**: より堅牢なセレクター使用とE2Eテスト追加
+  ```typescript
+  // tests/cascade-studio-robust.spec.ts
+  test('完全な機能テスト', async ({ page }) => {
+    // ページ表示
+    await page.goto('http://localhost:3000/cascade-studio');
+    await page.waitForSelector('.lm_goldenlayout', { timeout: 10000 });
+    
+    // エディターにコード入力
+    await page.locator('.monaco-editor').first().click();
+    await page.keyboard.press('Control+A');
+    await page.keyboard.press('Delete');
+    await page.keyboard.type('let box = Box(10, 20, 30);');
+    
+    // コード実行
+    await page.keyboard.press('F5');
+    await page.waitForTimeout(3000); // 十分な待機時間
+    
+    // 結果確認
+    await page.screenshot({ path: 'test-results/complete-workflow.png' });
+  });
+  ```
+
+- **CI/CD統合**: GitHub Actionsでの自動テスト設定
+  ```yaml
+  # .github/workflows/playwright.yml
+  name: Playwright Tests
+  on:
+    push:
+      branches: [ main, develop ]
+    pull_request:
+      branches: [ main, develop ]
+  
+  jobs:
+    test:
+      timeout-minutes: 60
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v3
+        - uses: actions/setup-node@v3
+          with:
+            node-version: 18
+        - name: Install dependencies
+          run: npm ci
+        - name: Install Playwright Browsers
+          run: npx playwright install --with-deps
+        - name: Run Playwright tests
+          run: npm run test:e2e
+        - uses: actions/upload-artifact@v3
+          if: always()
+          with:
+            name: playwright-report
+            path: playwright-report/
+            retention-days: 30
+  ```
+
+### 4.2 コード品質向上（2025年6月23日〜29日）
 
 - **リファクタリング**: コンポーネント分割とカスタムフック最適化
 - **型安全性の強化**: 厳格なTypeScript型定義の適用
 - **パフォーマンス最適化**: レンダリングとメモリ使用の最適化
 - **エラーハンドリング**: エラー捕捉と回復メカニズムの改善
 
-### 4.2 ドキュメント整備（2025年6月23日〜29日）
+### 4.3 ドキュメント整備（2025年6月30日〜7月6日）
 
 - **API仕様書**: 主要コンポーネントとフックのAPI仕様書作成
 - **使い方ガイド**: エンドユーザー向けドキュメント作成
 - **開発者ガイド**: 拡張開発者向けガイド作成
 - **サンプルコード**: 一般的なユースケースのサンプル作成
 
-### 4.3 テスト強化（2025年6月30日〜7月6日）
+### 4.4 テスト強化（2025年7月7日〜13日）
 
 - **単体テスト**: 重要コンポーネントの単体テスト追加
 - **統合テスト**: コンポーネント間連携テスト追加
 - **E2Eテスト**: Playwrightによるエンドツーエンドテスト強化
 - **クロスブラウザ互換性**: 主要ブラウザでの動作検証
 
-### 4.4 最終リリース準備（2025年7月7日〜13日）
+### 4.5 最終リリース準備（2025年7月14日〜20日）
 
 - **最終バグ修正**: 残存バグの修正
 - **パフォーマンスチューニング**: 最終的なパフォーマンス最適化
@@ -549,6 +731,98 @@ useEffect(() => {
 
 ## 5. 完了予定
 
-**リリース予定日**: 2025年7月15日
+**リリース予定日**: 2025年7月21日
 
-次期フェーズでは、ドキュメント整備と品質向上に注力します。CascadeStudioの基本機能の完全再現は達成したため、次は使いやすさと拡張性の向上に重点を置きます。 
+次期フェーズでは、現在の課題解決、ドキュメント整備と品質向上に注力します。CascadeStudioの基本機能の完全再現は達成したため、次は使いやすさと拡張性の向上、および安定性の確保に重点を置きます。 
+
+## 🚨 新発見ナレッジ・最新実装例
+
+### 1. URLハッシュ管理の最新実装例
+```typescript
+// コード実行時は必ずURLハッシュを最新化
+const evaluateCode = useCallback((code: string) => {
+  // ...
+  URLStateManager.saveStateToURL({ code, guiState });
+  // ...
+}, [...]);
+```
+- 旧実装の「差分がなければ更新しない」ロジックは廃止
+- F5/Ctrl+S等で必ずハッシュを上書き
+
+### 2. opencascade.jsのimport方法
+```typescript
+// 修正前
+import initOpenCascade from 'opencascade.js';
+// 修正後
+import * as OpenCascadeModule from 'opencascade.js';
+```
+- hooks/useOpenCascade.ts, components/threejs/ThreeJSViewport.tsx等も同様に修正
+
+### 3. Playwrightテスト安定化・CI/CD統合
+- セレクターは`.monaco-editor`.first()等、より具体的に
+- playwright.config.ts:
+```typescript
+export default defineConfig({
+  workers: 1,
+  fullyParallel: false,
+  // ...その他設定
+});
+```
+- .github/workflows/playwright.yml:
+```yaml
+name: Playwright Tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - run: npm ci
+      - run: npm run build --if-present
+      - run: npx playwright install --with-deps
+      - run: npx playwright test
+```
+
+### 4. 型安全性・パフォーマンス改善ポイント
+- TypeScript型定義の厳格化（any禁止、型推論活用）
+- 不要なconsole.logやデバッグコードの削除
+- useCallback, useMemo, useRef等で再レンダリング最適化
+- メモリリーク防止のためのuseEffectクリーンアップ
+
+## 参考：主要な技術実装例
+
+### CascadeViewport（React Three Fiber）
+```typescript
+function ShapeMesh({ shape, wireframe = false }: ShapeMeshProps) {
+  // ...（省略：README参照）
+}
+```
+
+### ファイルエクスポート（STEP/STL/OBJ）
+```typescript
+// ...（省略：README参照）
+```
+
+### Playwright MCPテスト例
+```typescript
+test('コード実行後にURLハッシュが更新される', async ({ page }) => {
+  await page.goto('http://localhost:3000/cascade-studio');
+  await page.waitForSelector('.monaco-editor', { timeout: 10000 });
+  await page.locator('.monaco-editor').first().click();
+  await page.keyboard.press('Control+A');
+  await page.keyboard.press('Delete');
+  await page.keyboard.type('let box = Box(10, 20, 30);');
+  await page.keyboard.press('F5');
+  await page.waitForTimeout(3000);
+  expect(page.url()).toContain('#');
+});
+```
+
+## 今後の改善・残タスク
+- ドキュメント整備（APIリファレンス、使い方ガイド）
+- テスト拡充・クロスブラウザ対応
+- コード品質・型安全性のさらなる向上 
