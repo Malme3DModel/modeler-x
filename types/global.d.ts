@@ -14,7 +14,7 @@ declare global {
 
 declare module 'opencascade.js' {
   function initOpenCascade(): Promise<any>;
-  export default initOpenCascade;
+  export { initOpenCascade };
 }
 
 export {}; 

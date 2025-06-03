@@ -8,12 +8,19 @@
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
-    "clean": "rmdir /s /q .next"
+    "clean": "rmdir /s /q .next",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
     "@react-three/drei": "^9.92.7",
     "@react-three/fiber": "^8.15.12",
+    "@tweakpane/core": "^2.0.5",
+    "fflate": "^0.8.2",
+    "golden-layout": "^2.6.0",
     "jwt-decode": "^4.0.0",
     "monaco-editor": "^0.52.2",
     "next": "^14.2.5",
@@ -21,9 +28,11 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "three": "^0.160.0",
+    "tweakpane": "^4.0.3",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
     "@types/node": "^20.17.57",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
