@@ -52,40 +52,72 @@
   - オブジェクト名、フェイス番号、IDの表示
   - ポジショニングとスタイリング完了
 
-### 🎨 1.2 マテリアル・ライティングの改善
+### 🎨 1.2 マテリアル・ライティングの改善 - ✅ 完了
 
-#### タスク1.2.1: MatCapマテリアルの実装
-- **ファイル**: `components/threejs/materials/MatCapMaterial.tsx` (新規作成)
+#### タスク1.2.1: MatCapマテリアルの実装 - ✅ 完了
+- **ファイル**: `components/threejs/materials/MatCapMaterial.tsx`
 - **期間**: 2日
 - **内容**:
-  - MatCapテクスチャの追加
-  - MeshMatcapMaterialの実装
-  - 元の`dullFrontLitMetal.png`の移植
+  - MatCapテクスチャの追加 ✅
+  - MeshMatcapMaterialの実装 ✅
+  - 元の`dullFrontLitMetal.png`の移植 ✅
+- **実装状況**:
+  - MatCapマテリアルが正常に実装されている
+  - テクスチャが`public/textures/dullFrontLitMetal.png`に配置済み
+  - ThreeJSModelコンポーネントで適切に使用されている
 
 ```typescript
 // 実装例
-const matcapTexture = useLoader(THREE.TextureLoader, '/textures/dullFrontLitMetal.png');
-const matcapMaterial = new THREE.MeshMatcapMaterial({
-  matcap: matcapTexture,
-  color: '#f5f5f5'
-});
+import { useMemo } from 'react';
+import * as THREE from 'three';
+import { useLoader } from '@react-three/fiber';
+
+export function useMatCapMaterial({ 
+  color = '#f5f5f5', 
+  opacity = 1.0, 
+  transparent = false 
+}) {
+  const matcapTexture = useLoader(
+    THREE.TextureLoader, 
+    '/textures/dullFrontLitMetal.png'
+  );
+  
+  return useMemo(() => {
+    const material = new THREE.MeshMatcapMaterial({
+      matcap: matcapTexture,
+      color: color,
+      transparent: transparent,
+      opacity: opacity,
+    });
+    
+    return material;
+  }, [matcapTexture, color, opacity, transparent]);
+}
 ```
 
-#### タスク1.2.2: ライティング設定の調整
-- **ファイル**: `components/threejs/CascadeViewport.tsx`
+#### タスク1.2.2: ライティング設定の調整 - ✅ 完了
+- **ファイル**: `components/threejs/ThreeJSViewport.tsx`
 - **期間**: 1日
 - **内容**:
-  - HemisphereLight + DirectionalLightの設定
-  - 元のCascadeView.jsと同等のライティング
-  - シャドウマップの最適化
+  - HemisphereLight + DirectionalLightの設定 ✅
+  - 元のCascadeView.jsと同等のライティング ✅
+  - シャドウマップの最適化 ✅
+- **実装状況**:
+  - 環境光、半球光、平行光源が適切に設定されている
+  - 地面へのシャドウ表示が正しく設定されている
+  - 元のCascadeStudioと同等の見た目を実現
 
-#### タスク1.2.3: フォグ機能の実装
-- **ファイル**: `components/threejs/CascadeViewport.tsx`
+#### タスク1.2.3: フォグ機能の実装 - ✅ 完了
+- **ファイル**: `components/threejs/ThreeJSViewport.tsx`
 - **期間**: 1日
 - **内容**:
-  - 動的フォグ距離の計算
-  - バウンディングボックスベースの調整
-  - 元の実装の移植
+  - 動的フォグ距離の計算 ✅
+  - バウンディングボックスベースの調整 ✅
+  - 元の実装の移植 ✅
+- **実装状況**:
+  - バウンディングボックスに基づく動的フォグ距離計算が実装済み
+  - フォグ色が正しく設定されている
+  - テストによって正常動作を確認済み
 
 ### 📏 1.3 エッジ表示の改善
 

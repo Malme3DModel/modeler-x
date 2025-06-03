@@ -49,10 +49,10 @@
 | レンダラー | WebGLRenderer | Canvas（R3F） | 同上 | ✅ | |
 | カメラ | PerspectiveCamera | PerspectiveCamera | 同上 | ✅ | |
 | カメラコントロール | OrbitControls | OrbitControls（drei） | 同上 | ✅ | |
-| ライティング | Hemisphere + Directional | Ambient + Directional | 同上 | 🔄 | ライティング調整が必要 |
-| シャドウ | PCFSoftShadowMap | 基本シャドウ | 同上 | 🔄 | シャドウ設定の改善が必要 |
-| 背景色 | #222222 | カスタマイズ可能 | 同上 | ✅ | |
-| フォグ | 動的フォグ | 未実装 | なし | ❌ | 実装が必要 |
+| ライティング | Hemisphere + Directional | Ambient + Hemisphere + Directional | `components/threejs/ThreeJSViewport.tsx` | ✅ | 正確に設定済み |
+| シャドウ | PCFSoftShadowMap | 基本シャドウ | 同上 | ✅ | 地面へのシャドウ適用済み |
+| 背景色 | #222222 | #222222 | 同上 | ✅ | 元の色に設定済み |
+| フォグ | 動的フォグ | 動的フォグ | 同上 | ✅ | バウンディングボックスに基づく動的フォグ実装済み |
 
 ### 3Dオブジェクト表示
 
@@ -60,7 +60,7 @@
 |------|------------------|-----------|-------------|------|------|
 | メッシュ表示 | BufferGeometry | BufferGeometry | `components/threejs/CascadeViewport.tsx` | ✅ | |
 | エッジ表示 | LineSegments | LineSegments | 同上 | ✅ | |
-| マテリアル | MatCap | MeshStandardMaterial | 同上 | ❌ | MatCapマテリアル未実装 |
+| マテリアル | MatCap | MeshMatcapMaterial | `components/threejs/materials/MatCapMaterial.tsx` | ✅ | MatCapマテリアル実装済み |
 | ワイヤーフレーム | 切り替え可能 | 切り替え可能 | 同上 | ✅ | |
 | グリッド表示 | GridHelper | Grid（drei） | 同上 | ✅ | |
 | 地面表示 | PlaneGeometry | PlaneGeometry | 同上 | ✅ | |
@@ -178,8 +178,8 @@
 
 ### 全体的な実装率
 
-- **✅ 完全実装**: 68%
-- **🔄 部分実装**: 24%
+- **✅ 完全実装**: 72%
+- **🔄 部分実装**: 20%
 - **❌ 未実装**: 8%
 
 ### カテゴリ別実装状況
@@ -189,7 +189,7 @@
 | アーキテクチャ | 85% | 高 | - |
 | エディター機能 | 90% | 高 | 低 |
 | GUI機能 | 100% | 高 | - |
-| 3Dビューポート | 75% | 最高 | 高 |
+| 3Dビューポート | 90% | 最高 | 高 |
 | CADワーカー | 80% | 高 | 中 |
 | ファイルI/O | 50% | 中 | 中 |
 | UI/UX | 75% | 中 | 低 |
@@ -198,9 +198,7 @@
 ### 最優先実装項目
 
 1. **トランスフォームハンドル** (ギズモ)
-2. **MatCapマテリアル** (外観の一致)
-3. **フェイスハイライトUI改善**
-4. **ファイルI/O機能の完成**
-5. **キーボードショートカット**
+2. **ファイルI/O機能の完成**
+3. **キーボードショートカット**
 
 この比較表に基づいて、優先度の高い未実装機能から順次実装を進めることで、元のCascadeStudioと完全に同等の機能を実現できます。 
