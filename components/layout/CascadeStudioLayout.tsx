@@ -82,15 +82,11 @@ export default function CascadeStudioLayout({
           
           // URLに状態を保存
           try {
-            // 状態に変更がある場合のみURLを更新
-            if (code !== lastSavedCodeRef.current || 
-                JSON.stringify(guiState) !== JSON.stringify(lastSavedGuiStateRef.current)) {
-              
-              URLStateManager.saveStateToURL({ code, guiState });
-              lastSavedCodeRef.current = code;
-              lastSavedGuiStateRef.current = { ...guiState };
-              appendConsoleMessage('💾 状態をURLに保存しました', 'success');
-            }
+            // 必ずURLハッシュを最新状態に更新
+            URLStateManager.saveStateToURL({ code, guiState });
+            lastSavedCodeRef.current = code;
+            lastSavedGuiStateRef.current = { ...guiState };
+            appendConsoleMessage('💾 状態をURLに保存しました', 'success');
           } catch (error) {
             console.error('URL状態の保存に失敗:', error);
             appendConsoleMessage('⚠️ URL状態の保存に失敗しました', 'error');
