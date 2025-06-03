@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState, useMemo } from 'react';
+import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment, PerspectiveCamera } from '@react-three/drei';
 import { CADShape } from '@/types/worker';
@@ -101,6 +101,72 @@ const ShapeMesh = React.memo(function ShapeMesh({ shape, wireframe = false }: Sh
     </>
   );
 });
+
+// レイキャスティング機能コンポーネント
+function RaycastingHandler({ 
+  shapes, 
+  isRaycastingEnabled, 
+  onHoverObject, 
+  onHoverFace 
+}: {
+  shapes: CADShape[];
+  isRaycastingEnabled: boolean;
+  onHoverObject: (object: THREE.Object3D | null) => void;
+  onHoverFace: (face: number | null) => void;
+}) {
+  const { camera, scene } = useThree();
+  const raycaster = useRef(new THREE.Raycaster());
+  const mouse = useRef(new THREE.Vector2());
+
+  useFrame(() => {
+    if (shapes.length === 0 || !isRaycastingEnabled) return;
+
+    // カメラとマウス座標からレイを発射
+    raycaster.current.setFromCamera(mouse.current, camera);
+
+    // 3Dオブジェクトとの交差判定
+    const intersects = raycaster.current.intersectObjects(scene.children, true);
+
+    if (intersects.length > 0) {
+      const intersection = intersects[0];
+      // ハイライト処理（次のタスクで詳細実装）
+      onHoverObject(intersection.object);
+
+      // フェイスインデックスの取得
+      if (intersection.face) {
+        onHoverFace(intersection.faceIndex || 0);
+      }
+
+      // テスト用のデータ属性を追加
+      intersection.object.userData.isHovered = true;
+      intersection.object.userData.hoveredFace = intersection.faceIndex;
+    } else {
+      // ハイライト解除
+      onHoverObject(null);
+      onHoverFace(null);
+    }
+  });
+
+  // マウス座標を更新する関数をグローバルに公開
+  useEffect(() => {
+    const updateMousePosition = (clientX: number, clientY: number, rect: DOMRect) => {
+      mouse.current.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+      mouse.current.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+    };
+
+    // グローバルオブジェクトに関数を登録
+    (window as any).cascadeRaycastingUtils = {
+      updateMousePosition,
+      getCurrentMousePosition: () => ({ x: mouse.current.x, y: mouse.current.y }),
+    };
+
+    return () => {
+      delete (window as any).cascadeRaycastingUtils;
+    };
+  }, []);
+
+  return null;
+}
 
 // 3Dシーン設定コンポーネント
 function SceneSetup({ viewSettings }: { viewSettings: ViewSettings }) {
@@ -242,6 +308,68 @@ export default function CascadeViewport({
   // useViewSettingsフックを使用して設定管理
   const { viewSettings: currentSettings, updateSetting, toggleSetting } = 
     useViewSettings({...defaultViewSettings, ...viewSettings});
+
+  // レイキャスティング状態の管理
+  const [hoveredObject, setHoveredObject] = useState<THREE.Object3D | null>(null);
+  const [hoveredFace, setHoveredFace] = useState<number | null>(null);
+  const [isRaycastingEnabled, setIsRaycastingEnabled] = useState(true);
+
+  // マウスイベントハンドラーの実装
+  const handleMouseMove = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
+    if (!isRaycastingEnabled) return;
+
+    // マウス座標の正規化（-1 to 1の範囲）
+    const rect = (event.target as HTMLElement).getBoundingClientRect();
+    const normalizedX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    const normalizedY = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+    // グローバル関数経由でマウス座標を更新
+    if ((window as any).cascadeRaycastingUtils) {
+      (window as any).cascadeRaycastingUtils.updateMousePosition(event.clientX, event.clientY, rect);
+    }
+  }, [isRaycastingEnabled]);
+
+  // ハイライト処理の実装
+  const handleHoverObject = useCallback((object: THREE.Object3D | null) => {
+    // 前のオブジェクトのハイライトを解除
+    if (hoveredObject && hoveredObject !== object) {
+      hoveredObject.userData.isHovered = false;
+      hoveredObject.userData.hoveredFace = null;
+    }
+    setHoveredObject(object);
+  }, [hoveredObject]);
+
+  const handleHoverFace = useCallback((face: number | null) => {
+    setHoveredFace(face);
+  }, []);
+
+  // テスト用のアクセス機能追加
+  useEffect(() => {
+    // グローバルオブジェクトにテスト用関数を登録
+    (window as any).cascadeTestUtils = {
+      getRaycastingState: () => ({
+        isEnabled: isRaycastingEnabled,
+        hoveredObject: hoveredObject?.uuid || null,
+        hoveredFace: hoveredFace,
+      }),
+      enableRaycasting: () => setIsRaycastingEnabled(true),
+      disableRaycasting: () => setIsRaycastingEnabled(false),
+    };
+
+    return () => {
+      delete (window as any).cascadeTestUtils;
+    };
+  }, [isRaycastingEnabled, hoveredObject, hoveredFace]);
+
+  // デバッグ用の状態表示
+  useEffect(() => {
+    if (hoveredObject) {
+      console.log('🎯 ホバー中オブジェクト:', hoveredObject.name || 'Unnamed', hoveredObject.uuid);
+    }
+    if (hoveredFace !== null) {
+      console.log('📐 ホバー中フェイス番号:', hoveredFace);
+    }
+  }, [hoveredObject, hoveredFace]);
   
   // パフォーマンス最適化のためにCanvasをメモ化
   const canvasContent = useMemo(() => (
@@ -251,11 +379,19 @@ export default function CascadeViewport({
       style={{ background: currentSettings.backgroundColor }}
       dpr={[1, 2]} // デバイスピクセル比の制限（パフォーマンス向上）
       performance={{ min: 0.5 }} // 低パフォーマンス時の最小更新レート
+      data-testid="cascade-3d-viewport"
+      onMouseMove={handleMouseMove}
     >
       <SceneSetup viewSettings={currentSettings} />
       <ShapesList shapes={shapes} wireframe={currentSettings.wireframe} />
+      <RaycastingHandler 
+        shapes={shapes}
+        isRaycastingEnabled={isRaycastingEnabled}
+        onHoverObject={handleHoverObject}
+        onHoverFace={handleHoverFace}
+      />
     </Canvas>
-  ), [shapes, currentSettings]);
+  ), [shapes, currentSettings, isRaycastingEnabled, handleMouseMove, handleHoverObject, handleHoverFace]);
   
   // ワイヤーフレーム表示切替のハンドラー
   const toggleWireframe = () => toggleSetting('wireframe');
@@ -276,7 +412,7 @@ export default function CascadeViewport({
           />
           ワイヤーフレーム
         </label>
-        <label className="flex items-center">
+        <label className="flex items-center mb-1">
           <input 
             type="checkbox" 
             checked={currentSettings.shadows} 
@@ -284,6 +420,15 @@ export default function CascadeViewport({
             className="mr-2"
           />
           シャドウ
+        </label>
+        <label className="flex items-center">
+          <input 
+            type="checkbox" 
+            checked={isRaycastingEnabled} 
+            onChange={() => setIsRaycastingEnabled(!isRaycastingEnabled)}
+            className="mr-2"
+          />
+          レイキャスティング
         </label>
       </div>
 

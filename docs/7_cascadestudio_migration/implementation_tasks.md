@@ -2,65 +2,55 @@
 
 ## フェーズ1: 基本3D機能の完成 (2週間)
 
-### 🎯 1.1 ホバーハイライト機能の実装
+### 🎯 1.1 ホバーハイライト機能の実装 - 部分実装済み
 
-#### タスク1.1.1: レイキャスティング基盤の実装
-- **ファイル**: `components/threejs/CascadeViewport.tsx`
+#### タスク1.1.1: レイキャスティング基盤の実装 - ✅ 完了
+- **ファイル**: `components/threejs/ThreeJSViewport.tsx`
 - **期間**: 2日
 - **内容**:
-  - React Three FiberでのRaycasterの実装
-  - マウス座標の3D座標変換
-  - オブジェクト交差判定の基盤構築
+  - React Three FiberでのRaycasterの実装 ✅
+  - マウス座標の3D座標変換 ✅
+  - オブジェクト交差判定の基盤構築 ✅
+- **実装状況**:
+  - レイキャスティング基盤は正常に動作
+  - RaycastingHandlerコンポーネントが実装済み
+  - グローバルユーティリティとしてテスト機能も実装済み
 
-```typescript
-// 実装例
-const raycaster = new THREE.Raycaster();
-const mouse = new THREE.Vector2();
-
-const handleMouseMove = (event: MouseEvent) => {
-  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-  
-  raycaster.setFromCamera(mouse, camera);
-  const intersects = raycaster.intersectObjects(scene.children);
-  // ハイライト処理
-};
-```
-
-#### タスク1.1.2: フェイスハイライト機能
-- **ファイル**: `components/threejs/CascadeViewport.tsx`
+#### タスク1.1.2: フェイスハイライト機能 - 🔄 部分実装
+- **ファイル**: `components/threejs/ThreeJSViewport.tsx`
 - **期間**: 3日
 - **内容**:
-  - フェイス選択時のマテリアル変更
-  - ハイライト状態の管理
-  - パフォーマンス最適化
+  - フェイス選択時のマテリアル変更 ✅
+  - ハイライト状態の管理 ✅
+  - パフォーマンス最適化 🔄
+- **実装状況**:
+  - 基本的なフェイス選択は動作
+  - マテリアル変更はuserDataで管理中
+  - 視覚的なハイライト効果の改善が必要
 
-```typescript
-// 実装例
-const [highlightedFace, setHighlightedFace] = useState<THREE.Face3 | null>(null);
-
-const highlightFace = (face: THREE.Face3) => {
-  // 元のマテリアルを保存
-  // ハイライトマテリアルに変更
-  // 状態を更新
-};
-```
-
-#### タスク1.1.3: エッジハイライト機能
-- **ファイル**: `components/threejs/CascadeViewport.tsx`
+#### タスク1.1.3: エッジハイライト機能 - 🔄 部分実装
+- **ファイル**: `components/threejs/ThreeJSViewport.tsx`
 - **期間**: 3日
 - **内容**:
-  - LineSegmentsのエッジ選択
-  - エッジ色変更機能
-  - 元のCascadeView.jsからのロジック移植
+  - LineSegmentsのエッジ選択 ✅
+  - エッジ色変更機能 🔄
+  - 元のCascadeView.jsからのロジック移植 🔄
+- **実装状況**:
+  - 基本的なエッジ検出は実装済み
+  - 視覚的なハイライト効果の実装が必要
+  - パフォーマンス最適化が必要
 
-#### タスク1.1.4: ツールチップ表示
+#### タスク1.1.4: ツールチップ表示 - ❌ 未実装
 - **ファイル**: `components/threejs/HoverTooltip.tsx` (新規作成)
 - **期間**: 2日
 - **内容**:
   - フェイス/エッジインデックス表示
   - マウス追従ツールチップ
   - 適切な位置調整
+- **実装状況**:
+  - コンソールログへの出力のみ実装
+  - UIツールチップコンポーネントの作成が必要
+  - ポジショニングとスタイリングが必要
 
 ### 🎨 1.2 マテリアル・ライティングの改善
 
