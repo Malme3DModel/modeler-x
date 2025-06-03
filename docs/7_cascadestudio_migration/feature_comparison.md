@@ -1,212 +1,231 @@
-# CascadeStudio 機能比較表
+# CascadeStudio 機能比較表 v2.0
 
-## 概要
+元のCascadeStudioと現在の Next.js + TypeScript + React Three Fiber 実装の機能対比表です。**2024年12月時点**での正確な実装状況を反映しています。
 
-この表は、元のCascadeStudioと現在のNext.js実装の機能を詳細に比較し、実装状況を把握するためのものです。
+## 凡例
 
-## 機能比較一覧
+- ✅ **完全実装済み**: 元と同等以上の機能実装完了
+- 🔄 **部分実装済み**: 基本機能は動作、改善・拡張が必要
+- ❌ **未実装**: 実装されていない
+- 🆕 **新機能**: 元にはない追加機能
 
-| カテゴリ | 機能 | 元のCascadeStudio | 現在の実装 | 実装ファイル | 備考 |
-|---------|------|------------------|-----------|-------------|------|
+---
 
-## 🏗️ アーキテクチャ
+## 1. 基本アーキテクチャ
 
-| 機能 | 元のCascadeStudio | 現在の実装 | 実装ファイル | 状態 | 備考 |
-|------|------------------|-----------|-------------|------|------|
-| レイアウトシステム | Golden Layout (jQuery) | Golden Layout (React統合) | `components/layout/CascadeStudioLayout.tsx` | ✅ | React 18のcreateRoot使用 |
-| ウィンドウ管理 | ドッキング可能3ペイン | ドッキング可能3ペイン | 同上 | ✅ | エディター、3Dビュー、コンソール |
-| 状態管理 | グローバル変数 | React state + URLハッシュ | `lib/layout/urlStateManager.ts` | ✅ | URLStateManager実装済み |
-| PWA対応 | Service Worker | 未実装 | なし | ❌ | フェーズ5で実装予定 |
+| 機能 | 元のCascadeStudio | 現在の実装 | 状態 | 実装ファイル | 備考 |
+|------|-------------------|------------|------|--------------|------|
+| フレームワーク | Vanilla JS + Three.js | Next.js 14 + TypeScript | ✅ | `app/page.tsx` | App Router使用 |
+| UIレイアウト | Golden Layout | Golden Layout 2.6.0 | ✅ | `components/layout/CascadeStudioLayout.tsx` | React統合済み |
+| 状態管理 | URLハッシュ | URLハッシュ + React State | ✅ | `lib/layout/urlStateManager.ts` | 型安全な実装 |
+| ホットリロード | ❌ | 開発時ホットリロード | 🆕 | Next.js標準機能 | 開発効率向上 |
 
-## 💻 エディター機能
+---
 
-| 機能 | 元のCascadeStudio | 現在の実装 | 実装ファイル | 状態 | 備考 |
-|------|------------------|-----------|-------------|------|------|
-| エディターエンジン | Monaco Editor | Monaco Editor | `components/cad/MonacoCodeEditor.tsx` | ✅ | TypeScript intellisense対応 |
-| 言語サポート | TypeScript | TypeScript | 同上 | ✅ | |
-| 自動補完 | OpenCascade.js型定義 | 部分的実装 | `public/types/` | 🔄 | 型定義の改善が必要 |
-| エラーハイライト | Monaco markers | 基本実装 | 同上 | 🔄 | エラー詳細表示の改善が必要 |
-| コード評価 | F5キー/Evaluateボタン | Evaluateボタン | 同上 | 🔄 | F5キーショートカット未実装 |
-| 関数折りたたみ | 自動折りたたみ | 標準機能 | 同上 | ✅ | |
+## 2. 3Dビューポート機能
 
-## 🎮 GUI機能
+| 機能 | 元のCascadeStudio | 現在の実装 | 状態 | 実装ファイル | 備考 |
+|------|-------------------|------------|------|--------------|------|
 
-| 機能 | 元のCascadeStudio | 現在の実装 | 実装ファイル | 状態 | 備考 |
-|------|------------------|-----------|-------------|------|------|
-| GUIライブラリ | Tweakpane | Tweakpane | `components/gui/TweakpaneGUI.tsx` | ✅ | |
-| スライダー | 動的生成 | 動的生成 | 同上 | ✅ | |
-| チェックボックス | 動的生成 | 動的生成 | 同上 | ✅ | |
-| ボタン | 動的生成 | 動的生成 | 同上 | ✅ | |
-| テキスト入力 | 動的生成 | 動的生成 | 同上 | ✅ | |
-| ドロップダウン | 動的生成 | 動的生成 | 同上 | ✅ | |
-| GUI位置 | フローティング | フローティング | 同上 | ✅ | |
+### 2.1 基本3D機能
+| カメラコントロール | OrbitControls | OrbitControls | ✅ | `components/threejs/ThreeJSViewport.tsx` | @react-three/drei使用 |
+| レンダリング | WebGL Renderer | React Three Fiber | ✅ | `components/threejs/ThreeJSViewport.tsx` | 宣言的3D実装 |
+| シーン管理 | Three.js Scene | React Three Fiber Scene | ✅ | `components/threejs/ThreeJSViewport.tsx` | コンポーネント化 |
 
-## 🎨 3Dビューポート機能
+### 2.2 マテリアル・ライティング  
+| MatCapマテリアル | MeshMatcapMaterial | MeshMatcapMaterial | ✅ | `components/threejs/materials/MatCapMaterial.tsx` | フック化実装 |
+| 環境光 | AmbientLight | AmbientLight | ✅ | `components/threejs/ThreeJSViewport.tsx` | 同等設定 |
+| 半球光 | HemisphereLight | HemisphereLight | ✅ | `components/threejs/ThreeJSViewport.tsx` | 同等設定 |
+| 平行光源 | DirectionalLight | DirectionalLight | ✅ | `components/threejs/ThreeJSViewport.tsx` | シャドウ対応 |
+| フォグ効果 | 静的フォグ | 動的フォグ | ✅ | `components/threejs/ThreeJSViewport.tsx` | バウンディングボックス連動 |
 
-| 機能 | 元のCascadeStudio | 現在の実装 | 実装ファイル | 状態 | 備考 |
-|------|------------------|-----------|-------------|------|------|
-| 3Dエンジン | Three.js (バニラ) | React Three Fiber | `components/threejs/CascadeViewport.tsx` | ✅ | |
-| レンダラー | WebGLRenderer | Canvas（R3F） | 同上 | ✅ | |
-| カメラ | PerspectiveCamera | PerspectiveCamera | 同上 | ✅ | |
-| カメラコントロール | OrbitControls | OrbitControls（drei） | 同上 | ✅ | |
-| ライティング | Hemisphere + Directional | Ambient + Hemisphere + Directional | `components/threejs/ThreeJSViewport.tsx` | ✅ | 正確に設定済み |
-| シャドウ | PCFSoftShadowMap | 基本シャドウ | 同上 | ✅ | 地面へのシャドウ適用済み |
-| 背景色 | #222222 | #222222 | 同上 | ✅ | 元の色に設定済み |
-| フォグ | 動的フォグ | 動的フォグ | 同上 | ✅ | バウンディングボックスに基づく動的フォグ実装済み |
+### 2.3 インタラクション機能
+| ホバーハイライト | フェイス/エッジハイライト | フェイス/エッジハイライト | ✅ | `components/threejs/ThreeJSViewport.tsx` | レイキャスティング実装 |
+| ツールチップ | インデックス表示 | インデックス表示 | ✅ | `components/threejs/HoverTooltip.tsx` | React実装 |
+| オブジェクト選択 | クリック選択 | クリック選択 | ❌ | 未実装 | フェーズ2で実装 |
+| **TransformControls** | **ギズモ操作** | **ギズモ操作** | **❌** | **未実装** | **最重要・フェーズ2** |
+| マルチセレクション | 複数選択 | 複数選択 | ❌ | 未実装 | フェーズ2で実装 |
 
-### 3Dオブジェクト表示
+### 2.4 カメラ機能
+| 基本カメラ操作 | パン・ズーム・回転 | パン・ズーム・回転 | ✅ | `components/threejs/ThreeJSViewport.tsx` | OrbitControls |
+| 視点プリセット | 6方向 + ISO | 基本実装のみ | 🔄 | `components/cad/CameraControls.tsx` | UI改善必要 |
+| Fit to Object | 自動フィット | 基本実装のみ | 🔄 | `components/cad/CameraControls.tsx` | アニメーション要追加 |
+| カメラアニメーション | スムーズ移動 | スムーズ移動 | ❌ | 未実装 | フェーズ2で実装 |
 
-| 機能 | 元のCascadeStudio | 現在の実装 | 実装ファイル | 状態 | 備考 |
-|------|------------------|-----------|-------------|------|------|
-| メッシュ表示 | BufferGeometry | BufferGeometry | `components/threejs/CascadeViewport.tsx` | ✅ | |
-| エッジ表示 | LineSegments | LineSegments | 同上 | ✅ | |
-| マテリアル | MatCap | MeshMatcapMaterial | `components/threejs/materials/MatCapMaterial.tsx` | ✅ | MatCapマテリアル実装済み |
-| ワイヤーフレーム | 切り替え可能 | 切り替え可能 | 同上 | ✅ | |
-| グリッド表示 | GridHelper | Grid（drei） | 同上 | ✅ | |
-| 地面表示 | PlaneGeometry | PlaneGeometry | 同上 | ✅ | |
+---
 
-### インタラクション
+## 3. CAD機能
 
-| 機能 | 元のCascadeStudio | 現在の実装 | 実装ファイル | 状態 | 備考 |
-|------|------------------|-----------|-------------|------|------|
-| マウスホバー | レイキャスティング | 実装済み | `components/threejs/ThreeJSViewport.tsx` | ✅ | React Three Fiber対応 |
-| フェイスハイライト | 色変更 | 実装済み | 同上 | ✅ | マテリアル変更によるハイライト実装済み |
-| エッジハイライト | 色変更 | 実装済み | 同上 | ✅ | エッジハイライト機能実装済み |
-| インデックス表示 | ツールチップ | ツールチップ | `components/threejs/HoverTooltip.tsx` | ✅ | マウス位置に追従するツールチップ実装済み |
-| オブジェクト選択 | 未実装 | 基本実装 | 同上 | 🔄 | オブジェクトUUID取得実装済み |
+| 機能 | 元のCascadeStudio | 現在の実装 | 状態 | 実装ファイル | 備考 |
+|------|-------------------|------------|------|--------------|------|
 
-### トランスフォーム機能
+### 3.1 CADカーネル
+| OpenCascade.js | v1.1.1 | v1.1.1 | ✅ | `public/opencascade/` | 同バージョン |
+| WebWorker実行 | CADワーカー | CADワーカー | ✅ | `public/workers/cadWorker.js` | 非同期処理 |
+| 基本形状生成 | Box、Sphere等 | Box、Sphere等 | ✅ | `lib/cad/StandardLibrary.ts` | TypeScript化 |
 
-| 機能 | 元のCascadeStudio | 現在の実装 | 実装ファイル | 状態 | 備考 |
-|------|------------------|-----------|-------------|------|------|
-| ギズモ表示 | TransformControls | 未実装 | なし | ❌ | CascadeViewHandles.js移植が必要 |
-| 移動操作 | translate モード | 未実装 | なし | ❌ | |
-| 回転操作 | rotate モード | 未実装 | なし | ❌ | |
-| スケール操作 | scale モード | 未実装 | なし | ❌ | |
-| ギズモ切り替え | ローカル/ワールド空間 | 未実装 | なし | ❌ | |
+### 3.2 標準ライブラリ
+| Boolean演算 | Union、Intersect等 | Union、Intersect等 | 🔄 | `lib/cad/StandardLibrary.ts` | 動作確認要 |
+| 変形操作 | Transform、Rotate等 | Transform、Rotate等 | 🔄 | `lib/cad/StandardLibrary.ts` | 動作確認要 |
+| 高度な形状 | Loft、Sweep等 | Loft、Sweep等 | 🔄 | 要詳細確認 | フェーズ4で検証 |
 
-## 🔧 CADワーカー機能
+### 3.3 ファイルI/O
+| STEPインポート | STEP読み込み | STEP読み込み | 🔄 | `public/workers/cadWorker.js` | エラーハンドリング要改善 |
+| STEPエクスポート | STEP出力 | STEP出力 | 🔄 | `public/workers/cadWorker.js` | 品質確認要 |
+| IGESサポート | IGES対応 | IGES対応 | 🔄 | 要詳細確認 | フェーズ4で検証 |
+| STLエクスポート | STL出力 | STL出力 | 🔄 | `public/workers/cadWorker.js` | 品質向上要 |
+| OBJエクスポート | OBJ出力 | OBJ出力 | 🔄 | `public/workers/cadWorker.js` | 品質向上要 |
 
-| 機能 | 元のCascadeStudio | 現在の実装 | 実装ファイル | 状態 | 備考 |
-|------|------------------|-----------|-------------|------|------|
-| WebWorker | CascadeStudioMainWorker.js | cadWorker.js | `public/workers/cadWorker.js` | ✅ | |
-| OpenCascade.js | 統合済み | 統合済み | 同上 | ✅ | |
-| コード評価 | eval実行 | eval実行 | 同上 | ✅ | |
-| 形状メッシュ化 | ShapeToMesh | 基本実装 | 同上 | 🔄 | 改善が必要 |
-| エラーハンドリング | カスタムエラー | 基本実装 | `hooks/useCADWorker.ts` | 🔄 | 詳細化が必要 |
-| プログレス通知 | Progress メッセージ | 基本実装 | 同上 | 🔄 | UI表示の改善が必要 |
+---
 
-### CAD標準ライブラリ
+## 4. エディター機能
 
-| 機能 | 元のCascadeStudio | 現在の実装 | 実装ファイル | 状態 | 備考 |
-|------|------------------|-----------|-------------|------|------|
-| 基本図形生成 | Box, Sphere, Cylinder等 | 実装済み | `public/workers/cadWorker.js` | ✅ | |
-| ブール演算 | Union, Difference等 | 実装済み | 同上 | ✅ | |
-| 変換操作 | Translate, Rotate等 | 実装済み | 同上 | ✅ | OpenCascade.js v1.1.1ではgp_Pnt_1コンストラクタにパラメータを渡せない問題を修正済み |
-| フィレット/面取り | FilletEdges, ChamferEdges | 要確認 | 同上 | 🔄 | 動作確認が必要 |
-| テキスト3D | Text3D関数 | 要確認 | 同上 | 🔄 | フォント対応の確認が必要 |
+| 機能 | 元のCascadeStudio | 現在の実装 | 状態 | 実装ファイル | 備考 |
+|------|-------------------|------------|------|--------------|------|
 
-### OpenCascade.js v1.1.1固有の問題点
+### 4.1 Monaco Editor
+| コードエディター | Monaco Editor | @monaco-editor/react | ✅ | `components/cad/MonacoCodeEditor.tsx` | モダン実装 |
+| TypeScript対応 | TypeScript | TypeScript | ✅ | `components/cad/MonacoCodeEditor.tsx` | IntelliSense動作 |
+| シンタックスハイライト | 対応 | 対応 | ✅ | `components/cad/MonacoCodeEditor.tsx` | 正常動作 |
+| オートコンプリート | 対応 | 対応 | ✅ | `components/cad/MonacoCodeEditor.tsx` | 型定義ベース |
 
-| 問題 | 元のCascadeStudio | 現在の実装 | 実装ファイル | 状態 | 備考 |
-|------|------------------|-----------|-------------|------|------|
-| gp_Pntコンストラクタ | パラメータ指定可能 | パラメータなし構築 | `public/workers/cadWorker.js` | ✅ | v1.1.1ではgp_Pnt_1(x,y,z)形式で直接構築できないため、インスタンス化後に座標設定する方式に修正 |
-| gp_Dirコンストラクタ | 直接構築可能 | 安全な構築方法 | 同上 | ✅ | パラメータ渡し方を修正 |
-| コンストラクタ互換性 | - | ヘルパー関数 | 同上 | ✅ | createPoint()とcreateDirection()関数を追加 |
+### 4.2 エディター操作
+| コード評価 | F5、Ctrl+Enter | F5、Ctrl+Enter | ✅ | `components/cad/MonacoCodeEditor.tsx` | キーバインド実装 |
+| エラー表示 | エディター内表示 | 基本エラー表示 | 🔄 | 要改善 | フェーズ3で強化 |
+| 行番号表示 | 対応 | 対応 | ✅ | `components/cad/MonacoCodeEditor.tsx` | 標準機能 |
+| コードフォーマット | 対応 | 対応 | ✅ | `components/cad/MonacoCodeEditor.tsx` | Prettier統合 |
 
-## 📁 ファイルI/O機能
+---
 
-| 機能 | 元のCascadeStudio | 現在の実装 | 実装ファイル | 状態 | 備考 |
-|------|------------------|-----------|-------------|------|------|
-| STEPインポート | ✅ | 基本実装 | `public/workers/cadWorker.js` | 🔄 | 機能確認が必要 |
-| IGESインポート | ✅ | 基本実装 | 同上 | 🔄 | 機能確認が必要 |
-| STLインポート | ✅ (ASCII) | 基本実装 | 同上 | 🔄 | バイナリ対応要確認 |
-| STEPエクスポート | ✅ | 基本実装 | 同上 | 🔄 | 機能確認が必要 |
-| STLエクスポート | ✅ (ASCII) | 基本実装 | 同上 | 🔄 | Three.js STLExporter使用 |
-| OBJエクスポート | ✅ | 基本実装 | 同上 | 🔄 | Three.js OBJExporter使用 |
-| ファイル管理 | 外部ファイルキャッシュ | 未実装 | なし | ❌ | clearExternalFiles等 |
+## 5. GUI機能
 
-## 💾 プロジェクト管理
+| 機能 | 元のCascadeStudio | 現在の実装 | 状態 | 実装ファイル | 備考 |
+|------|-------------------|------------|------|--------------|------|
 
-| 機能 | 元のCascadeStudio | 現在の実装 | 実装ファイル | 状態 | 備考 |
-|------|------------------|-----------|-------------|------|------|
-| プロジェクト保存 | JSON形式 | JSON形式 | `components/layout/CascadeNavigation.tsx` | ✅ | |
-| プロジェクト読み込み | ファイル選択 | ファイル選択 | 同上 | ✅ | |
-| URL状態保存 | ハッシュ圧縮 | ハッシュ保存 | `lib/layout/urlStateManager.ts` | ✅ | 圧縮機能は別実装 |
-| 自動保存 | beforeunload | beforeunload | `components/layout/CascadeStudioLayout.tsx` | ✅ | |
+### 5.1 Tweakpane統合
+| 動的GUI生成 | Tweakpane | Tweakpane 4.0.3 | ✅ | `components/gui/TweakpaneGUI.tsx` | React統合 |
+| スライダー | 数値スライダー | 数値スライダー | ✅ | `components/gui/CADSlider.tsx` | カスタムコンポーネント |
+| チェックボックス | ブール値切り替え | ブール値切り替え | ✅ | `components/gui/CADCheckbox.tsx` | カスタムコンポーネント |
+| GUI状態保存 | URLハッシュ連動 | URLハッシュ連動 | ✅ | `hooks/useGUIState.ts` | React Hook |
 
-## 🎯 ユーザーインターフェース
+### 5.2 GUI操作
+| リアルタイム更新 | 値変更時更新 | 値変更時更新 | ✅ | `hooks/useGUIState.ts` | イベント連動 |
+| GUI状態復元 | ページリロード対応 | ページリロード対応 | ✅ | `hooks/useGUIState.ts` | 自動復元 |
 
-| 機能 | 元のCascadeStudio | 現在の実装 | 実装ファイル | 状態 | 備考 |
-|------|------------------|-----------|-------------|------|------|
-| トップナビゲーション | 固定ナビバー | CascadeNavigation | `components/layout/CascadeNavigation.tsx` | ✅ | Tailwind CSS使用 |
-| レスポンシブ対応 | 基本対応 | 改善済み | 複数ファイル | ✅ | モバイル対応向上 |
-| テーマ | ダークテーマ | ダークテーマ | CSS | ✅ | |
-| ローディング表示 | 基本表示 | 改善された表示 | 複数ファイル | ✅ | |
+---
 
-### キーボードショートカット
+## 6. UI/UX機能
 
-| 機能 | 元のCascadeStudio | 現在の実装 | 実装ファイル | 状態 | 備考 |
-|------|------------------|-----------|-------------|------|------|
-| F5でリフレッシュ | ✅ | ❌ | なし | ❌ | 要実装 |
-| Ctrl+S で保存 | ✅ | ❌ | なし | ❌ | 要実装 |
-| エディターショートカット | Monaco標準 | Monaco標準 | Monaco Editor | ✅ | |
+| 機能 | 元のCascadeStudio | 現在の実装 | 状態 | 実装ファイル | 備考 |
+|------|-------------------|------------|------|--------------|------|
 
-## 📊 コンソール機能
+### 6.1 キーボードショートカット
+| F5リフレッシュ | F5でコード実行 | F5でコード実行 | ✅ | `components/cad/MonacoCodeEditor.tsx` | エディター内のみ |
+| Ctrl+S保存 | プロジェクト保存 | プロジェクト保存 | ❌ | 未実装 | フェーズ3で実装 |
+| グローバルショートカット | 各種ショートカット | 各種ショートカット | ❌ | 未実装 | フェーズ3で実装 |
 
-| 機能 | 元のCascadeStudio | 現在の実装 | 実装ファイル | 状態 | 備考 |
-|------|------------------|-----------|-------------|------|------|
-| ログ表示 | console.logオーバーライド | 専用コンソール | `components/layout/CascadeConsole.tsx` | ✅ | 改善された実装 |
-| エラー表示 | 赤色表示 | 色分け表示 | 同上 | ✅ | |
-| プログレス表示 | テキスト更新 | メッセージ表示 | 同上 | 🔄 | プログレスバー追加予定 |
-| 自動スクロール | ✅ | ✅ | 同上 | ✅ | |
-| コンソールクリア | 未実装 | ✅ | 同上 | ✅ | 改善点 |
+### 6.2 プログレス・エラー表示
+| 進行状況表示 | コンソール出力 | 基本ログ表示 | 🔄 | `components/layout/CascadeConsole.tsx` | 視覚的改善要 |
+| エラーハンドリング | エラーメッセージ | 基本エラー表示 | 🔄 | 要改善 | フェーズ3で強化 |
+| 操作キャンセル | ❌ | ❌ | ❌ | 未実装 | フェーズ3で実装 |
 
-## 🔧 開発・デバッグ機能
+### 6.3 ヘルプ・ガイド
+| ヘルプシステム | ❌ | ❌ | ❌ | 未実装 | フェーズ3で実装 |
+| 操作ガイド | ❌ | ❌ | ❌ | 未実装 | フェーズ3で実装 |
+| ツールチップ強化 | 基本ツールチップ | 基本ツールチップ | 🔄 | `components/threejs/HoverTooltip.tsx` | 情報拡充要 |
 
-| 機能 | 元のCascadeStudio | 現在の実装 | 実装ファイル | 状態 | 備考 |
-|------|------------------|-----------|-------------|------|------|
-| ソースマップ | 基本対応 | TypeScript対応 | Next.js設定 | ✅ | |
-| ホットリロード | 手動リロード | Next.js HMR | Next.js | ✅ | 開発体験向上 |
-| 型チェック | 基本対応 | 厳密な型チェック | TypeScript | ✅ | |
-| Linting | 未実装 | ESLint設定 | `.eslintrc.json` | ✅ | |
-| テスト | 未実装 | Playwright | `tests/` | ✅ | E2Eテスト実装 |
+---
 
-## 📱 Progressive Web App
+## 7. PWA機能
 
-| 機能 | 元のCascadeStudio | 現在の実装 | 実装ファイル | 状態 | 備考 |
-|------|------------------|-----------|-------------|------|------|
-| Service Worker | ✅ | ❌ | なし | ❌ | フェーズ5で実装 |
-| Web App Manifest | ✅ | ❌ | なし | ❌ | フェーズ5で実装 |
-| オフライン対応 | ✅ | ❌ | なし | ❌ | キャッシュ戦略の実装が必要 |
-| インストール促進 | ✅ | ❌ | なし | ❌ | PWA機能実装時に追加 |
-| アイコン | ✅ | ❌ | なし | ❌ | アプリアイコンの作成が必要 |
+| 機能 | 元のCascadeStudio | 現在の実装 | 状態 | 実装ファイル | 備考 |
+|------|-------------------|------------|------|--------------|------|
+
+### 7.1 Service Worker
+| オフライン対応 | Service Worker | Service Worker | ❌ | 未実装（Next.js版） | フェーズ5で実装 |
+| キャッシュ戦略 | ファイルキャッシュ | ファイルキャッシュ | ❌ | 未実装（Next.js版） | フェーズ5で実装 |
+| アップデート通知 | ❌ | ❌ | ❌ | 未実装 | フェーズ5で実装 |
+
+### 7.2 PWAマニフェスト
+| インストール対応 | PWAマニフェスト | PWAマニフェスト | ❌ | 未実装（Next.js版） | フェーズ5で実装 |
+| アプリアイコン | アイコン設定 | アイコン設定 | ❌ | 未実装（Next.js版） | フェーズ5で実装 |
+| インストール促進 | ❌ | ❌ | ❌ | 未実装 | フェーズ5で実装 |
+
+---
+
+## 8. 開発・保守性機能
+
+| 機能 | 元のCascadeStudio | 現在の実装 | 状態 | 実装ファイル | 備考 |
+|------|-------------------|------------|------|--------------|------|
+
+### 8.1 型安全性
+| TypeScript | 一部対応 | 完全対応 | 🆕 | 全ファイル | strict mode |
+| 型定義 | 基本型のみ | 包括的型定義 | 🆕 | `types/` | カスタム型多数 |
+| コンパイル時チェック | ❌ | 完全対応 | 🆕 | `tsconfig.json` | エラー事前検出 |
+
+### 8.2 テスト
+| E2Eテスト | ❌ | Playwright | 🆕 | `tests/` | 自動テスト |
+| コンポーネントテスト | ❌ | 部分対応 | 🆕 | 要拡充 | フェーズごとに追加 |
+| CI/CD | ❌ | GitHub Actions準備 | 🆕 | `.github/workflows/` | 自動化準備完了 |
+
+### 8.3 開発体験
+| ホットリロード | ❌ | 完全対応 | 🆕 | Next.js標準 | 開発効率向上 |
+| ESLint | ❌ | 完全対応 | 🆕 | `.eslintrc.json` | コード品質保証 |
+| Prettier | ❌ | 完全対応 | 🆕 | 設定済み | コードフォーマット |
+
+---
 
 ## 📊 実装状況サマリー
 
-### 全体的な実装率
-
-- **✅ 完全実装**: 72%
-- **🔄 部分実装**: 20%
-- **❌ 未実装**: 8%
-
 ### カテゴリ別実装状況
 
-| カテゴリ | 実装率 | 重要度 | 優先度 |
-|---------|-------|-------|-------|
-| アーキテクチャ | 85% | 高 | - |
-| エディター機能 | 90% | 高 | 低 |
-| GUI機能 | 100% | 高 | - |
-| 3Dビューポート | 90% | 最高 | 高 |
-| CADワーカー | 80% | 高 | 中 |
-| ファイルI/O | 50% | 中 | 中 |
-| UI/UX | 75% | 中 | 低 |
-| PWA機能 | 0% | 低 | 最低 |
+| カテゴリ | 完全実装 | 部分実装 | 未実装 | 合計 | 完了率 |
+|----------|----------|----------|--------|------|--------|
+| 基本アーキテクチャ | 3 | 0 | 0 | 3 | **100%** |
+| 3Dビューポート | 8 | 3 | 4 | 15 | **53%** |
+| CAD機能 | 3 | 6 | 0 | 9 | **67%** |
+| エディター | 6 | 1 | 0 | 7 | **86%** |
+| GUI機能 | 5 | 0 | 0 | 5 | **100%** |
+| UI/UX | 1 | 2 | 6 | 9 | **11%** |
+| PWA機能 | 0 | 0 | 5 | 5 | **0%** |
+| 開発・保守性 | 7 | 1 | 0 | 8 | **88%** |
 
-### 最優先実装項目
+### 全体実装状況
+- **完全実装**: 33機能 (53%)
+- **部分実装**: 13機能 (21%)
+- **未実装**: 15機能 (24%)
+- **新機能**: 9機能（元にない改善）
 
-1. **トランスフォームハンドル** (ギズモ)
-2. **ファイルI/O機能の完成**
-3. **キーボードショートカット**
+---
 
-この比較表に基づいて、優先度の高い未実装機能から順次実装を進めることで、元のCascadeStudioと完全に同等の機能を実現できます。 
+## 🎯 優先度別実装計画
+
+### 🔴 最高優先度（フェーズ2）
+1. **TransformControls（ギズモ操作）** - 3D操作の中核機能
+2. **オブジェクト選択機能** - クリック選択・マルチセレクション
+3. **カメラアニメーション** - スムーズな視点変更
+
+### 🟡 中優先度（フェーズ3-4）
+1. **キーボードショートカット** - ユーザビリティ向上
+2. **プログレス・エラー表示強化** - ユーザー体験改善
+3. **ファイルI/O品質向上** - CADファイル処理の完全性
+
+### 🟢 低優先度（フェーズ5）
+1. **PWA機能** - オフライン対応
+2. **ヘルプシステム** - ユーザーサポート機能
+
+---
+
+## 🚀 次のアクション
+
+### 即座に開始すべき実装
+1. `components/threejs/TransformGizmo.tsx` - TransformControls実装
+2. `components/threejs/ObjectSelector.tsx` - オブジェクト選択
+3. `tests/transform-controls.spec.ts` - E2Eテスト
+
+### 技術的準備事項
+- `@react-three/drei` TransformControlsの調査
+- 元のCascadeStudioの`CascadeViewHandles.js`詳細分析
+- OrbitControlsとTransformControlsの競合解決策検討
+
+この機能比較表v2.0により、現在の実装状況が正確に把握でき、今後の開発方針を明確に決定できます。 

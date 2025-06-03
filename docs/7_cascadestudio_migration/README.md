@@ -1,16 +1,15 @@
-# CascadeStudio 完全移行計画
+# CascadeStudio 完全移行計画 v2.0
 
 このフォルダには、元のCascadeStudioから現在のNext.js + TypeScript + React Three Fiberアプリケーションへの完全移行に関する詳細な計画とドキュメントが含まれています。
 
 ## 📁 ファイル構成
 
 ### 📋 [migration_plan.md](./migration_plan.md)
-**完全移行計画書**
-- プロジェクト概要と目標
-- 現在の実装状況の評価
-- 未実装機能の詳細分析
-- 5つのフェーズに分かれた実装計画
-- 技術的注意事項とベストプラクティス
+**完全移行計画書 v2.0** ⭐ **最新版**
+- 2024年12月時点での正確な実装状況評価
+- 現実的な未実装機能の詳細分析
+- 5つのフェーズに分かれた実装計画（フェーズ2から開始）
+- 技術的制約とベストプラクティス
 
 ### 📊 [feature_comparison.md](./feature_comparison.md)
 **詳細機能比較表**
@@ -26,132 +25,206 @@
 - コード例とサンプル実装
 - テスト・品質管理の指針
 
-## 🎯 プロジェクトの目標
+### 🎯 [transform-handles-task.md](./transform-handles-task.md)
+**TransformControls実装専用ガイド**
+- フェーズ2最重要機能の詳細実装手順
+- コード例と具体的な実装方法
+- テスト戦略と品質確保手順
 
-元のCascadeStudioの全機能を**完全に再現**し、さらに以下の改善を実現します：
+## 🎯 プロジェクトの現状と目標
 
-### ✅ 完全機能再現
-- 3Dビューポートのインタラクション（ホバーハイライト、ギズモ）
-- CAD機能の完全移植
-- ファイルI/O機能の完全実装
-- PWA対応とオフライン機能
+### 📈 実装状況サマリー（2024年12月時点）
 
-### 🚀 技術的改善
-- **モダンな技術スタック**: Next.js 14 + TypeScript + React Three Fiber
-- **型安全性**: 完全なTypeScript型定義
-- **パフォーマンス**: 最適化されたレンダリングとメモリ使用量
-- **開発体験**: ホットリロード、Linting、自動テスト
+#### 全体進捗
+- **✅ フェーズ1完了**: 100%（基本3D機能完成）
+- **❌ フェーズ2未開始**: 0%（3D操作機能）
+- **🔄 部分実装**: ファイルI/O、CAD標準ライブラリ
+- **❌ 未実装**: UI/UX改善、PWA機能
 
-### 📱 UX/UI改善
-- **レスポンシブデザイン**: モバイル対応の向上
-- **アクセシビリティ**: WCAG準拠
-- **ユーザビリティ**: 改善されたナビゲーションとヘルプ機能
+#### ✅ 完全実装済み機能
+- **3Dビューポート基盤**: React Three Fiber + Three.js
+- **ホバーハイライト**: フェイス/エッジ検出とツールチップ表示
+- **MatCapマテリアル**: 元のCascadeStudioと同等の見た目
+- **ライティング・フォグ**: 環境光、半球光、平行光源、動的フォグ
+- **Monaco Editor**: `@monaco-editor/react`でモダン実装
+- **CADワーカー**: OpenCascade.js v1.1.1基盤
+- **Golden Layout**: ドッキング可能ウィンドウシステム
+- **状態管理**: URLハッシュ保存・復元機能
 
-## 📈 実装状況サマリー
+#### ❌ 最重要未実装機能
+1. **TransformControls（ギズモ）**: 3Dオブジェクトの移動・回転・スケール操作
+2. **オブジェクト選択**: クリック選択とマルチセレクション
+3. **カメラコントロール高度機能**: 視点プリセット、フィット機能
+4. **キーボードショートカット**: F5リフレッシュ、Ctrl+S保存等
+5. **PWA機能**: Service Worker、マニフェスト
 
-### 全体進捗
-- **✅ 完全実装**: 72%
-- **🔄 部分実装**: 20%
-- **❌ 未実装**: 8%
+### 🚀 次のステップ：フェーズ2実装
 
-### 最近の実装成果
-- **MatCapマテリアル**: 元のCascadeStudioと同等の見た目を再現するMatCapマテリアルを実装
-- **ライティング設定**: 環境光、半球光、平行光源の適切な設定と地面へのシャドウ適用
-- **フォグ機能**: バウンディングボックスに基づく動的フォグ距離計算の実装
-- **ホバーハイライト機能**: フェイス/エッジのハイライト表示機能を完全実装
-- **ツールチップ表示**: マウス位置に追従するツールチップ表示機能を実装
-- **OpenCascade.js互換性**: v1.1.1でのgp_Pntコンストラクタ問題を修正し、互換性を確保
-- **Monaco Editor対応**: `@monaco-editor/react`を使用したモダンな実装への移行、FileAccessImplエラーを根本解決
+**最優先タスク**: `components/threejs/TransformGizmo.tsx`の作成
 
-### 直近の課題
-1. **テスト安定性**: OpenCascade.jsの読み込み時間とテストタイムアウトの対応
-2. **パフォーマンス向上**: レイキャスティング処理の最適化
-3. **トランスフォームハンドル**: ギズモによる3Dオブジェクト操作機能の実装
+```bash
+# 開発開始コマンド
+npm run dev
 
-### 最優先項目（フェーズ2）
-1. **トランスフォームハンドル** - ギズモによる操作
-2. **オブジェクト選択機能** - 3Dオブジェクトの選択とトランスフォーム
-3. **カメラコントロールの改善** - 視点プリセットと操作性向上
+# 最初に作成するファイル
+# components/threejs/TransformGizmo.tsx
+# components/threejs/ObjectSelector.tsx
+# components/threejs/TransformControlsUI.tsx
+```
 
-## 🗓️ 実装スケジュール
+## 🗓️ 実装スケジュール v2.0
 
 | フェーズ | 期間 | 主要機能 | 優先度 | 状態 |
 |---------|------|---------|--------|------|
-| **フェーズ1** | 2週間 | 基本3D機能完成 | 🔴 最高 | ✅ 100% |
-| **フェーズ2** | 2週間 | 高度な3D機能 | 🔴 高 | 🔄 開始 |
-| **フェーズ3** | 3週間 | CAD機能完成 | 🟡 中 | ⏳ 待機中 |
-| **フェーズ4** | 1週間 | UI/UX機能 | 🟡 中 | ⏳ 待機中 |
-| **フェーズ5** | 1週間 | PWA機能 | 🟢 低 | ⏳ 待機中 |
+| **フェーズ1** | ✅完了 | 基本3D機能完成 | 🔴 最高 | ✅ 100% |
+| **フェーズ2** | 3週間 | 3D操作機能実装 | 🔴 最高 | ❌ 未開始 |
+| **フェーズ3** | 2週間 | UI/UX機能実装 | 🟡 中 | ⏳ 待機中 |
+| **フェーズ4** | 2週間 | ファイルI/O完全実装 | 🟡 中 | ⏳ 待機中 |
+| **フェーズ5** | 1週間 | PWA機能実装 | 🟢 低 | ⏳ 待機中 |
 
-**総期間**: 9週間
+**総期間**: 8週間（フェーズ2から開始）
 
-## 🛠️ 技術スタック
+### フェーズ2詳細スケジュール
+- **Week 1-1.5**: TransformControls実装（ギズモ操作）
+- **Week 2**: カメラコントロール高度機能
+- **Week 3**: 統合テスト・品質確保
+
+## 🛠️ 技術スタック（確認済み）
 
 ### フロントエンド
-- **フレームワーク**: Next.js 14 (App Router)
-- **言語**: TypeScript
-- **3Dライブラリ**: React Three Fiber + Three.js
+- **フレームワーク**: Next.js 14.2.5 (App Router)
+- **言語**: TypeScript 5.8.3 (strict mode)
+- **3Dライブラリ**: React Three Fiber 8.15.12 + Three.js 0.160.0
+- **3D操作**: @react-three/drei 9.92.7
 - **UIフレームワーク**: TailwindCSS
-- **レイアウト**: Golden Layout
+- **レイアウト**: Golden Layout 2.6.0
 
 ### CADエンジン
-- **CADカーネル**: OpenCascade.js
+- **CADカーネル**: OpenCascade.js 1.1.1
 - **実行環境**: WebWorker
-- **エディター**: Monaco Editor
+- **エディター**: @monaco-editor/react 4.7.0
 
 ### 開発ツール
-- **テスト**: Playwright (E2E)
+- **テスト**: Playwright 1.52.0 (E2E)
 - **Linting**: ESLint + Prettier
 - **型チェック**: TypeScript strict mode
 
-## 📚 参考資料
+## 📚 実装参考資料
 
 ### 元のCascadeStudio
-- **ソースコード**: `docs/template/`
 - **メインファイル**: `docs/template/js/MainPage/CascadeMain.js`
 - **3Dビューポート**: `docs/template/js/MainPage/CascadeView.js`
+- **ハンドル機能**: `docs/template/js/MainPage/CascadeViewHandles.js` ⭐
 - **CADワーカー**: `docs/template/js/CADWorker/`
+- **PWA機能**: `docs/template/service-worker.js`, `docs/template/manifest.webmanifest`
 
 ### 現在の実装
 - **メインアプリ**: `app/page.tsx`
 - **レイアウト**: `components/layout/CascadeStudioLayout.tsx`
-- **3Dビューポート**: `components/threejs/ThreeJSViewport.tsx`
+- **3Dビューポート**: `components/threejs/ThreeJSViewport.tsx` ⭐
+- **MatCapマテリアル**: `components/threejs/materials/MatCapMaterial.tsx`
 - **CADワーカー**: `public/workers/cadWorker.js`
 
-## 🧪 テスト
+## 🧪 テスト状況
 
-### E2Eテスト
-- **基本機能テスト**: `tests/raycasting-simple.spec.ts`
-- **デバッグテスト**: `tests/debug-raycasting.spec.ts`
-- **完全テスト**: `tests/raycasting.spec.ts`
+### E2Eテスト（実装済み）
+- **基本機能**: `tests/raycasting-simple.spec.ts`
+- **ホバーハイライト**: `tests/raycasting.spec.ts`
+- **デバッグ**: `tests/debug-raycasting.spec.ts`
 
-### テスト注意事項
-- OpenCascade.jsの読み込みに時間がかかるため、タイムアウト設定を調整
-- エラーハンドリングを強化し、OpenCascadeの読み込みエラーでもテストが失敗しないように改善
-- テスト環境では3Dビューポートが表示されない問題があり、条件付きテストの実装が必要
+### 必要な新規テスト
+- **TransformControls**: `tests/transform-controls.spec.ts`（フェーズ2で作成）
+- **カメラ操作**: `tests/camera-controls.spec.ts`（フェーズ2で作成）
+- **統合テスト**: `tests/integration.spec.ts`（フェーズ2で作成）
 
-## 🚀 開始方法
+### テスト実行
+```bash
+# 全テスト実行
+npm run test
 
-1. **現状確認**: [feature_comparison.md](./feature_comparison.md)で実装状況を確認
-2. **計画理解**: [migration_plan.md](./migration_plan.md)で全体計画を把握
-3. **タスク開始**: [implementation_tasks.md](./implementation_tasks.md)からフェーズ1の残りのタスクを開始
+# ヘッド付きテスト（デバッグ用）
+npm run test:headed
 
-## 📞 サポート
+# UIモード
+npm run test:ui
+```
 
-実装中に疑問や問題が発生した場合：
+## 🚨 重要な技術的注意事項
 
-1. **機能比較表**で元の実装を確認
-2. **タスクリスト**の実装例を参照
-3. **元のソースコード**(`docs/template/`)を詳細確認
+### 1. OpenCascade.js v1.1.1の制約
+- **gp_Pntコンストラクタ問題**: 解決済み（パラメータ分離方式）
+- **メモリ管理**: WebWorkerでの適切な処理実装済み
+
+### 2. パフォーマンス最適化
+- **React Three Fiber**: useFrame、useMemo、useCallback適用済み
+- **レイキャスティング**: 最適化実装済み
+- **WebWorker**: 非同期処理で UI ブロッキング回避
+
+### 3. SSR対応
+- **useIsClient**: フック実装済み
+- **動的インポート**: Monaco Editor等で適用済み
+- **エラーハンドリング**: サーバーサイド考慮済み
+
+## 🎯 実装開始ガイド
+
+### 1. 現状確認
+```bash
+# プロジェクトの起動確認
+npm run dev
+
+# 既存テストの実行確認
+npm run test
+
+# TypeScript型チェック確認
+npm run type-check
+```
+
+### 2. フェーズ2開始手順
+1. **[migration_plan.md](./migration_plan.md)** でフェーズ2詳細を確認
+2. **[transform-handles-task.md](./transform-handles-task.md)** で実装手順を確認
+3. `components/threejs/TransformGizmo.tsx` から実装開始
+
+### 3. 実装優先順位
+1. 🔴 **TransformControls（ギズモ）** - 最重要
+2. 🔴 **オブジェクト選択機能** - 高
+3. 🔴 **カメラコントロール改善** - 高
+4. 🟡 **キーボードショートカット** - 中
+5. 🟡 **ファイルI/O改善** - 中
+
+## 📞 サポート・トラブルシューティング
+
+### 実装中の問題
+1. **技術仕様確認**: `docs/template/`の元実装を参照
+2. **実装例確認**: [implementation_tasks.md](./implementation_tasks.md)のコード例
+3. **型定義問題**: `@types/three`と`@react-three/fiber`の型定義確認
+
+### よくある問題
+- **OrbitControlsとTransformControlsの競合**: イベント制御で解決
+- **レイキャスティング精度**: Three.jsレイキャスター設定調整
+- **OpenCascade.js読み込み**: WebWorker初期化タイミング調整
 
 ## 🎉 完成イメージ
 
-完成時には以下が実現されます：
+フェーズ2完了時：
+- ✅ 3Dオブジェクトの移動・回転・スケールが可能
+- ✅ クリック選択とマルチセレクション
+- ✅ 6方向視点切り替え + ISO視点
+- ✅ Fit to Object機能
+- ✅ 元のCascadeStudioと同等の操作感
 
+最終完成時：
 - ✅ 元のCascadeStudioと100%同等の機能
 - ✅ モダンなTypeScript + React実装
 - ✅ 改善されたパフォーマンスとUX
 - ✅ PWA対応とオフライン機能
 - ✅ 包括的なテスト範囲
+- ✅ 型安全で保守性の高いコードベース
 
-この計画に従って実装を進めることで、元のCascadeStudioの魅力を保ちながら、技術的に大幅に改善されたCADアプリケーションを完成させることができます。 
+この計画書v2.0に従って実装を進めることで、元のCascadeStudioの魅力を保ちながら、技術的に大幅に改善されたCADアプリケーションを完成させることができます。
+
+---
+
+## 🔄 更新履歴
+
+- **v2.0 (2024年12月)**: 実装状況の正確な調査に基づく計画書全面刷新
+- **v1.0**: 初版計画書作成 
