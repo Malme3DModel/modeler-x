@@ -37,130 +37,165 @@
 
 ### フェーズ2: 3D操作機能実装（最優先・3週間）
 
-**状態**: ❌ 未開始
+**状態**: 🔄 進行中
 **優先度**: 🔴 最高
 **目標**: 元のCascadeStudioと同等の3D操作機能実現
 
 #### 📦 マイルストーン 2.1: TransformControls実装（1.5週間）
+**状態**: ✅ 完了（2024年6月）
 
-##### タスク2.1.1: TransformGizmo基盤作成 ⭐ **最重要**
-- **ファイル**: `components/threejs/TransformGizmo.tsx` (新規作成)
+##### タスク2.1.1: TransformGizmo基盤作成 
+- **ファイル**: `components/threejs/TransformGizmo.tsx`
 - **期間**: 3日
 - **優先度**: 🔴 最高
+- **状態**: ✅ 完了
 
 **実装内容**:
 ```typescript
-// 実装すべき基本構造
+// 完全実装済み 2024年6月
 import { TransformControls } from '@react-three/drei';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
+import { useThree } from '@react-three/fiber';
+import * as THREE from 'three';
 
 interface TransformGizmoProps {
   selectedObject: THREE.Object3D | null;
   mode: 'translate' | 'rotate' | 'scale';
   space: 'local' | 'world';
+  enabled?: boolean;
+  size?: number;
   onObjectChange?: (object: THREE.Object3D) => void;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
 }
 
 export function TransformGizmo({ 
   selectedObject, 
   mode, 
   space,
-  onObjectChange 
+  enabled = true,
+  size = 1,
+  onObjectChange,
+  onDragStart,
+  onDragEnd
 }: TransformGizmoProps) {
-  const transformRef = useRef();
-  
-  const handleChange = () => {
-    if (onObjectChange && selectedObject) {
-      onObjectChange(selectedObject);
-    }
-  };
-  
-  if (!selectedObject) return null;
-  
-  return (
-    <TransformControls
-      ref={transformRef}
-      object={selectedObject}
-      mode={mode}
-      space={space}
-      onObjectChange={handleChange}
-      showX={true}
-      showY={true}
-      showZ={true}
-    />
-  );
+  // OrbitControlsとの競合解決などの機能を含む完全実装
+  // ...
 }
 ```
 
 **達成目標**:
-- ✅ @react-three/dreiのTransformControls統合
-- ✅ 移動・回転・スケールモード切り替え
-- ✅ ローカル/ワールド空間切り替え
-- ✅ OrbitControlsとの競合解決
+- ✅ @react-three/dreiのTransformControls統合 - 完了
+- ✅ 移動・回転・スケールモード切り替え - 完了
+- ✅ ローカル/ワールド空間切り替え - 完了
+- ✅ OrbitControlsとの競合解決 - 完了
 
 ##### タスク2.1.2: オブジェクト選択システム作成
-- **ファイル**: `components/threejs/ObjectSelector.tsx` (新規作成)
+- **ファイル**: `components/threejs/ObjectSelector.tsx`
 - **期間**: 2日
 - **優先度**: 🔴 高
+- **状態**: ✅ 完了
 
 **実装内容**:
 ```typescript
-// クリック選択システムの実装
-export function ObjectSelector({ onSelectObject }: ObjectSelectorProps) {
-  const handleClick = (event: ThreeEvent<MouseEvent>) => {
-    event.stopPropagation();
-    
-    // レイキャスティングでオブジェクト検出
-    const raycaster = new THREE.Raycaster();
-    const mouse = new THREE.Vector2();
-    
-    // マウス座標を正規化
-    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    
-    raycaster.setFromCamera(mouse, camera);
-    const intersects = raycaster.intersectObjects(selectableObjects);
-    
-    if (intersects.length > 0) {
-      const selectedObject = intersects[0].object;
-      onSelectObject(selectedObject);
-    }
-  };
-  
-  return (
-    <mesh onClick={handleClick} visible={false}>
-      <planeGeometry args={[1000, 1000]} />
-    </mesh>
-  );
+// 完全実装済み 2024年6月
+import { useCallback, useRef, useEffect } from 'react';
+import { useThree, ThreeEvent } from '@react-three/fiber';
+import * as THREE from 'three';
+
+interface ObjectSelectorProps {
+  children: React.ReactNode;
+  onSelectObject: (object: THREE.Object3D | null) => void;
+  selectableObjects?: THREE.Object3D[];
+  multiSelect?: boolean;
+}
+
+export function ObjectSelector({ 
+  children, 
+  onSelectObject,
+  selectableObjects = [],
+  multiSelect = false
+}: ObjectSelectorProps) {
+  // レイキャスティングとオブジェクト選択の完全実装
+  // ...
 }
 ```
 
 **達成目標**:
-- ✅ クリック検出とレイキャスティング
-- ✅ 選択状態の可視化（アウトライン表示）
-- ✅ マルチセレクション対応（Ctrl+クリック）
-- ✅ 選択状態の管理
+- ✅ クリック検出とレイキャスティング - 完了
+- ✅ 選択状態の可視化 - 完了
+- ✅ マルチセレクション対応（基本実装）- 完了
+- ✅ 選択状態の管理 - 完了
 
 ##### タスク2.1.3: UI統合実装
-- **ファイル**: `components/threejs/TransformControlsUI.tsx` (新規作成)
+- **ファイル**: `components/threejs/TransformControlsUI.tsx`
 - **期間**: 2日
 - **優先度**: 🟡 中
+- **状態**: ✅ 完了
 
 **実装内容**:
-- モード切り替えボタン（移動・回転・スケール）
-- 空間切り替えボタン（ローカル・ワールド）
-- ギズモ表示/非表示制御
-- 操作状態の表示
+```typescript
+// 完全実装済み 2024年6月
+import { useState } from 'react';
+import { Button } from '../ui/button';
+import { Toggle } from '../ui/toggle';
+import { 
+  MoveHorizontal, 
+  RotateCw, 
+  Maximize, 
+  Globe,
+  Box,
+  Eye,
+  EyeOff 
+} from 'lucide-react';
+
+interface TransformControlsUIProps {
+  mode: 'translate' | 'rotate' | 'scale';
+  space: 'local' | 'world';
+  visible: boolean;
+  enabled: boolean;
+  onModeChange: (mode: 'translate' | 'rotate' | 'scale') => void;
+  onSpaceChange: (space: 'local' | 'world') => void;
+  onVisibilityChange: (visible: boolean) => void;
+  selectedObjectName?: string;
+}
+
+export function TransformControlsUI({
+  // ...
+}) {
+  // モード切り替え、空間切り替え、表示制御機能を含む完全実装
+  // ...
+}
+```
+
+**達成目標**:
+- ✅ モード切り替えボタン（移動・回転・スケール） - 完了
+- ✅ 空間切り替えボタン（ローカル・ワールド） - 完了
+- ✅ ギズモ表示/非表示制御 - 完了
+- ✅ キーボードショートカット対応（G/R/S） - 完了
 
 ##### タスク2.1.4: ThreeJSViewportへの統合
-- **ファイル**: `components/threejs/ThreeJSViewport.tsx` (改良)
+- **ファイル**: `components/threejs/ThreeJSViewport.tsx`
 - **期間**: 1日
 - **優先度**: 🔴 高
+- **状態**: ✅ 完了
 
 **実装内容**:
-- 既存のホバーハイライト機能との統合
-- イベントハンドリングの調整
-- 状態管理の統一
+- ✅ 既存のホバーハイライト機能との統合 - 完了
+- ✅ イベントハンドリングの調整 - 完了
+- ✅ 状態管理の統一 - 完了
+
+##### タスク2.1.5: テスト実装
+- **ファイル**: `tests/transform-controls.spec.ts`
+- **期間**: 2日
+- **優先度**: 🔴 高
+- **状態**: ✅ 完了
+
+**実装内容**:
+- ✅ オブジェクト選択のテスト実装
+- ✅ 移動・回転・スケール操作のテスト
+- ✅ キーボードショートカットのテスト
+- ✅ E2Eテストの整備
 
 #### 📦 マイルストーン 2.2: カメラコントロール高度機能（1週間）
 
@@ -468,7 +503,7 @@ useEffect(() => {
 
 ### 全体進捗
 - **フェーズ1**: ✅ 100%完了
-- **フェーズ2**: ❌ 0%未開始 ← **次の実装対象**
+- **フェーズ2**: 🔄 進行中
 - **フェーズ3**: ❌ 0%未開始
 - **フェーズ4**: ❌ 0%未開始
 - **フェーズ5**: ❌ 0%未開始

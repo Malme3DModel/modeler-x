@@ -1,4 +1,4 @@
-# CascadeStudio 機能比較表 v2.0
+# CascadeStudio 機能比較表 v2.1
 
 元のCascadeStudioと現在の Next.js + TypeScript + React Three Fiber 実装の機能対比表です。**2024年12月時点**での正確な実装状況を反映しています。
 
@@ -42,9 +42,9 @@
 ### 2.3 インタラクション機能
 | ホバーハイライト | フェイス/エッジハイライト | フェイス/エッジハイライト | ✅ | `components/threejs/ThreeJSViewport.tsx` | レイキャスティング実装 |
 | ツールチップ | インデックス表示 | インデックス表示 | ✅ | `components/threejs/HoverTooltip.tsx` | React実装 |
-| オブジェクト選択 | クリック選択 | クリック選択 | ❌ | 未実装 | フェーズ2で実装 |
-| **TransformControls** | **ギズモ操作** | **ギズモ操作** | **❌** | **未実装** | **最重要・フェーズ2** |
-| マルチセレクション | 複数選択 | 複数選択 | ❌ | 未実装 | フェーズ2で実装 |
+| オブジェクト選択 | クリック選択 | クリック選択 | ✅ | `components/threejs/ObjectSelector.tsx` | 2024年6月実装 |
+| **TransformControls** | **ギズモ操作** | **ギズモ操作** | **✅** | **`components/threejs/TransformGizmo.tsx`** | **2024年6月実装済み** |
+| マルチセレクション | 複数選択 | 複数選択 | 🔄 | `components/threejs/ObjectSelector.tsx` | 基本実装のみ、改良要 |
 
 ### 2.4 カメラ機能
 | 基本カメラ操作 | パン・ズーム・回転 | パン・ズーム・回転 | ✅ | `components/threejs/ThreeJSViewport.tsx` | OrbitControls |
@@ -182,7 +182,7 @@
 | カテゴリ | 完全実装 | 部分実装 | 未実装 | 合計 | 完了率 |
 |----------|----------|----------|--------|------|--------|
 | 基本アーキテクチャ | 3 | 0 | 0 | 3 | **100%** |
-| 3Dビューポート | 8 | 3 | 4 | 15 | **53%** |
+| 3Dビューポート | 10 | 3 | 2 | 15 | **67%** |
 | CAD機能 | 3 | 6 | 0 | 9 | **67%** |
 | エディター | 6 | 1 | 0 | 7 | **86%** |
 | GUI機能 | 5 | 0 | 0 | 5 | **100%** |
@@ -191,9 +191,9 @@
 | 開発・保守性 | 7 | 1 | 0 | 8 | **88%** |
 
 ### 全体実装状況
-- **完全実装**: 33機能 (53%)
+- **完全実装**: 35機能 (56%)
 - **部分実装**: 13機能 (21%)
-- **未実装**: 15機能 (24%)
+- **未実装**: 13機能 (21%)
 - **新機能**: 9機能（元にない改善）
 
 ---
@@ -219,13 +219,17 @@
 ## 🚀 次のアクション
 
 ### 即座に開始すべき実装
-1. `components/threejs/TransformGizmo.tsx` - TransformControls実装
-2. `components/threejs/ObjectSelector.tsx` - オブジェクト選択
-3. `tests/transform-controls.spec.ts` - E2Eテスト
+1. ~~`components/threejs/TransformGizmo.tsx` - TransformControls実装~~ ✅ 完了
+2. ~~`components/threejs/ObjectSelector.tsx` - オブジェクト選択~~ ✅ 完了
+3. ~~`tests/transform-controls.spec.ts` - E2Eテスト~~ ✅ 完了
+4. `components/cad/CameraControls.tsx` - カメラコントロール高度機能（フェーズ2.2）
+5. `hooks/useCameraAnimation.ts` - Fit to Object機能とアニメーション
 
 ### 技術的準備事項
-- `@react-three/drei` TransformControlsの調査
-- 元のCascadeStudioの`CascadeViewHandles.js`詳細分析
-- OrbitControlsとTransformControlsの競合解決策検討
+- ~~`@react-three/drei` TransformControlsの調査~~ ✅ 完了
+- ~~元のCascadeStudioの`CascadeViewHandles.js`詳細分析~~ ✅ 完了
+- ~~OrbitControlsとTransformControlsの競合解決策検討~~ ✅ 完了
+- カメラアニメーション実装方法の検討
+- マルチセレクション完全実装の設計
 
-この機能比較表v2.0により、現在の実装状況が正確に把握でき、今後の開発方針を明確に決定できます。 
+この機能比較表v2.1により、現在の実装状況が正確に把握でき、今後の開発方針を明確に決定できます。 

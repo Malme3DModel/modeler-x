@@ -9,6 +9,9 @@ import { useOpenCascade } from '../../hooks/useOpenCascade';
 import * as THREE from 'three';
 import { useIsClient } from '../../hooks/useIsClient';
 import HoverTooltip from './HoverTooltip';
+import { TransformGizmo } from './TransformGizmo';
+import { ObjectSelector } from './ObjectSelector';
+import { TransformControlsUI } from './TransformControlsUI';
 
 interface ThreeJSViewportProps {
   cameraPosition?: [number, number, number];
@@ -250,12 +253,12 @@ if (typeof window !== 'undefined') {
         meshes[0] : 
         meshes[0].children.find((c: any) => c.type === 'Mesh');
       
-      if (!mesh || !mesh.material) return null;
+      if (!mesh) return null;
       
       return {
-        type: mesh.material.type,
-        color: mesh.material.color?.getHexString(),
-        hasMatcap: !!(mesh.material as THREE.MeshMatcapMaterial).matcap
+        type: mesh.material?.type || 'unknown',
+        color: mesh.material?.color?.getHexString() || 'unknown',
+        wireframe: !!mesh.material?.wireframe
       };
     },
     
@@ -294,6 +297,24 @@ if (typeof window !== 'undefined') {
   console.log('✅ テスト用グローバルユーティリティ関数を初期化: getMaterialInfo, getLightingInfo, getFogInfo');
 }
 
+// シーン設定用コンポーネント
+function SceneSetup({ selectedObject }: { selectedObject: THREE.Object3D | null }) {
+  const { scene } = useThree();
+  
+  // テスト用のグローバルユーティリティ関数の拡張
+  useEffect(() => {
+    if (typeof window !== 'undefined' && (window as any).cascadeTestUtils) {
+      // シーンを設定
+      (window as any).cascadeTestUtils.setScene(scene);
+      
+      // 選択オブジェクト設定
+      (window as any).cascadeTestUtils.setSelectedObject(selectedObject);
+    }
+  }, [scene, selectedObject]);
+  
+  return null;
+}
+
 export default function ThreeJSViewport({ 
   cameraPosition = [5, 5, 5],
   enableControls = true 
@@ -306,6 +327,63 @@ export default function ThreeJSViewport({
   const [hoveredFace, setHoveredFace] = useState<number | null>(null);
   const [fogSettings, setFogSettings] = useState({ near: 50, far: 200 });
   const [boundingBox, setBoundingBox] = useState<THREE.Box3 | null>(null);
+
+  // 🎯 TransformControls状態管理
+  const [selectedObject, setSelectedObject] = useState<THREE.Object3D | null>(null);
+  const [transformMode, setTransformMode] = useState<'translate' | 'rotate' | 'scale'>('translate');
+  const [transformSpace, setTransformSpace] = useState<'local' | 'world'>('world');
+  const [isTransformVisible, setIsTransformVisible] = useState<boolean>(true);
+  
+  // 🔧 オブジェクト変更ハンドラー
+  const handleObjectChange = useCallback((object: THREE.Object3D) => {
+    console.log('Object transformed:', {
+      position: object.position.toArray(),
+      rotation: object.rotation.toArray(),
+      scale: object.scale.toArray()
+    });
+    
+    // TODO: 変更をプロジェクト状態に保存
+  }, []);
+  
+  // 🎯 オブジェクト選択ハンドラー
+  const handleSelectObject = useCallback((object: THREE.Object3D | null) => {
+    setSelectedObject(object);
+    console.log('Object selected:', object?.name || 'None');
+  }, []);
+  
+  // ⌨️ キーボードショートカット
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!selectedObject) return;
+      
+      switch (event.key.toLowerCase()) {
+        case 'g':
+          setTransformMode('translate');
+          break;
+        case 'r':
+          setTransformMode('rotate');
+          break;
+        case 's':
+          setTransformMode('scale');
+          break;
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedObject]);
+  
+  // テスト用のグローバルユーティリティ関数を拡張
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).cascadeTestUtils = {
+        ...(window as any).cascadeTestUtils || {},
+        hasTransformControls: () => !!selectedObject,
+        getSelectedObjectPosition: () => selectedObject?.position.toArray() || null,
+        getSelectedObjectRotation: () => selectedObject?.rotation.toArray() || null,
+      };
+    }
+  }, [selectedObject]);
 
   // バウンディングボックスに基づくフォグ距離の計算
   const calculateFogDistance = useCallback((boundingBox: THREE.Box3) => {
@@ -376,7 +454,23 @@ export default function ThreeJSViewport({
   }
 
   return (
-    <div className="w-full h-screen relative">
+    <div className="relative w-full h-full">
+      {/* Transform Controls UI */}
+      {selectedObject && (
+        <div className="absolute top-4 left-4 z-10">
+          <TransformControlsUI
+            mode={transformMode}
+            space={transformSpace}
+            visible={isTransformVisible}
+            enabled={!!selectedObject}
+            onModeChange={setTransformMode}
+            onSpaceChange={setTransformSpace}
+            onVisibilityChange={setIsTransformVisible}
+            selectedObjectName={selectedObject?.name || selectedObject?.type}
+          />
+        </div>
+      )}
+      
       <Canvas
         camera={{ 
           position: cameraPosition, 
@@ -452,6 +546,31 @@ export default function ThreeJSViewport({
           isRaycastingEnabled={isRaycastingEnabled} 
           setIsRaycastingEnabled={setIsRaycastingEnabled} 
         />
+
+        {/* TransformGizmo */}
+        <TransformGizmo
+          selectedObject={selectedObject}
+          mode={transformMode}
+          space={transformSpace}
+          enabled={isTransformVisible}
+          onObjectChange={handleObjectChange}
+        />
+
+        {/* ObjectSelector */}
+        <ObjectSelector onSelectObject={handleSelectObject}>
+          {/* テスト用のシンプルな3Dオブジェクト */}
+          <mesh position={[0, 0, 0]} name="Cube">
+            <boxGeometry args={[1, 1, 1]} />
+            <meshStandardMaterial color="royalblue" />
+          </mesh>
+          
+          <mesh position={[2, 0, 0]} name="Sphere">
+            <sphereGeometry args={[0.5, 32, 32]} />
+            <meshStandardMaterial color="tomato" />
+          </mesh>
+        </ObjectSelector>
+
+        <SceneSetup selectedObject={selectedObject} />
       </Canvas>
 
       {/* ツールチップを追加 */}

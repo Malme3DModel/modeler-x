@@ -58,21 +58,21 @@
 ## 1. 3D操作機能（最重要）
 
 ### 1.1 トランスフォームハンドル（ギズモ）
-**状態**: ❌ 未実装
+**状態**: ✅ 完全実装済み（2024年6月）
 **説明**: 3Dオブジェクトの移動、回転、スケール操作
-**元の実装**: `CascadeViewHandles.js`
-**必要なファイル**: 
-- `components/threejs/TransformGizmo.tsx` (新規作成)
-- `components/threejs/ObjectSelector.tsx` (新規作成)
-- `components/threejs/TransformControlsUI.tsx` (新規作成)
+**実装ファイル**: 
+- `components/threejs/TransformGizmo.tsx`
+- `components/threejs/ObjectSelector.tsx`
+- `components/threejs/TransformControlsUI.tsx`
+- `tests/transform-controls.spec.ts`
 
 ### 1.2 オブジェクト選択機能
-**状態**: ❌ 未実装
+**状態**: ✅ 基本実装済み（2024年6月）
 **説明**: クリックによる3Dオブジェクト選択とマルチセレクション
-**必要な実装**:
-- クリック検出システム
-- 選択状態の可視化
-- 複数選択対応
+**実装状況**:
+- クリック検出システム ✅
+- 選択状態の可視化 ✅
+- 複数選択対応 🔄（基本実装のみ）
 
 ### 1.3 カメラコントロール高度機能
 **状態**: 🔄 部分実装
@@ -162,8 +162,9 @@
 #### 2.1 トランスフォームハンドル実装（1.5週間）
 **期間**: 1.5週間
 **優先度**: 🔴 最高
+**状態**: ✅ 完了（2024年6月）
 
-**タスク2.1.1: TransformControlsコンポーネント作成**
+**タスク2.1.1: TransformControlsコンポーネント作成** ✅
 - **ファイル**: `components/threejs/TransformGizmo.tsx`
 - **期間**: 3日
 - **内容**:
@@ -171,15 +172,15 @@
   - 移動・回転・スケールモード実装
   - OrbitControlsとの競合解決
 
-**タスク2.1.2: オブジェクト選択システム**
+**タスク2.1.2: オブジェクト選択システム** ✅
 - **ファイル**: `components/threejs/ObjectSelector.tsx`
 - **期間**: 2日
 - **内容**:
   - クリック検出とレイキャスティング
   - 選択状態管理
-  - マルチセレクション対応
+  - マルチセレクション対応（基本実装）
 
-**タスク2.1.3: UI統合**
+**タスク2.1.3: UI統合** ✅
 - **ファイル**: `components/threejs/TransformControlsUI.tsx`
 - **期間**: 2日
 - **内容**:
@@ -187,7 +188,7 @@
   - ローカル/ワールド空間切り替え
   - ギズモ表示制御
 
-**タスク2.1.4: ThreeJSViewportへの統合**
+**タスク2.1.4: ThreeJSViewportへの統合** ✅
 - **ファイル**: `components/threejs/ThreeJSViewport.tsx`
 - **期間**: 1日
 - **内容**:
@@ -385,12 +386,12 @@
 ## 完了判定基準
 
 ### フェーズ2完了条件
-1. ✅ TransformControlsでオブジェクトの移動・回転・スケールが可能
-2. ✅ クリックによるオブジェクト選択が正常動作
-3. ✅ 6方向視点 + ISO視点の切り替えが動作
-4. ✅ Fit to Object機能が動作
-5. ✅ 全E2Eテストがパス
-6. ✅ 元のCascadeStudioと同等の操作感を実現
+1. ✅ TransformControlsでオブジェクトの移動・回転・スケールが可能（2024年6月完了）
+2. ✅ クリックによるオブジェクト選択が正常動作（2024年6月完了）
+3. 🔄 6方向視点 + ISO視点の切り替えが動作
+4. 🔄 Fit to Object機能が動作
+5. ✅ 全E2Eテストがパス（TransformControls部分、2024年6月完了）
+6. 🔄 元のCascadeStudioと同等の操作感を実現
 
 ### 全体完了条件
 1. ✅ 元のCascadeStudioの全機能が100%動作

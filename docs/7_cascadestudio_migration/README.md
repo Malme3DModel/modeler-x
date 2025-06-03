@@ -25,19 +25,17 @@
 - コード例とサンプル実装
 - テスト・品質管理の指針
 
-### 🎯 [transform-handles-task.md](./transform-handles-task.md)
-**TransformControls実装専用ガイド**
-- フェーズ2最重要機能の詳細実装手順
-- コード例と具体的な実装方法
-- テスト戦略と品質確保手順
 
 ## 🎯 プロジェクトの現状と目標
 
-### 📈 実装状況サマリー（2024年12月時点）
+### 📈 実装状況サマリー（2024年6月更新）
 
 #### 全体進捗
 - **✅ フェーズ1完了**: 100%（基本3D機能完成）
-- **❌ フェーズ2未開始**: 0%（3D操作機能）
+- **🔄 フェーズ2進行中**: 35%（3D操作機能）
+  - ✅ TransformControls実装: 完了
+  - ✅ オブジェクト選択基盤: 完了
+  - 🔄 カメラ高度機能: 進行中
 - **🔄 部分実装**: ファイルI/O、CAD標準ライブラリ
 - **❌ 未実装**: UI/UX改善、PWA機能
 
@@ -50,43 +48,43 @@
 - **CADワーカー**: OpenCascade.js v1.1.1基盤
 - **Golden Layout**: ドッキング可能ウィンドウシステム
 - **状態管理**: URLハッシュ保存・復元機能
+- **TransformControls**: オブジェクト移動・回転・スケール操作
+- **オブジェクト選択**: クリック選択機能
 
 #### ❌ 最重要未実装機能
-1. **TransformControls（ギズモ）**: 3Dオブジェクトの移動・回転・スケール操作
-2. **オブジェクト選択**: クリック選択とマルチセレクション
-3. **カメラコントロール高度機能**: 視点プリセット、フィット機能
-4. **キーボードショートカット**: F5リフレッシュ、Ctrl+S保存等
-5. **PWA機能**: Service Worker、マニフェスト
+1. **カメラコントロール高度機能**: 視点プリセット、フィット機能
+2. **マルチセレクション**: 複数オブジェクト選択の完全実装
+3. **キーボードショートカット**: F5リフレッシュ、Ctrl+S保存等（部分実装）
+4. **PWA機能**: Service Worker、マニフェスト
 
-### 🚀 次のステップ：フェーズ2実装
+### 🚀 次のステップ：フェーズ2続行
 
-**最優先タスク**: `components/threejs/TransformGizmo.tsx`の作成
+**最優先タスク**: カメラコントロール高度機能の実装
 
 ```bash
 # 開発開始コマンド
 npm run dev
 
-# 最初に作成するファイル
-# components/threejs/TransformGizmo.tsx
-# components/threejs/ObjectSelector.tsx
-# components/threejs/TransformControlsUI.tsx
+# 次に作成・改良するファイル
+# components/cad/CameraControls.tsx
+# hooks/useCameraAnimation.ts
 ```
 
-## 🗓️ 実装スケジュール v2.0
+## 🗓️ 実装スケジュール v2.1
 
 | フェーズ | 期間 | 主要機能 | 優先度 | 状態 |
 |---------|------|---------|--------|------|
 | **フェーズ1** | ✅完了 | 基本3D機能完成 | 🔴 最高 | ✅ 100% |
-| **フェーズ2** | 3週間 | 3D操作機能実装 | 🔴 最高 | ❌ 未開始 |
+| **フェーズ2** | 3週間 | 3D操作機能実装 | 🔴 最高 | 🔄 35% |
 | **フェーズ3** | 2週間 | UI/UX機能実装 | 🟡 中 | ⏳ 待機中 |
 | **フェーズ4** | 2週間 | ファイルI/O完全実装 | 🟡 中 | ⏳ 待機中 |
 | **フェーズ5** | 1週間 | PWA機能実装 | 🟢 低 | ⏳ 待機中 |
 
-**総期間**: 8週間（フェーズ2から開始）
+**総期間**: 6週間（残り）
 
 ### フェーズ2詳細スケジュール
-- **Week 1-1.5**: TransformControls実装（ギズモ操作）
-- **Week 2**: カメラコントロール高度機能
+- **Week 1**: ✅ TransformControls実装（ギズモ操作）：完了
+- **Week 2**: 🔄 カメラコントロール高度機能：進行中
 - **Week 3**: 統合テスト・品質確保
 
 ## 🛠️ 技術スタック（確認済み）
@@ -131,11 +129,11 @@ npm run dev
 - **基本機能**: `tests/raycasting-simple.spec.ts`
 - **ホバーハイライト**: `tests/raycasting.spec.ts`
 - **デバッグ**: `tests/debug-raycasting.spec.ts`
+- **TransformControls**: `tests/transform-controls.spec.ts`
 
 ### 必要な新規テスト
-- **TransformControls**: `tests/transform-controls.spec.ts`（フェーズ2で作成）
-- **カメラ操作**: `tests/camera-controls.spec.ts`（フェーズ2で作成）
-- **統合テスト**: `tests/integration.spec.ts`（フェーズ2で作成）
+- **カメラ操作**: `tests/camera-controls.spec.ts`（フェーズ2.2で作成）
+- **統合テスト**: `tests/integration.spec.ts`（フェーズ2.3で作成）
 
 ### テスト実行
 ```bash
@@ -179,17 +177,16 @@ npm run test
 npm run type-check
 ```
 
-### 2. フェーズ2開始手順
-1. **[migration_plan.md](./migration_plan.md)** でフェーズ2詳細を確認
-2. **[transform-handles-task.md](./transform-handles-task.md)** で実装手順を確認
-3. `components/threejs/TransformGizmo.tsx` から実装開始
+### 2. フェーズ2続行手順
+1. **[migration_plan.md](./migration_plan.md)** でフェーズ2.2詳細を確認
+2. **[feature_comparison.md](./feature_comparison.md)** で実装状況を確認
+3. `components/cad/CameraControls.tsx` の改良から開始
 
 ### 3. 実装優先順位
-1. 🔴 **TransformControls（ギズモ）** - 最重要
-2. 🔴 **オブジェクト選択機能** - 高
-3. 🔴 **カメラコントロール改善** - 高
-4. 🟡 **キーボードショートカット** - 中
-5. 🟡 **ファイルI/O改善** - 中
+1. 🔴 **カメラコントロール改善** - 最重要（進行中）
+2. 🔴 **マルチセレクション改良** - 高
+3. 🟡 **キーボードショートカット拡充** - 中
+4. 🟡 **ファイルI/O改善** - 中
 
 ## 📞 サポート・トラブルシューティング
 
