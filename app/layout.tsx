@@ -16,6 +16,8 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <Script src="/monaco-editor-workers/monaco.config.js" strategy="beforeInteractive" />
+        <Script src="/monaco-editor-workers/editor.worker.js" strategy="afterInteractive" />
+        <Script src="/monaco-editor-workers/ts.worker.js" strategy="afterInteractive" />
       </head>
       <body>{children}</body>
     </html>

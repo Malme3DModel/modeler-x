@@ -54,40 +54,105 @@ function loadMonacoScripts(scriptUrls) {
 // メインスレッドでのMonaco設定
 if (typeof window !== 'undefined') {
   // FileAccessImplのtoUrlエラーを修正するためのモンキーパッチ
-  window.MonacoEnvironment = {
-    getWorkerUrl: function(_moduleId, label) {
-      // TypeScriptかJavaScriptのワーカーの場合
-      if (label === 'typescript' || label === 'javascript') {
-        return '/monaco-editor-workers/ts.worker.js';
-      }
-      // それ以外のワーカーの場合
-      return '/monaco-editor-workers/editor.worker.js';
-    },
-    // ワーカーオプションの設定
-    getWorkerOptions: function() {
-      return {
-        type: 'classic'  // classicタイプを使用
-      };
-    }
-  };
-  
-  // FileAccessImpl.toUrlエラーを修正するためのモンキーパッチ
-  setTimeout(() => {
-    if (window.monaco && window.monaco.editor) {
-      const originalCreate = window.monaco.editor.create;
-      window.monaco.editor.create = function(...args) {
-        // FileAccess実装のモンキーパッチ
-        if (window.monaco.fileAccess && !window.monaco.fileAccess.FileAccess) {
-          window.monaco.fileAccess.FileAccess = {
-            asFileUri: function() { return { toString: () => '', fsPath: '' }; },
-            asBrowserUri: function() { return { toString: () => '', fsPath: '' }; }
-          };
+  if (!window.MonacoEnvironment) {
+    window.MonacoEnvironment = {
+      getWorkerUrl: function(_moduleId, label) {
+        // TypeScriptかJavaScriptのワーカーの場合
+        if (label === 'typescript' || label === 'javascript') {
+          return '/monaco-editor-workers/ts.worker.js';
         }
-        return originalCreate.apply(this, args);
-      };
-      console.log('Monaco editor patched to fix FileAccess issues');
-    }
-  }, 500);
+        // それ以外のワーカーの場合
+        return '/monaco-editor-workers/editor.worker.js';
+      }
+    };
+  }
+  
+  // レガシーコード用にファイルアクセスオブジェクトを作成
+  if (typeof window.monaco === 'undefined') {
+    window.monaco = {};
+  }
+  
+  if (typeof window.monaco.fileAccess === 'undefined') {
+    window.monaco.fileAccess = {};
+  }
+
+  if (typeof window.monaco.fileAccess.FileAccess === 'undefined') {
+    window.monaco.fileAccess.FileAccess = {
+      asFileUri: function(path) { 
+        return { 
+          toString: function() { return path || ''; },
+          fsPath: path || '',
+          scheme: 'file'
+        };
+      },
+      asBrowserUri: function(path) { 
+        return { 
+          toString: function() { return path || ''; },
+          fsPath: path || '',
+          scheme: 'http'
+        };
+      }
+    };
+  }
+  
+  if (typeof window.monaco.Uri === 'undefined') {
+    window.monaco.Uri = {
+      parse: function(path) {
+        return {
+          toString: function() { return path || ''; },
+          fsPath: path || '',
+          scheme: path && path.startsWith('http') ? 'http' : 'file'
+        };
+      },
+      file: function(path) {
+        return {
+          toString: function() { return path || ''; },
+          fsPath: path || '',
+          scheme: 'file'
+        };
+      }
+    };
+  }
+  
+  // エディタ作成時のモンキーパッチ
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      if (window.monaco && window.monaco.editor) {
+        console.log('Monaco editor patched to fix FileAccess issues');
+        
+        // 直接FileAccessImplを修正
+        try {
+          if (window.monaco && window.monaco.editor) {
+            // FileAccessImplクラスへの参照を取得
+            const monacoModules = Object.keys(window.monaco).filter(k => window.monaco[k] && typeof window.monaco[k] === 'object');
+            
+            // 見つからない場合は独自の実装を注入
+            window.FileAccessImpl = window.FileAccessImpl || {
+              toUrl: function(path) {
+                return path ? path.toString() : '';
+              },
+              toUri: function(path) {
+                return {
+                  toString: function() { return path || ''; },
+                  fsPath: path || '',
+                  scheme: 'file'
+                };
+              }
+            };
+            
+            // monaco内部へのインジェクション
+            if (window.monaco.fileAccess) {
+              window.monaco.fileAccess.FileAccessImpl = window.FileAccessImpl;
+            }
+            
+            console.log('Successfully patched FileAccessImpl');
+          }
+        } catch (err) {
+          console.error('Failed to patch FileAccessImpl:', err);
+        }
+      }
+    }, 1000);
+  });
 }
 
 // ワーカースクリプトでの処理（Web Worker環境で実行される場合）
@@ -98,8 +163,20 @@ if (typeof self !== 'undefined' && !self.window) {
   
   // FileAccess実装のモンキーパッチ
   self.FileAccess = {
-    asFileUri: function() { return { toString: () => '', fsPath: '' }; },
-    asBrowserUri: function() { return { toString: () => '', fsPath: '' }; }
+    asFileUri: function(path) { 
+      return { 
+        toString: function() { return path || ''; },
+        fsPath: path || '',
+        scheme: 'file' 
+      }; 
+    },
+    asBrowserUri: function(path) { 
+      return { 
+        toString: function() { return path || ''; },
+        fsPath: path || '',
+        scheme: 'http' 
+      }; 
+    }
   };
   
   // ワーカーのタイプに基づいてスクリプトを読み込む

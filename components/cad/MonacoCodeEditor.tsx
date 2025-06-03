@@ -46,6 +46,17 @@ export const MonacoCodeEditor = forwardRef<MonacoCodeEditorRef, MonacoCodeEditor
           const monaco = await import('monaco-editor');
           
           // ワーカーURLの設定
+          if (typeof window !== 'undefined' && !window.MonacoEnvironment) {
+            window.MonacoEnvironment = {
+              getWorkerUrl: function(_moduleId, label) {
+                if (label === 'typescript' || label === 'javascript') {
+                  return '/monaco-editor-workers/ts.worker.js';
+                }
+                return '/monaco-editor-workers/editor.worker.js';
+              }
+            };
+          }
+          
           if (monaco.languages.typescript) {
             monaco.languages.typescript.javascriptDefaults.setEagerModelSync(true);
             monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
@@ -67,6 +78,18 @@ export const MonacoCodeEditor = forwardRef<MonacoCodeEditorRef, MonacoCodeEditor
               // ワーカーGUI状態
               declare var GUIState: Record<string, any>;
             `, 'ts:cascade-studio-types');
+            
+            // TypeScript設定の最適化
+            monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
+              target: monaco.languages.typescript.ScriptTarget.ES2020,
+              allowNonTsExtensions: true,
+              moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+              module: monaco.languages.typescript.ModuleKind.CommonJS,
+              noEmit: true,
+              esModuleInterop: true,
+              allowJs: true,
+              strict: false
+            });
           }
 
           // containerRef.currentが存在することを確認

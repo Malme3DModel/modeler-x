@@ -111,7 +111,7 @@
 - **CADワーカー**: `docs/template/js/CADWorker/`
 
 ### 現在の実装
-- **メインアプリ**: `app/cascade-studio/page.tsx`
+- **メインアプリ**: `app/page.tsx`
 - **レイアウト**: `components/layout/CascadeStudioLayout.tsx`
 - **3Dビューポート**: `components/threejs/ThreeJSViewport.tsx`
 - **CADワーカー**: `public/workers/cadWorker.js`

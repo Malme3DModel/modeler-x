@@ -16,6 +16,18 @@ import { MonacoCodeEditor, MonacoCodeEditorRef } from '@/components/cad/MonacoCo
 import 'golden-layout/dist/css/goldenlayout-base.css';
 import 'golden-layout/dist/css/themes/goldenlayout-dark-theme.css';
 
+// Monaco Editorのグローバル型拡張
+declare global {
+  interface Window {
+    monaco: any;
+    MonacoEnvironment?: any;
+    monacoConfig?: {
+      version: string;
+      baseUrl: string;
+    };
+  }
+}
+
 // TweakpaneGUIを動的インポート
 const TweakpaneGUI = dynamic(() => import('@/components/gui/TweakpaneGUI'), {
   ssr: false,
