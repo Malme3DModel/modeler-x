@@ -1,15 +1,15 @@
-# 🎯 CascadeStudio移行作業 - フェーズ1開始指示書
+# 🎯 CascadeStudio移行作業 - フェーズ1.2実装指示書
 
 ## 📋 作業概要
 
-**作業名**: フェーズ1 - 基本3D機能の完成（レイキャスティング基盤実装 + テスト）  
-**優先度**: 🔴 最高  
-**期間**: 2日  
+**作業名**: フェーズ1.2 - MatCapマテリアルとライティング設定の改善  
+**優先度**: 🔴 高  
+**期間**: 3日  
 **担当者**: 次期AI作業者  
 
 ## 🎯 作業目的
 
-元のCascadeStudioの**最重要機能**である「マウスホバーによるフェイス・エッジハイライト」機能を実現するため、React Three Fiberでのレイキャスティング基盤を実装してください。この機能により、ユーザーが3Dオブジェクトにマウスをホバーした際に、該当するフェイスやエッジが視覚的にハイライトされます。
+ホバーハイライト機能の実装が完了したため、次のステップとして「MatCapマテリアルとライティング設定の改善」を実装してください。現在は標準的なMeshStandardMaterialが使用されていますが、元のCascadeStudioと同等の見た目を実現するためにMatCapマテリアルを実装し、適切なライティング設定を行います。これにより、3Dオブジェクトの視覚的品質が向上し、ユーザー体験が改善されます。
 
 **重要**: 実装完了後、必ずテストを作成・実行し、全テストがパスしてから完了とします。
 
@@ -17,391 +17,456 @@
 
 ### 1. 移行計画書
 - **`docs/7_cascadestudio_migration/README.md`** - 全体概要
-- **`docs/7_cascadestudio_migration/feature_comparison.md`** - 機能比較表（3Dインタラクション部分を確認）
-- **`docs/7_cascadestudio_migration/implementation_tasks.md`** - タスク1.1.1の詳細
+- **`docs/7_cascadestudio_migration/feature_comparison.md`** - 機能比較表（3Dビューポート機能部分を確認）
+- **`docs/7_cascadestudio_migration/implementation_tasks.md`** - タスク1.2.1〜1.2.3の詳細
 
 ### 2. 元のCascadeStudio実装
-- **`docs/template/js/MainPage/CascadeView.js`** - 元のレイキャスティング実装（310-350行目付近）
-- 特に`this.raycaster`と`intersectObjects`の使用方法を参考にしてください
+- **`docs/template/js/MainPage/CascadeView.js`** - 元のマテリアル・ライティング実装（200-250行目付近）
+- **`docs/template/textures/dullFrontLitMetal.png`** - 元のMatCapテクスチャ
+- マテリアル設定とライティング設定の詳細を確認してください
 
 ### 3. 現在の実装
-- **`components/threejs/CascadeViewport.tsx`** - 修正対象メインファイル
-- **`hooks/useCADWorker.ts`** - CADワーカーとの連携部分
-- **`tests/`** - 既存のテストフォルダ
+- **`components/threejs/ThreeJSViewport.tsx`** - 修正対象メインファイル
+- **`components/threejs/ThreeJSModel.tsx`** - 3Dモデル表示コンポーネント
+- **`tests/raycasting.spec.ts`** - 既存のレイキャスティングテスト
 
 ## 🔧 具体的な作業内容
 
-### タスク1: React Three FiberでのRaycaster実装
+### タスク1: MatCapマテリアルの実装
 
-**対象ファイル**: `components/threejs/CascadeViewport.tsx`
+**対象ファイル**: `components/threejs/materials/MatCapMaterial.tsx` (新規作成)
 
-#### 1.1 必要なインポートの追加
+#### 1.1 MatCapマテリアルコンポーネントの作成
 ```typescript
-import { useThree, useFrame } from '@react-three/fiber';
+import { useMemo } from 'react';
 import * as THREE from 'three';
-import { useRef, useState, useCallback } from 'react';
-```
+import { useLoader } from '@react-three/fiber';
 
-#### 1.2 レイキャスター状態の追加
-```typescript
-// 実装する状態管理
-const raycaster = useRef(new THREE.Raycaster());
-const mouse = useRef(new THREE.Vector2());
-const [hoveredObject, setHoveredObject] = useState<THREE.Object3D | null>(null);
-const [hoveredFace, setHoveredFace] = useState<number | null>(null);
-const [isRaycastingEnabled, setIsRaycastingEnabled] = useState(true);
-```
+interface MatCapMaterialProps {
+  color?: string;
+  opacity?: number;
+  transparent?: boolean;
+}
 
-#### 1.3 マウスイベントハンドラーの実装
-```typescript
-const handleMouseMove = useCallback((event: MouseEvent) => {
-  if (!isRaycastingEnabled) return;
+export function useMatCapMaterial({ 
+  color = '#f5f5f5', 
+  opacity = 1.0, 
+  transparent = false 
+}: MatCapMaterialProps = {}) {
+  const matcapTexture = useLoader(
+    THREE.TextureLoader, 
+    '/textures/dullFrontLitMetal.png'
+  );
   
-  // マウス座標の正規化（-1 to 1の範囲）
-  const rect = (event.target as HTMLElement).getBoundingClientRect();
-  mouse.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  mouse.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-}, [isRaycastingEnabled]);
-```
-
-#### 1.4 レイキャスティング処理の実装
-```typescript
-useFrame(() => {
-  if (shapes.length === 0 || !isRaycastingEnabled) return;
-  
-  // カメラとマウス座標からレイを発射
-  raycaster.current.setFromCamera(mouse.current, camera);
-  
-  // 3Dオブジェクトとの交差判定
-  const intersects = raycaster.current.intersectObjects(scene.children, true);
-  
-  if (intersects.length > 0) {
-    const intersection = intersects[0];
-    // ハイライト処理（次のタスクで詳細実装）
-    setHoveredObject(intersection.object);
+  return useMemo(() => {
+    const material = new THREE.MeshMatcapMaterial({
+      matcap: matcapTexture,
+      color: color,
+      transparent: transparent,
+      opacity: opacity,
+    });
     
-    // フェイスインデックスの取得
-    if (intersection.face) {
-      setHoveredFace(intersection.faceIndex || 0);
-    }
-    
-    // テスト用のデータ属性を追加
-    intersection.object.userData.isHovered = true;
-    intersection.object.userData.hoveredFace = intersection.faceIndex;
-  } else {
-    // ハイライト解除
-    if (hoveredObject) {
-      hoveredObject.userData.isHovered = false;
-      hoveredObject.userData.hoveredFace = null;
-    }
-    setHoveredObject(null);
-    setHoveredFace(null);
-  }
-});
+    return material;
+  }, [matcapTexture, color, opacity, transparent]);
+}
 ```
 
-#### 1.5 テスト用のアクセス機能追加
+#### 1.2 テクスチャファイルのコピー
+元のテクスチャファイル `docs/template/textures/dullFrontLitMetal.png` を `public/textures/` ディレクトリにコピーします。
+
+```bash
+# ディレクトリの作成（存在しない場合）
+mkdir -p public/textures
+
+# テクスチャファイルのコピー
+cp docs/template/textures/dullFrontLitMetal.png public/textures/
+```
+
+### タスク2: ThreeJSModelコンポーネントの修正
+
+**対象ファイル**: `components/threejs/ThreeJSModel.tsx`
+
+#### 2.1 MatCapマテリアルの統合
 ```typescript
-// テスト用のコンポーネント外部アクセス機能
-useEffect(() => {
-  // グローバルオブジェクトにテスト用関数を登録
-  (window as any).cascadeTestUtils = {
-    getRaycastingState: () => ({
-      isEnabled: isRaycastingEnabled,
-      hoveredObject: hoveredObject?.uuid || null,
-      hoveredFace: hoveredFace,
-    }),
-    enableRaycasting: () => setIsRaycastingEnabled(true),
-    disableRaycasting: () => setIsRaycastingEnabled(false),
-  };
+import { useMatCapMaterial } from './materials/MatCapMaterial';
+
+// 既存のコンポーネント内で
+export default function ThreeJSModel({ geometry, edges, ...props }) {
+  // MatCapマテリアルを使用
+  const matcapMaterial = useMatCapMaterial({ 
+    color: '#f5f5f5',
+    transparent: props.transparent || false,
+    opacity: props.opacity || 1.0
+  });
   
-  return () => {
-    delete (window as any).cascadeTestUtils;
-  };
-}, [isRaycastingEnabled, hoveredObject, hoveredFace]);
+  // 既存のマテリアル定義を置き換え
+  // const material = new THREE.MeshStandardMaterial({ ... }); ← 削除
+  
+  return (
+    <group {...props}>
+      <mesh geometry={geometry} material={matcapMaterial}>
+        {/* 既存の子要素 */}
+      </mesh>
+      {edges && (
+        <lineSegments geometry={edges}>
+          <lineBasicMaterial color="#000000" />
+        </lineSegments>
+      )}
+    </group>
+  );
+}
 ```
 
-### タスク2: イベントリスナーの統合
+### タスク3: ライティング設定の改善
 
-**Canvas要素**にマウスイベントを追加：
+**対象ファイル**: `components/threejs/ThreeJSViewport.tsx`
+
+#### 3.1 ライティング設定の修正
 ```typescript
+// 既存のライティング設定を以下に置き換え
 <Canvas
-  onMouseMove={handleMouseMove}
-  style={{ width: '100%', height: '100%' }}
-  data-testid="cascade-3d-viewport"
-  // その他の既存props
+  // 既存のprops
 >
+  {/* 環境光 */}
+  <ambientLight intensity={0.3} />
+  
+  {/* 半球光 - 元の実装に合わせる */}
+  <hemisphereLight 
+    position={[0, 1, 0]} 
+    args={['#ffffff', '#444444', 1]} 
+  />
+  
+  {/* 平行光源 */}
+  <directionalLight 
+    position={[3, 10, 10]} 
+    intensity={0.8} 
+    castShadow 
+    shadow-mapSize-width={2048} 
+    shadow-mapSize-height={2048} 
+  />
+  
+  {/* その他の既存コンポーネント */}
+</Canvas>
 ```
 
-### タスク3: デバッグ機能の追加
-
-コンソールでの確認機能を追加：
+#### 3.2 シャドウ設定の改善
 ```typescript
-// デバッグ用の状態表示
-useEffect(() => {
-  if (hoveredObject) {
-    console.log('🎯 ホバー中オブジェクト:', hoveredObject.name || 'Unnamed', hoveredObject.uuid);
-  }
-  if (hoveredFace !== null) {
-    console.log('📐 ホバー中フェイス番号:', hoveredFace);
-  }
-}, [hoveredObject, hoveredFace]);
+// Canvasコンポーネントに追加
+<Canvas
+  shadows
+  camera={{ position: [10, 10, 10], fov: 50 }}
+  // 既存のprops
+>
+  {/* 既存の内容 */}
+</Canvas>
+
+// 地面コンポーネントにシャドウ設定を追加（存在する場合）
+<mesh 
+  receiveShadow 
+  rotation={[-Math.PI / 2, 0, 0]} 
+  position={[0, -0.5, 0]}
+>
+  <planeGeometry args={[100, 100]} />
+  <shadowMaterial opacity={0.2} />
+</mesh>
 ```
 
-## 🧪 テスト実装（必須）
+### タスク4: フォグ機能の実装
 
-### タスク4: E2Eテストの作成
+**対象ファイル**: `components/threejs/ThreeJSViewport.tsx`
 
-**新規作成ファイル**: `tests/raycasting.spec.ts`
+#### 4.1 動的フォグの実装
+```typescript
+// バウンディングボックスに基づくフォグ距離の計算
+const calculateFogDistance = (boundingBox: THREE.Box3) => {
+  if (!boundingBox) return { near: 50, far: 200 };
+  
+  const size = new THREE.Vector3();
+  boundingBox.getSize(size);
+  const maxDim = Math.max(size.x, size.y, size.z);
+  
+  return {
+    near: maxDim * 2,
+    far: maxDim * 5
+  };
+};
+
+// コンポーネント内で
+const [fogSettings, setFogSettings] = useState({ near: 50, far: 200 });
+
+// バウンディングボックスの更新時にフォグ設定を更新
+useEffect(() => {
+  if (boundingBox) {
+    setFogSettings(calculateFogDistance(boundingBox));
+  }
+}, [boundingBox]);
+
+// Canvasコンポーネント内でフォグを設定
+<Canvas
+  // 既存のprops
+>
+  <fog attach="fog" args={['#f0f0f0', fogSettings.near, fogSettings.far]} />
+  
+  {/* 既存の内容 */}
+</Canvas>
+```
+
+### タスク5: 背景色の設定
+
+**対象ファイル**: `components/threejs/ThreeJSViewport.tsx`
+
+#### 5.1 背景色の設定
+```typescript
+// Canvasコンポーネントに背景色を設定
+<Canvas
+  gl={{ 
+    antialias: true,
+    outputEncoding: THREE.sRGBEncoding 
+  }}
+  // 既存のprops
+>
+  <color attach="background" args={['#222222']} />
+  
+  {/* 既存の内容 */}
+</Canvas>
+```
+
+## 🧪 テスト実装
+
+### タスク6: マテリアルとライティングのテスト
+
+**新規作成ファイル**: `tests/material-lighting.spec.ts`
 
 ```typescript
 import { test, expect } from '@playwright/test';
 
-test.describe('3Dビューポート レイキャスティング機能', () => {
+test.describe('3Dビューポート マテリアルとライティング', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto('/cascade-studio');
+    // アプリケーションにアクセス
+    await page.goto('http://localhost:3000');
     
-    // CADワーカーの初期化を待機
-    await page.waitForSelector('[data-testid="cascade-3d-viewport"]', { 
-      timeout: 10000 
-    });
+    // ローディングが完了するまで待機
+    await page.waitForSelector('[data-testid="loading-spinner"]', { state: 'hidden', timeout: 60000 });
     
-    // 簡単な3Dオブジェクトを生成
-    const evaluateButton = page.locator('button:has-text("Evaluate")');
-    if (await evaluateButton.isVisible()) {
-      await evaluateButton.click();
-      await page.waitForTimeout(2000); // 3Dオブジェクト生成待機
-    }
+    // 3Dビューポートが表示されるまで待機
+    await page.waitForSelector('[data-testid="cascade-3d-viewport"]', { timeout: 10000 });
   });
 
-  test('レイキャスティング機能が初期化されている', async ({ page }) => {
-    // テスト用ユーティリティが存在することを確認
-    const raycastingState = await page.evaluate(() => {
-      return (window as any).cascadeTestUtils?.getRaycastingState();
+  test('MatCapマテリアルが正しく適用されている', async ({ page }) => {
+    // スクリーンショットを取得して視覚的に確認
+    await page.screenshot({ path: 'test-results/matcap-material.png', fullPage: true });
+    
+    // マテリアルの種類を確認
+    const materialInfo = await page.evaluate(() => {
+      return (window as any).cascadeTestUtils?.getMaterialInfo();
     });
-
-    expect(raycastingState).toBeDefined();
-    expect(raycastingState.isEnabled).toBe(true);
-    expect(raycastingState.hoveredObject).toBeNull();
-    expect(raycastingState.hoveredFace).toBeNull();
+    
+    // マテリアルがMeshMatcapMaterialであることを確認
+    expect(materialInfo?.type).toBe('MeshMatcapMaterial');
   });
 
-  test('3Dビューポート上でマウス移動が検出される', async ({ page }) => {
-    const viewport = page.locator('[data-testid="cascade-3d-viewport"]');
-    
-    // ビューポートの中央にマウスを移動
-    await viewport.hover();
-    
-    // 少し待機してレイキャスティング処理が実行されるのを待つ
-    await page.waitForTimeout(100);
-    
-    // マウス移動イベントが処理されたことを確認
-    const raycastingState = await page.evaluate(() => {
-      return (window as any).cascadeTestUtils?.getRaycastingState();
+  test('ライティング設定が正しく適用されている', async ({ page }) => {
+    // ライトの情報を取得
+    const lightInfo = await page.evaluate(() => {
+      return (window as any).cascadeTestUtils?.getLightingInfo();
     });
     
-    expect(raycastingState.isEnabled).toBe(true);
+    // 必要なライトが存在することを確認
+    expect(lightInfo?.hasHemisphereLight).toBe(true);
+    expect(lightInfo?.hasDirectionalLight).toBe(true);
+    expect(lightInfo?.hasAmbientLight).toBe(true);
   });
 
-  test('レイキャスティングの有効/無効切り替えが動作する', async ({ page }) => {
-    // レイキャスティングを無効にする
-    await page.evaluate(() => {
-      (window as any).cascadeTestUtils?.disableRaycasting();
+  test('フォグが正しく設定されている', async ({ page }) => {
+    // フォグの設定を確認
+    const fogInfo = await page.evaluate(() => {
+      return (window as any).cascadeTestUtils?.getFogInfo();
     });
-
-    let raycastingState = await page.evaluate(() => {
-      return (window as any).cascadeTestUtils?.getRaycastingState();
-    });
-    expect(raycastingState.isEnabled).toBe(false);
-
-    // レイキャスティングを有効にする
-    await page.evaluate(() => {
-      (window as any).cascadeTestUtils?.enableRaycasting();
-    });
-
-    raycastingState = await page.evaluate(() => {
-      return (window as any).cascadeTestUtils?.getRaycastingState();
-    });
-    expect(raycastingState.isEnabled).toBe(true);
-  });
-
-  test('3Dオブジェクトとの交差判定が動作する', async ({ page }) => {
-    const viewport = page.locator('[data-testid="cascade-3d-viewport"]');
     
-    // ビューポートの異なる位置でマウス移動をテスト
-    const positions = [
-      { x: 100, y: 100 },
-      { x: 200, y: 150 },
-      { x: 300, y: 200 }
-    ];
-
-    for (const pos of positions) {
-      await viewport.hover({ position: pos });
-      await page.waitForTimeout(50);
-      
-      const raycastingState = await page.evaluate(() => {
-        return (window as any).cascadeTestUtils?.getRaycastingState();
-      });
-      
-      // レイキャスティングが実行されていることを確認
-      expect(raycastingState).toBeDefined();
-    }
+    expect(fogInfo?.hasFog).toBe(true);
+    expect(fogInfo?.fogColor).toBe('#f0f0f0');
   });
 });
 ```
 
-### タスク5: ユニットテストの作成（可能であれば）
+### タスク7: テスト用ユーティリティの追加
 
-**新規作成ファイル**: `tests/unit/raycasting.test.ts`
+**対象ファイル**: `components/threejs/ThreeJSViewport.tsx`
 
 ```typescript
-/**
- * レイキャスティング機能のユニットテスト
- * 注意: React Three Fiberコンポーネントのため、統合テストが主体
- */
-
-import { describe, it, expect } from 'vitest';
-
-describe('レイキャスティング ユーティリティ', () => {
-  it('マウス座標の正規化が正しく計算される', () => {
-    // マウス座標正規化のロジックをテスト
-    const normalizeMouseCoords = (
-      clientX: number, 
-      clientY: number, 
-      rectLeft: number, 
-      rectTop: number, 
-      rectWidth: number, 
-      rectHeight: number
-    ) => {
-      const x = ((clientX - rectLeft) / rectWidth) * 2 - 1;
-      const y = -((clientY - rectTop) / rectHeight) * 2 + 1;
-      return { x, y };
-    };
-
-    const result = normalizeMouseCoords(100, 100, 0, 0, 200, 200);
-    expect(result.x).toBe(0);
-    expect(result.y).toBe(0);
-
-    const cornerResult = normalizeMouseCoords(200, 200, 0, 0, 200, 200);
-    expect(cornerResult.x).toBe(1);
-    expect(cornerResult.y).toBe(-1);
-  });
-});
+// テスト用のアクセス機能を追加
+useEffect(() => {
+  // 既存のcascadeTestUtilsに追加
+  (window as any).cascadeTestUtils = {
+    ...(window as any).cascadeTestUtils || {},
+    
+    // マテリアル情報を取得
+    getMaterialInfo: () => {
+      const meshes = scene.children.filter(child => 
+        child.type === 'Mesh' || 
+        (child.type === 'Group' && child.children.some(c => c.type === 'Mesh'))
+      );
+      
+      if (meshes.length === 0) return null;
+      
+      const mesh = meshes[0].type === 'Mesh' ? 
+        meshes[0] : 
+        meshes[0].children.find(c => c.type === 'Mesh');
+      
+      if (!mesh || !mesh.material) return null;
+      
+      return {
+        type: mesh.material.type,
+        color: (mesh.material as THREE.MeshMatcapMaterial).color?.getHexString(),
+        hasMatcap: !!(mesh.material as THREE.MeshMatcapMaterial).matcap
+      };
+    },
+    
+    // ライティング情報を取得
+    getLightingInfo: () => {
+      const lights = scene.children.filter(child => 
+        child.type.includes('Light')
+      );
+      
+      return {
+        lightCount: lights.length,
+        hasHemisphereLight: lights.some(light => light.type === 'HemisphereLight'),
+        hasDirectionalLight: lights.some(light => light.type === 'DirectionalLight'),
+        hasAmbientLight: lights.some(light => light.type === 'AmbientLight')
+      };
+    },
+    
+    // フォグ情報を取得
+    getFogInfo: () => {
+      return {
+        hasFog: !!scene.fog,
+        fogType: scene.fog?.type,
+        fogColor: scene.fog ? `#${(scene.fog as THREE.Fog).color.getHexString()}` : null,
+        fogNear: (scene.fog as THREE.Fog)?.near,
+        fogFar: (scene.fog as THREE.Fog)?.far
+      };
+    }
+  };
+  
+  return () => {
+    // 既存のクリーンアップ処理を保持
+  };
+}, [scene]);
 ```
 
 ## 🧪 テスト実行
 
-### タスク6: テスト実行とパス確認
+### タスク8: テスト実行とパス確認
 
-#### 6.1 E2Eテストの実行
+#### 8.1 開発サーバーの起動
 ```bash
-# Playwrightテストの実行
-npm run test:e2e
-
-# または特定のテストファイルのみ
-npx playwright test tests/raycasting.spec.ts
+npm run dev
 ```
 
-#### 6.2 ユニットテスト実行（Vitestが設定されている場合）
+#### 8.2 テストの実行
 ```bash
-# ユニットテストの実行
-npm run test:unit
+# 新しいテストの実行
+npx playwright test tests/material-lighting.spec.ts
 
-# または
-npx vitest run tests/unit/raycasting.test.ts
+# 既存のテストも含めて全テストを実行
+npx playwright test
 ```
 
-#### 6.3 全テストの実行
-```bash
-# 全テストスイートの実行
-npm test
-```
-
-## ✅ 完了条件（テスト含む）
+## ✅ 完了条件
 
 ### 必須条件
 1. **機能実装完了**:
-   - マウス移動検出が正常に動作
-   - レイキャスティングが正常に動作
-   - 3Dオブジェクトとの交差判定が動作
-   - TypeScript型エラーやランタイムエラーが発生しない
+   - MatCapマテリアルが正しく実装され、テクスチャが表示される
+   - ライティング設定が元のCascadeStudioと同等に設定されている
+   - フォグ機能が正しく動作している
+   - 背景色が適切に設定されている
 
 2. **テスト実装完了**:
-   - E2Eテスト（`tests/raycasting.spec.ts`）が作成されている
-   - ユニットテスト（可能であれば）が作成されている
-   - テスト用のアクセス機能が実装されている
-
-3. **全テストパス**:
+   - マテリアルとライティングのテストが作成されている
+   - テスト用のユーティリティ関数が実装されている
    - 既存のテストが引き続きパスしている
-   - 新しく作成したレイキャスティングテストがパスしている
-   - テストカバレッジが適切に設定されている
+
+3. **視覚的確認**:
+   - 3Dオブジェクトが元のCascadeStudioと同等の見た目になっている
+   - ライティングとシャドウが適切に表示されている
+   - フォグ効果が適切に表示されている
 
 ### 確認方法
 1. **機能確認**:
-   - アプリケーションを起動
-   - CADコードを実行して3Dオブジェクトを表示
-   - マウスをオブジェクト上で動かす
-   - ブラウザのコンソールで交差情報が表示されることを確認
+   - アプリケーションを起動して3Dオブジェクトを表示
+   - MatCapマテリアルが適用されていることを視覚的に確認
+   - ライティングとシャドウが適切に表示されていることを確認
+   - フォグ効果が距離に応じて適切に表示されていることを確認
 
 2. **テスト確認**:
-   - `npm run test:e2e` でE2Eテストが全てパス
-   - `npm test` で全テストスイートがパス
-   - テストレポートで新機能のテストが含まれていることを確認
+   - `npx playwright test tests/material-lighting.spec.ts` でテストがパス
+   - `npx playwright test` で全テストがパス
+   - テストスクリーンショットで視覚的な確認
 
 ## 🚨 注意事項
 
 ### パフォーマンス
-- `useFrame`内での重い処理は避ける
-- 不要な再レンダリングを防ぐため適切にメモ化する
-- テスト実行時のタイムアウトに注意
+- テクスチャのサイズと解像度に注意
+- 不要なライトやエフェクトを避ける
+- メモリリークを防ぐためにテクスチャを適切に解放
 
-### Three.jsのバージョン対応
-- React Three Fiberのバージョンに対応したThree.js APIを使用
-- 型定義の互換性に注意
-
-### 既存機能への影響
-- 既存のOrbitControlsやカメラ操作に干渉しないよう注意
-- 既存の3D表示機能を壊さないよう慎重に実装
-- **既存テストを壊さないよう注意**
+### 互換性
+- React Three Fiberの最新バージョンとの互換性を確認
+- Three.jsのバージョンに対応したAPIを使用
+- SSR（サーバーサイドレンダリング）との互換性に注意
 
 ### テスト環境
-- Playwrightの設定を確認
-- ヘッドレスモードでのテスト実行を確認
-- CI/CD環境でのテスト実行を想定
+- テクスチャのロードは非同期処理なので適切に待機
+- スクリーンショットテストは環境によって結果が異なる可能性がある
+- OpenCascade.jsの読み込みエラーに対応したエラーハンドリングを実装
+
+### 既存機能への影響
+- ホバーハイライト機能が引き続き動作することを確認
+- レイキャスティング機能への影響がないことを確認
+- パフォーマンスが低下していないことを確認
 
 ## 📁 作業完了時の提出物
 
-1. **修正されたファイル**: `components/threejs/CascadeViewport.tsx`
-2. **新規テストファイル**: 
-   - `tests/raycasting.spec.ts`
-   - `tests/unit/raycasting.test.ts`（可能であれば）
-3. **テスト実行結果**: 全テストパス済みのレポート
-4. **動作確認レポート**: 実装した機能の動作確認結果
-5. **次のタスクへの引き継ぎ**: 発見した課題や改善点
+1. **新規作成ファイル**:
+   - `components/threejs/materials/MatCapMaterial.tsx`
+   - `public/textures/dullFrontLitMetal.png`
+   - `tests/material-lighting.spec.ts`
+
+2. **修正ファイル**:
+   - `components/threejs/ThreeJSViewport.tsx`
+   - `components/threejs/ThreeJSModel.tsx`
+
+3. **テスト実行結果**:
+   - テスト実行のスクリーンショット
+   - パスしたテストの一覧
+
+4. **視覚的確認結果**:
+   - 実装前後の3Dビューポートのスクリーンショット比較
+   - 異なる角度からの見た目の確認
 
 ## 🔄 次のステップ
 
-この基盤実装とテストが完了したら、次は**タスク1.1.2: フェイスハイライト機能**の実装に進みます。レイキャスティングで取得した交差情報を使用して、実際にオブジェクトの色を変更する機能を実装し、同様にテストも作成します。
+この実装が完了したら、次は**フェーズ2: 高度な3D機能**の実装に進みます。特に「トランスフォームハンドル（ギズモ）の実装」が最優先項目となります。
 
 ## 💬 質問・相談
 
 実装中に不明点があれば：
 1. 元のCascadeView.jsの該当部分を詳細確認
 2. 機能比較表で元の仕様を確認
-3. 既存のテストファイルの構造を参考にする
-4. 現在の実装状況を把握してから実装開始
+3. React Three FiberとThree.jsのドキュメントを参照
+4. MatCapマテリアルのサンプルコードを参考にする
 
 **重要**: 
-- この作業は全フェーズの中で最も重要な基盤となります
-- **テストパスは完了の必須条件**です
-- 既存機能を壊さないよう慎重に実装してください
+- 視覚的な品質は元のCascadeStudioと同等以上を目指してください
+- テストは必ず実装し、全てパスさせてください
+- 既存機能（特にホバーハイライト）を壊さないよう注意してください
 
 ---
 **作業開始**: 即座に開始可能  
-**完了予定**: 2日以内（テスト含む）  
-**完了条件**: 機能実装 + 全テストパス  
+**完了予定**: 3日以内（テスト含む）  
+**完了条件**: 機能実装 + 全テストパス + 視覚的確認  
 **レビュー**: 完了時に動作確認とテスト結果を確認
 
 ---
 
-**🚀 CascadeStudio完全移行プロジェクトの完全完了を目指してください！**
+**🚀 CascadeStudio移行プロジェクトの次のマイルストーン達成を目指してください！** 

@@ -238,6 +238,29 @@ export default function ThreeJSViewport({
   const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
   const [hoveredObject, setHoveredObject] = useState<THREE.Mesh | null>(null);
   const [hoveredFace, setHoveredFace] = useState<number | null>(null);
+  const [fogSettings, setFogSettings] = useState({ near: 50, far: 200 });
+  const [boundingBox, setBoundingBox] = useState<THREE.Box3 | null>(null);
+
+  // バウンディングボックスに基づくフォグ距離の計算
+  const calculateFogDistance = useCallback((boundingBox: THREE.Box3) => {
+    if (!boundingBox) return { near: 50, far: 200 };
+    
+    const size = new THREE.Vector3();
+    boundingBox.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z);
+    
+    return {
+      near: maxDim * 2,
+      far: maxDim * 5
+    };
+  }, []);
+
+  // バウンディングボックスの更新時にフォグ設定を更新
+  useEffect(() => {
+    if (boundingBox) {
+      setFogSettings(calculateFogDistance(boundingBox));
+    }
+  }, [boundingBox, calculateFogDistance]);
 
   // マウスイベントハンドラー
   const handleMouseMove = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
@@ -255,6 +278,12 @@ export default function ThreeJSViewport({
     }
   }, [isRaycastingEnabled]);
 
+  // モデルのバウンディングボックスを更新するハンドラー
+  const handleModelLoaded = useCallback((scene: THREE.Group) => {
+    const box = new THREE.Box3().setFromObject(scene);
+    setBoundingBox(box);
+  }, []);
+
   // コンポーネントがマウントされたことをコンソールに記録
   useEffect(() => {
     console.log('🚀 ThreeJSViewport マウント完了');
@@ -264,6 +293,77 @@ export default function ThreeJSViewport({
       console.log('👋 ThreeJSViewport アンマウント');
     };
   }, []);
+
+  // テスト用のアクセス機能を追加
+  useEffect(() => {
+    // 既存のcascadeTestUtilsに追加
+    (window as any).cascadeTestUtils = {
+      ...(window as any).cascadeTestUtils || {},
+      
+      // マテリアル情報を取得
+      getMaterialInfo: () => {
+        const scene = (window as any).cascadeScene;
+        if (!scene) return null;
+        
+        const meshes = scene.children.filter((child: any) => 
+          child.type === 'Mesh' || 
+          (child.type === 'Group' && child.children.some((c: any) => c.type === 'Mesh'))
+        );
+        
+        if (meshes.length === 0) return null;
+        
+        const mesh = meshes[0].type === 'Mesh' ? 
+          meshes[0] : 
+          meshes[0].children.find((c: any) => c.type === 'Mesh');
+        
+        if (!mesh || !mesh.material) return null;
+        
+        return {
+          type: mesh.material.type,
+          color: mesh.material.color?.getHexString(),
+          hasMatcap: !!mesh.material.matcap
+        };
+      },
+      
+      // ライティング情報を取得
+      getLightingInfo: () => {
+        const scene = (window as any).cascadeScene;
+        if (!scene) return null;
+        
+        const lights = scene.children.filter((child: any) => 
+          child.type.includes('Light')
+        );
+        
+        return {
+          lightCount: lights.length,
+          hasHemisphereLight: lights.some((light: any) => light.type === 'HemisphereLight'),
+          hasDirectionalLight: lights.some((light: any) => light.type === 'DirectionalLight'),
+          hasAmbientLight: lights.some((light: any) => light.type === 'AmbientLight')
+        };
+      },
+      
+      // フォグ情報を取得
+      getFogInfo: () => {
+        const scene = (window as any).cascadeScene;
+        if (!scene) return null;
+        
+        return {
+          hasFog: !!scene.fog,
+          fogType: scene.fog?.type,
+          fogColor: scene.fog ? `#${scene.fog.color.getHexString()}` : null,
+          fogNear: scene.fog?.near,
+          fogFar: scene.fog?.far
+        };
+      }
+    };
+  }, []);
+
+  // バウンディングボックスの更新
+  useEffect(() => {
+    if ((window as any).cascadeTestUtils?.boundingBox && !boundingBox) {
+      setBoundingBox((window as any).cascadeTestUtils.boundingBox);
+    }
+  }, [boundingBox]);
 
   if (error) {
     return <div className="error">Error: {error}</div>;
@@ -278,28 +378,60 @@ export default function ThreeJSViewport({
       <Canvas
         camera={{ 
           position: cameraPosition, 
-          fov: 75 
+          fov: 50 
         }}
         shadows
+        gl={{ 
+          antialias: true
+        }}
         data-testid="cascade-3d-viewport"
         onMouseMove={handleMouseMove}
+        onCreated={({ scene }) => {
+          // シーンをグローバルに保存（テスト用）
+          (window as any).cascadeScene = scene;
+        }}
       >
+        {/* 背景色の設定 */}
+        <color attach="background" args={['#222222']} />
+        
+        {/* フォグの設定 */}
+        <fog attach="fog" args={['#f0f0f0', fogSettings.near, fogSettings.far]} />
+        
         {/* ライティング設定 */}
-        <ambientLight intensity={0.5} />
-        <directionalLight 
-          position={[10, 10, 5]} 
-          castShadow 
-          intensity={1}
-          shadow-mapSize-width={2048}
-          shadow-mapSize-height={2048}
+        <ambientLight intensity={0.3} />
+        
+        {/* 半球光 - 元の実装に合わせる */}
+        <hemisphereLight 
+          position={[0, 1, 0]} 
+          args={['#ffffff', '#444444', 1]} 
         />
         
-        {/* 環境設定 */}
-        <Environment preset="studio" />
+        {/* 平行光源 */}
+        <directionalLight 
+          position={[3, 10, 10]} 
+          intensity={0.8} 
+          castShadow 
+          shadow-mapSize-width={2048} 
+          shadow-mapSize-height={2048} 
+        />
+        
+        {/* 地面 */}
+        <mesh 
+          receiveShadow 
+          rotation={[-Math.PI / 2, 0, 0]} 
+          position={[0, -0.5, 0]}
+        >
+          <planeGeometry args={[100, 100]} />
+          <shadowMaterial opacity={0.2} />
+        </mesh>
         
         {/* 3Dモデル表示 */}
         <Suspense fallback={null}>
-          {modelUrl && <ThreeJSModel url={modelUrl} />}
+          {modelUrl && (
+            <ThreeJSModel 
+              url={modelUrl} 
+            />
+          )}
         </Suspense>
         
         {/* カメラコントロール */}
