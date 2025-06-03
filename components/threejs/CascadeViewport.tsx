@@ -1,7 +1,7 @@
 'use client';
 
-import { useRef, useEffect, useState } from 'react';
-import { Canvas, useThree } from '@react-three/fiber';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment, PerspectiveCamera } from '@react-three/drei';
 import { CADShape } from '@/types/worker';
 import * as THREE from 'three';
@@ -18,82 +18,96 @@ interface ShapeMeshProps {
   wireframe?: boolean;
 }
 
-// CADシェイプを表示するコンポーネント
-function ShapeMesh({ shape, wireframe = false }: ShapeMeshProps) {
+// CADシェイプを表示するコンポーネント（メモ化で最適化）
+const ShapeMesh = React.memo(function ShapeMesh({ shape, wireframe = false }: ShapeMeshProps) {
   const meshRef = useRef<THREE.Mesh>(null);
   const edgesRef = useRef<THREE.LineSegments>(null);
-
-  useEffect(() => {
-    if (!shape) return;
-
-    // メッシュの設定
-    if (shape.mesh && meshRef.current) {
-      const { vertices, normals, indices } = shape.mesh;
+  
+  // ジオメトリの生成をメモ化
+  const [meshGeometry, edgesGeometry] = useMemo(() => {
+    // メッシュジオメトリ
+    let meshGeo: THREE.BufferGeometry | null = null;
+    if (shape.mesh?.vertices && shape.mesh?.indices) {
+      meshGeo = new THREE.BufferGeometry();
+      meshGeo.setAttribute('position', new THREE.Float32BufferAttribute(shape.mesh.vertices, 3));
       
-      if (vertices && indices) {
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-        
-        if (normals) {
-          geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
-        } else {
-          geometry.computeVertexNormals();
-        }
-        
-        geometry.setIndex(Array.from(indices));
-        
-        meshRef.current.geometry.dispose();
-        meshRef.current.geometry = geometry;
+      if (shape.mesh.normals) {
+        meshGeo.setAttribute('normal', new THREE.Float32BufferAttribute(shape.mesh.normals, 3));
+      } else {
+        meshGeo.computeVertexNormals();
       }
-    }
-
-    // エッジの設定
-    if (shape.edges && edgesRef.current) {
-      const { vertices } = shape.edges;
       
-      if (vertices) {
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-        
-        edgesRef.current.geometry.dispose();
-        edgesRef.current.geometry = geometry;
-      }
+      meshGeo.setIndex(Array.from(shape.mesh.indices));
     }
+    
+    // エッジジオメトリ
+    let edgesGeo: THREE.BufferGeometry | null = null;
+    if (shape.edges?.vertices) {
+      edgesGeo = new THREE.BufferGeometry();
+      edgesGeo.setAttribute('position', new THREE.Float32BufferAttribute(shape.edges.vertices, 3));
+    }
+    
+    return [meshGeo, edgesGeo];
   }, [shape]);
+
+  // マテリアルのメモ化
+  const meshMaterial = useMemo(() => 
+    new THREE.MeshStandardMaterial({ 
+      color: '#6b9bd7', 
+      roughness: 0.5, 
+      metalness: 0.5,
+      side: THREE.DoubleSide,
+      wireframe 
+    }),
+  [wireframe]);
+  
+  const edgesMaterial = useMemo(() => 
+    new THREE.LineBasicMaterial({ 
+      color: '#000000', 
+      linewidth: 1 
+    }),
+  []);
+
+  // ジオメトリが変更されたら3Dオブジェクトを更新
+  useEffect(() => {
+    if (meshGeometry && meshRef.current) {
+      meshRef.current.geometry.dispose();
+      meshRef.current.geometry = meshGeometry;
+    }
+    
+    if (edgesGeometry && edgesRef.current) {
+      edgesRef.current.geometry.dispose();
+      edgesRef.current.geometry = edgesGeometry;
+    }
+  }, [meshGeometry, edgesGeometry]);
 
   return (
     <>
       {/* CADメッシュ */}
-      {shape.mesh && (
+      {meshGeometry && (
         <mesh ref={meshRef} castShadow receiveShadow>
-          <bufferGeometry />
-          <meshStandardMaterial 
-            color="#6b9bd7" 
-            roughness={0.5} 
-            metalness={0.5}
-            side={THREE.DoubleSide}
-            wireframe={wireframe}
-          />
+          <primitive attach="geometry" object={meshGeometry} />
+          <primitive attach="material" object={meshMaterial} />
         </mesh>
       )}
 
       {/* CADエッジ */}
-      {shape.edges && (
+      {edgesGeometry && (
         <lineSegments ref={edgesRef}>
-          <bufferGeometry />
-          <lineBasicMaterial color="#000000" linewidth={1} />
+          <primitive attach="geometry" object={edgesGeometry} />
+          <primitive attach="material" object={edgesMaterial} />
         </lineSegments>
       )}
     </>
   );
-}
+});
 
 // 3Dシーン設定コンポーネント
 function SceneSetup({ viewSettings }: { viewSettings: ViewSettings }) {
   const { camera } = useThree();
   
+  // カメラ位置の初期設定
   useEffect(() => {
-    // カメラ初期位置設定
     if (camera instanceof THREE.PerspectiveCamera) {
       camera.position.set(100, 100, 100);
       camera.lookAt(0, 0, 0);
@@ -199,6 +213,27 @@ function SceneSetup({ viewSettings }: { viewSettings: ViewSettings }) {
   );
 }
 
+// シェイプリストを表示するコンポーネント（メモ化）
+const ShapesList = React.memo(function ShapesList({ 
+  shapes, 
+  wireframe 
+}: { 
+  shapes: CADShape[], 
+  wireframe: boolean 
+}) {
+  return (
+    <>
+      {shapes.map((shape, i) => (
+        <ShapeMesh 
+          key={shape.hash || `shape-${i}`} 
+          shape={shape} 
+          wireframe={wireframe} 
+        />
+      ))}
+    </>
+  );
+});
+
 // メインビューポートコンポーネント
 export default function CascadeViewport({ 
   shapes = [], 
@@ -208,6 +243,20 @@ export default function CascadeViewport({
   const { viewSettings: currentSettings, updateSetting, toggleSetting } = 
     useViewSettings({...defaultViewSettings, ...viewSettings});
   
+  // パフォーマンス最適化のためにCanvasをメモ化
+  const canvasContent = useMemo(() => (
+    <Canvas 
+      shadows={currentSettings.shadows} 
+      gl={{ antialias: true }}
+      style={{ background: currentSettings.backgroundColor }}
+      dpr={[1, 2]} // デバイスピクセル比の制限（パフォーマンス向上）
+      performance={{ min: 0.5 }} // 低パフォーマンス時の最小更新レート
+    >
+      <SceneSetup viewSettings={currentSettings} />
+      <ShapesList shapes={shapes} wireframe={currentSettings.wireframe} />
+    </Canvas>
+  ), [shapes, currentSettings]);
+  
   // ワイヤーフレーム表示切替のハンドラー
   const toggleWireframe = () => toggleSetting('wireframe');
   
@@ -216,7 +265,7 @@ export default function CascadeViewport({
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      {/* ビューポート設定コントロールパネル（オプション） */}
+      {/* ビューポート設定コントロールパネル */}
       <div className="absolute bottom-2 left-2 z-10 bg-gray-800 bg-opacity-80 p-1 rounded shadow-lg text-white text-sm">
         <label className="flex items-center mb-1">
           <input 
@@ -238,22 +287,8 @@ export default function CascadeViewport({
         </label>
       </div>
 
-      <Canvas 
-        shadows={currentSettings.shadows} 
-        gl={{ antialias: true }}
-        style={{ background: currentSettings.backgroundColor }}
-      >
-        <SceneSetup viewSettings={currentSettings} />
-        
-        {/* CADシェイプを表示 */}
-        {shapes.map((shape, i) => (
-          <ShapeMesh 
-            key={i} 
-            shape={shape} 
-            wireframe={currentSettings.wireframe} 
-          />
-        ))}
-      </Canvas>
+      {/* キャンバス本体 */}
+      {canvasContent}
     </div>
   );
 } 

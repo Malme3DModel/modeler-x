@@ -24,6 +24,12 @@ interface UseCADWorkerReturn {
   clearError: () => void;
 }
 
+/**
+ * CADワーカーを使用するためのカスタムフック
+ * 
+ * OpenCascade.jsを使用したCAD操作をWebWorkerで実行するための
+ * フックです。コードの評価、形状のレンダリング、エラーハンドリングを提供します。
+ */
 export function useCADWorker(): UseCADWorkerReturn {
   const workerRef = useRef<Worker | null>(null);
   const [isWorkerReady, setIsWorkerReady] = useState(false);
@@ -36,20 +42,41 @@ export function useCADWorker(): UseCADWorkerReturn {
   // メッセージハンドラーマップ
   const messageHandlers = useRef<Record<string, (payload: any) => void>>({});
 
+  // ログの追加とキャッシュ（パフォーマンス最適化）
+  const addLog = useCallback((log: string) => {
+    // 最大500件までキャッシュ
+    setLogs(prevLogs => {
+      const newLogs = [...prevLogs, log];
+      return newLogs.slice(-500);
+    });
+  }, []);
+
   // ワーカーの初期化
   useEffect(() => {
     let worker: Worker | null = null;
+    let initTimeout: NodeJS.Timeout | null = null;
 
     console.log("🔧 [useCADWorker] Starting WebWorker initialization...");
-    console.log("🔧 [useCADWorker] Worker support:", typeof Worker !== 'undefined');
-    console.log("🔧 [useCADWorker] Current URL:", window.location.href);
 
     try {
+      // WebWorker APIのサポートチェック
+      if (typeof Worker === 'undefined') {
+        throw new Error('WebWorker is not supported in this browser');
+      }
+
       console.log("🔧 [useCADWorker] Attempting to create Worker('/workers/cadWorker.js')...");
       worker = new Worker('/workers/cadWorker.js');
       console.log("✅ [useCADWorker] Worker created successfully:", worker);
       
       workerRef.current = worker;
+
+      // タイムアウト処理の設定（10秒で初期化失敗と判断）
+      initTimeout = setTimeout(() => {
+        if (!isWorkerReady) {
+          setError('Worker initialization timed out after 10 seconds');
+          console.error('🚨 [useCADWorker] Worker initialization timed out');
+        }
+      }, 10000);
 
       // メッセージハンドラーの設定
       messageHandlers.current = {
@@ -57,11 +84,17 @@ export function useCADWorker(): UseCADWorkerReturn {
           console.log('✅ [useCADWorker] CAD Worker initialized successfully');
           setIsWorkerReady(true);
           setError(null);
+          
+          // タイムアウトのクリア
+          if (initTimeout) {
+            clearTimeout(initTimeout);
+            initTimeout = null;
+          }
         },
         
         log: (payload: string) => {
           console.log('📋 [useCADWorker] Worker log:', payload);
-          setLogs(prev => [...prev, payload]);
+          addLog(payload);
         },
         
         error: (payload: WorkerError) => {
@@ -131,7 +164,12 @@ export function useCADWorker(): UseCADWorkerReturn {
           colno: error.colno,
           error: error.error
         });
-        setError(`Worker error: ${error.message} (${error.filename}:${error.lineno}:${error.colno})`);
+        
+        // エラーメッセージを整形
+        const errorMessage = `Worker error: ${error.message} (${error.filename}:${error.lineno}:${error.colno})`;
+        setError(errorMessage);
+        addLog(`❌ ${errorMessage}`);
+        
         setIsWorkerReady(false);
         setIsWorking(false);
       };
@@ -139,7 +177,9 @@ export function useCADWorker(): UseCADWorkerReturn {
       // 追加: ワーカーメッセージエラーハンドリング
       worker.onmessageerror = (error) => {
         console.error('🚨 [useCADWorker] Worker onmessageerror:', error);
-        setError(`Worker message error: ${error}`);
+        const errorMessage = `Worker message error: ${error}`;
+        setError(errorMessage);
+        addLog(`❌ ${errorMessage}`);
       };
 
       console.log("🔧 [useCADWorker] Event handlers attached successfully");
@@ -149,22 +189,38 @@ export function useCADWorker(): UseCADWorkerReturn {
       console.error('🚨 [useCADWorker] Error type:', err instanceof Error ? err.constructor.name : typeof err);
       console.error('🚨 [useCADWorker] Error message:', err instanceof Error ? err.message : String(err));
       console.error('🚨 [useCADWorker] Error stack:', err instanceof Error ? err.stack : 'No stack trace');
-      setError(`Failed to create worker: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      
+      const errorMessage = `Failed to create worker: ${err instanceof Error ? err.message : 'Unknown error'}`;
+      setError(errorMessage);
+      addLog(`❌ ${errorMessage}`);
+      
+      // タイムアウトのクリア
+      if (initTimeout) {
+        clearTimeout(initTimeout);
+        initTimeout = null;
+      }
     }
 
     // クリーンアップ
     return () => {
       console.log("🧹 [useCADWorker] Cleaning up worker...");
+      
+      // タイムアウトのクリア
+      if (initTimeout) {
+        clearTimeout(initTimeout);
+        initTimeout = null;
+      }
+      
       if (worker) {
         worker.terminate();
         workerRef.current = null;
         console.log("✅ [useCADWorker] Worker terminated");
       }
     };
-  }, []);
+  }, [addLog]);
 
   // CADコードの実行
-  const executeCADCode = useCallback(async (code: string, guiState: GUIState = {}) => {
+  const executeCADCode = useCallback(async (code: string, guiState: GUIState = {}): Promise<void> => {
     if (!workerRef.current || !isWorkerReady) {
       throw new Error('Worker not ready');
     }
@@ -172,7 +228,11 @@ export function useCADWorker(): UseCADWorkerReturn {
     setIsWorking(true);
     setError(null);
     setProgress(null);
+    
+    // コード実行の開始をログに記録
+    addLog(`🔄 コード評価を開始: ${code.length}文字のコード`);
 
+    // デフォルトのGUI状態とマージ
     const payload: EvaluationPayload = {
       code,
       GUIState: {
@@ -189,15 +249,54 @@ export function useCADWorker(): UseCADWorkerReturn {
       payload
     };
 
-    workerRef.current.postMessage(message);
-  }, [isWorkerReady]);
+    // Promiseベースでメッセージを送信
+    return new Promise((resolve, reject) => {
+      if (!workerRef.current) {
+        reject(new Error('Worker not available'));
+        return;
+      }
+      
+      // 一定時間後にタイムアウトエラーを発生させる
+      const timeoutId = setTimeout(() => {
+        setIsWorking(false);
+        const timeoutError = new Error('CAD evaluation timed out after 30 seconds');
+        setError(timeoutError.message);
+        addLog(`❌ ${timeoutError.message}`);
+        reject(timeoutError);
+      }, 30000);
+      
+      // 完了イベントを待機するハンドラー
+      const handleCompletion = (e: MessageEvent<CADWorkerResponse>) => {
+        const { type } = e.data;
+        if (type === 'combineAndRenderShapes') {
+          clearTimeout(timeoutId);
+          workerRef.current?.removeEventListener('message', handleCompletion);
+          resolve();
+        } else if (type === 'error') {
+          clearTimeout(timeoutId);
+          workerRef.current?.removeEventListener('message', handleCompletion);
+          reject(new Error(e.data.payload?.message || 'Unknown error'));
+        }
+      };
+      
+      // メッセージハンドラーを追加
+      workerRef.current.addEventListener('message', handleCompletion);
+      
+      // メッセージを送信
+      workerRef.current.postMessage(message);
+    });
+  }, [isWorkerReady, addLog]);
 
   // 形状の結合とレンダリング
-  const combineAndRender = useCallback(async (options: CombineAndRenderPayload = {}) => {
+  const combineAndRender = useCallback(async (options: CombineAndRenderPayload = {}): Promise<void> => {
     if (!workerRef.current || !isWorkerReady) {
       throw new Error('Worker not ready');
     }
 
+    // 進行中であることを示す
+    setIsWorking(true);
+    
+    // デフォルト設定とマージ
     const defaultPayload: CombineAndRenderPayload = {
       maxDeviation: 0.1,
       sceneOptions: {
@@ -220,8 +319,43 @@ export function useCADWorker(): UseCADWorkerReturn {
       payload
     };
 
-    workerRef.current.postMessage(message);
-  }, [isWorkerReady]);
+    // Promiseベースでメッセージを送信
+    return new Promise((resolve, reject) => {
+      if (!workerRef.current) {
+        reject(new Error('Worker not available'));
+        return;
+      }
+      
+      // 一定時間後にタイムアウトエラーを発生させる
+      const timeoutId = setTimeout(() => {
+        setIsWorking(false);
+        const timeoutError = new Error('Combine and render operation timed out after 10 seconds');
+        setError(timeoutError.message);
+        addLog(`❌ ${timeoutError.message}`);
+        reject(timeoutError);
+      }, 10000);
+      
+      // 完了イベントを待機するハンドラー
+      const handleCompletion = (e: MessageEvent<CADWorkerResponse>) => {
+        const { type } = e.data;
+        if (type === 'combineAndRenderShapes') {
+          clearTimeout(timeoutId);
+          workerRef.current?.removeEventListener('message', handleCompletion);
+          resolve();
+        } else if (type === 'error') {
+          clearTimeout(timeoutId);
+          workerRef.current?.removeEventListener('message', handleCompletion);
+          reject(new Error(e.data.payload?.message || 'Unknown error'));
+        }
+      };
+      
+      // メッセージハンドラーを追加
+      workerRef.current.addEventListener('message', handleCompletion);
+      
+      // メッセージを送信
+      workerRef.current.postMessage(message);
+    });
+  }, [isWorkerReady, addLog]);
 
   // ログのクリア
   const clearLogs = useCallback(() => {

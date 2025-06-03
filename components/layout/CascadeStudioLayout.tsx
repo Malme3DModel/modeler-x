@@ -1,13 +1,16 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback, MutableRefObject } from 'react';
 import { DEFAULT_LAYOUT_CONFIG, STARTER_CODE } from '@/lib/layout/cascadeLayoutConfig';
 import dynamic from 'next/dynamic';
+import { createRoot } from 'react-dom/client';
 
 // 新しいインポート
 import { URLStateManager } from '@/lib/layout/urlStateManager';
 import { GUIState } from '@/types/gui';
 import { useCADWorker } from '@/hooks/useCADWorker';
+import { CascadeConsole, CascadeConsoleRef } from '@/components/layout/CascadeConsole';
+import { MonacoCodeEditor, MonacoCodeEditorRef } from '@/components/cad/MonacoCodeEditor';
 
 // Golden Layout CSS
 import 'golden-layout/dist/css/goldenlayout-base.css';
@@ -34,10 +37,14 @@ export default function CascadeStudioLayout({
   const [isLayoutReady, setIsLayoutReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guiState, setGuiState] = useState<GUIState>({});
-  const [consoleElement, setConsoleElement] = useState<HTMLElement | null>(null);
-  const editorRef = useRef<any>(null);
+  // consoleRefをMutableRefObjectとして作成
+  const consoleRef = useRef<CascadeConsoleRef | null>(null);
+  const [editorInstance, setEditorInstance] = useState<MonacoCodeEditorRef | null>(null);
   const lastSavedCodeRef = useRef<string>(STARTER_CODE);
   const lastSavedGuiStateRef = useRef<GUIState>({});
+
+  // コンソールインスタンスの状態
+  const [consoleInstance, setConsoleInstance] = useState<CascadeConsoleRef | null>(null);
 
   // CADワーカーフックを追加
   const {
@@ -51,6 +58,52 @@ export default function CascadeStudioLayout({
     worker
   } = useCADWorker();
 
+  // コンソールインスタンスが更新されたらrefを更新
+  useEffect(() => {
+    consoleRef.current = consoleInstance;
+  }, [consoleInstance]);
+
+  // コンソールにメッセージを追加（CascadeConsoleを使用）
+  const appendConsoleMessage = useCallback((message: string, type: 'info' | 'error' | 'success' | 'debug' = 'info') => {
+    if (consoleRef.current) {
+      consoleRef.current.appendMessage(message, type);
+    }
+  }, []);
+
+  // コードを評価する関数を定義（先に定義しておく）
+  const evaluateCode = useCallback((code: string) => {
+    appendConsoleMessage('🔄 コード評価を開始します...', 'info');
+    
+    // CADワーカーにコードを送信
+    if (isWorkerReady) {
+      executeCADCode(code, guiState)
+        .then(() => {
+          appendConsoleMessage('✅ コード評価を送信しました', 'success');
+          
+          // URLに状態を保存
+          try {
+            // 状態に変更がある場合のみURLを更新
+            if (code !== lastSavedCodeRef.current || 
+                JSON.stringify(guiState) !== JSON.stringify(lastSavedGuiStateRef.current)) {
+              
+              URLStateManager.saveStateToURL({ code, guiState });
+              lastSavedCodeRef.current = code;
+              lastSavedGuiStateRef.current = { ...guiState };
+              appendConsoleMessage('💾 状態をURLに保存しました', 'success');
+            }
+          } catch (error) {
+            console.error('URL状態の保存に失敗:', error);
+            appendConsoleMessage('⚠️ URL状態の保存に失敗しました', 'error');
+          }
+        })
+        .catch(err => {
+          appendConsoleMessage(`❌ コード評価に失敗: ${err.message}`, 'error');
+        });
+    } else {
+      appendConsoleMessage('❌ CADワーカーが初期化されていません', 'error');
+    }
+  }, [isWorkerReady, executeCADCode, guiState, appendConsoleMessage]);
+  
   // URLハッシュから初期状態を読み込む
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -74,23 +127,23 @@ export default function CascadeStudioLayout({
       console.error('URL状態の読み込みに失敗:', error);
       appendConsoleMessage('⚠️ URL状態の読み込みに失敗しました', 'error');
     }
-  }, []);
+  }, [appendConsoleMessage]);
 
   // ワーカーエラーをコンソールに表示
   useEffect(() => {
-    if (workerError && consoleElement) {
+    if (workerError) {
       appendConsoleMessage(`❌ CADワーカーエラー: ${workerError}`, 'error');
     }
-  }, [workerError, consoleElement]);
+  }, [workerError, appendConsoleMessage]);
 
   // ワーカーログをコンソールに表示
   useEffect(() => {
-    if (logs.length > 0 && consoleElement) {
+    if (logs.length > 0) {
       logs.forEach(log => {
         appendConsoleMessage(`${log}`, 'info');
       });
     }
-  }, [logs, consoleElement]);
+  }, [logs, appendConsoleMessage]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -120,15 +173,91 @@ export default function CascadeStudioLayout({
           
           switch (componentType) {
             case 'codeEditor':
-              createCodeEditorComponent(container);
+              container.element.innerHTML = '';
+              
+              // エディターコンポーネントのマウント先を作成
+              const editorContainer = document.createElement('div');
+              editorContainer.style.width = '100%';
+              editorContainer.style.height = '100%';
+              container.element.appendChild(editorContainer);
+              
+              // React 18のcreateRootを使用してReactコンポーネントをマウント
+              const editorRoot = createRoot(editorContainer);
+              
+              // 新しいrefオブジェクトを作成
+              const localEditorRef = {
+                current: null as MonacoCodeEditorRef | null
+              };
+              
+              // エディタコンポーネントのレンダリング
+              editorRoot.render(
+                <MonacoCodeEditor
+                  ref={(ref) => {
+                    if (ref) {
+                      // refがセットされたらインスタンスを保存
+                      localEditorRef.current = ref;
+                      setEditorInstance(ref);
+                    }
+                  }}
+                  initialCode={lastSavedCodeRef.current}
+                  onEvaluate={evaluateCode}
+                />
+              );
               break;
             case 'cascadeView':
               createCascadeViewComponent(container);
               break;
             case 'console':
-              container.element.innerHTML = createConsoleHTML();
-              // コンソール要素への参照を保存
-              setConsoleElement(container.element.querySelector('.cascade-console'));
+              container.element.innerHTML = '';
+              
+              // コンソールコンポーネントのマウント先を作成
+              const consoleContainer = document.createElement('div');
+              consoleContainer.style.width = '100%';
+              consoleContainer.style.height = '100%';
+              container.element.appendChild(consoleContainer);
+              
+              // コンソールのDOM直接埋め込み
+              const consoleElement = document.createElement('div');
+              consoleElement.className = 'cascade-console';
+              consoleElement.style.cssText = 'height: 100%; overflow-y: auto; padding: 8px; font-family: monospace; font-size: 12px; background-color: #1e1e1e; color: #dcdcaa;';
+              consoleContainer.appendChild(consoleElement);
+              
+              // 手動でインスタンスを作成
+              // DOM操作方式
+              const newConsoleInstance: CascadeConsoleRef = {
+                appendMessage: (message, type = 'info') => {
+                  const messageElement = document.createElement('div');
+                  messageElement.style.marginTop = '4px';
+                  
+                  // メッセージタイプに応じたスタイル
+                  switch (type) {
+                    case 'error':
+                      messageElement.style.color = '#f87171';
+                      break;
+                    case 'success':
+                      messageElement.style.color = '#4fd1c7';
+                      break;
+                    case 'debug':
+                      messageElement.style.color = '#f0db4f';
+                      break;
+                    default:
+                      messageElement.style.color = '#dcdcaa';
+                  }
+                  
+                  messageElement.textContent = `> ${message}`;
+                  consoleElement.appendChild(messageElement);
+                  
+                  // 自動スクロール
+                  consoleElement.scrollTop = consoleElement.scrollHeight;
+                },
+                clear: () => {
+                  consoleElement.innerHTML = '';
+                },
+                getElement: () => consoleElement
+              };
+              
+              // refを更新（stateを通して）
+              setConsoleInstance(newConsoleInstance);
               break;
           }
           
@@ -162,49 +291,10 @@ export default function CascadeStudioLayout({
     };
 
     initializeLayout();
-  }, []);
-
-  // コードを評価する関数を更新
-  const evaluateCode = (code: string) => {
-    appendConsoleMessage('🔄 コード評価を開始します...', 'info');
-    
-    // CADワーカーにコードを送信
-    if (isWorkerReady) {
-      executeCADCode(code, guiState)
-        .then(() => {
-          appendConsoleMessage('✅ コード評価を送信しました', 'success');
-          
-          // URLに状態を保存
-          saveStateToURL(code, guiState);
-        })
-        .catch(err => {
-          appendConsoleMessage(`❌ コード評価に失敗: ${err.message}`, 'error');
-        });
-    } else {
-      appendConsoleMessage('❌ CADワーカーが初期化されていません', 'error');
-    }
-  };
-  
-  // 状態をURLに保存
-  const saveStateToURL = (code: string, guiState: GUIState) => {
-    try {
-      // 状態に変更がある場合のみURLを更新
-      if (code !== lastSavedCodeRef.current || 
-          JSON.stringify(guiState) !== JSON.stringify(lastSavedGuiStateRef.current)) {
-        
-        URLStateManager.saveStateToURL({ code, guiState });
-        lastSavedCodeRef.current = code;
-        lastSavedGuiStateRef.current = { ...guiState };
-        appendConsoleMessage('💾 状態をURLに保存しました', 'success');
-      }
-    } catch (error) {
-      console.error('URL状態の保存に失敗:', error);
-      appendConsoleMessage('⚠️ URL状態の保存に失敗しました', 'error');
-    }
-  };
+  }, [appendConsoleMessage, evaluateCode]);
 
   // GUI状態更新ハンドラー
-  const handleGUIUpdate = (newGuiState: GUIState) => {
+  const handleGUIUpdate = useCallback((newGuiState: GUIState) => {
     setGuiState(newGuiState);
     console.log('🎛️ [CascadeStudioLayout] GUI状態更新:', newGuiState);
     
@@ -213,50 +303,21 @@ export default function CascadeStudioLayout({
     appendConsoleMessage('🎮 GUI状態更新: ' + JSON.stringify(newGuiState, null, 2), 'debug');
     
     // エディターのコードを取得して評価
-    if (editorRef.current) {
-      const code = editorRef.current.getValue();
+    if (editorInstance) {
+      const code = editorInstance.getValue();
       evaluateCode(code);
     }
-  };
-
-  // コンソールにメッセージを追加
-  const appendConsoleMessage = (message: string, type: 'info' | 'error' | 'success' | 'debug' = 'info') => {
-    if (!consoleElement) return;
-    
-    const messageElement = document.createElement('div');
-    messageElement.style.marginTop = '4px';
-    
-    // メッセージタイプに応じたスタイル
-    switch (type) {
-      case 'error':
-        messageElement.style.color = '#f87171';
-        break;
-      case 'success':
-        messageElement.style.color = '#4fd1c7';
-        break;
-      case 'debug':
-        messageElement.style.color = '#f0db4f';
-        break;
-      default:
-        messageElement.style.color = '#dcdcaa';
-    }
-    
-    messageElement.textContent = `> ${message}`;
-    consoleElement.appendChild(messageElement);
-    
-    // 自動スクロール
-    consoleElement.scrollTop = consoleElement.scrollHeight;
-  };
+  }, [appendConsoleMessage, evaluateCode, editorInstance]);
 
   // エラーが発生した場合の表示
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gray-900">
-        <div className="text-center">
-          <div className="text-red-500 text-xl mb-4">⚠️ エラーが発生しました</div>
-          <p className="text-gray-300">{error}</p>
+      <div className="w-full h-screen flex items-center justify-center bg-gray-900 text-white">
+        <div className="text-center p-8 bg-red-900 rounded-lg max-w-xl">
+          <h2 className="text-2xl mb-4">エラーが発生しました</h2>
+          <p className="text-red-200 mb-4">{error}</p>
           <button 
-            className="btn btn-primary mt-4"
+            className="px-4 py-2 bg-white text-red-900 rounded hover:bg-red-100"
             onClick={() => window.location.reload()}
           >
             再読み込み
@@ -266,71 +327,32 @@ export default function CascadeStudioLayout({
     );
   }
 
+  // CascadeViewportコンポーネントの設定
+  function createCascadeViewComponent(container: any) {
+    container.element.innerHTML = '<div class="cascade-view-container"></div>';
+    const viewContainer = container.element.querySelector('.cascade-view-container');
+    viewContainer.style.width = '100%';
+    viewContainer.style.height = '100%';
+    viewContainer.style.backgroundColor = '#2d2d2d';
+
+    // React 18のcreateRootを使用してReactコンポーネントをマウント
+    const viewRoot = createRoot(viewContainer);
+    
+    // CascadeViewportコンポーネントをレンダリング
+    const CascadeViewport = dynamic(() => import('@/components/threejs/CascadeViewport'), {
+      ssr: false,
+      loading: () => <div className="w-full h-full flex items-center justify-center bg-gray-800">
+        <div className="loading loading-spinner loading-lg text-primary"></div>
+      </div>
+    });
+    
+    viewRoot.render(<CascadeViewport shapes={shapes} />);
+  }
+
   return (
-    <div className="h-full w-full">
+    <div className="h-screen w-full bg-gray-900 flex flex-col">
+      {/* ナビゲーションバー */}
       <CascadeNavigation 
-        onNewProject={() => {
-          // エディタが利用可能ならコードをリセット
-          if (editorRef.current) {
-            editorRef.current.setValue(STARTER_CODE);
-            lastSavedCodeRef.current = STARTER_CODE;
-            evaluateCode(STARTER_CODE);
-          }
-          appendConsoleMessage('🆕 新規プロジェクトを作成しました', 'info');
-        }}
-        onSaveProject={() => {
-          if (editorRef.current) {
-            const code = editorRef.current.getValue();
-            const projectData = {
-              code,
-              guiState
-            };
-            // JSONとしてエクスポート
-            const projectString = JSON.stringify(projectData, null, 2);
-            const blob = new Blob([projectString], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'cascade-project.json';
-            link.click();
-            URL.revokeObjectURL(url);
-            appendConsoleMessage('💾 プロジェクトをJSONとして保存しました', 'success');
-          }
-        }}
-        onLoadProject={() => {
-          const input = document.createElement('input');
-          input.type = 'file';
-          input.accept = 'application/json';
-          input.onchange = (e: any) => {
-            const file = e.target.files?.[0];
-            if (file) {
-              const reader = new FileReader();
-              reader.onload = (event) => {
-                try {
-                  const projectData = JSON.parse(event.target?.result as string);
-                  if (projectData.code && editorRef.current) {
-                    editorRef.current.setValue(projectData.code);
-                    lastSavedCodeRef.current = projectData.code;
-                    
-                    // GUIステートがあれば更新
-                    if (projectData.guiState) {
-                      setGuiState(projectData.guiState);
-                      lastSavedGuiStateRef.current = projectData.guiState;
-                    }
-                    
-                    // コードを評価
-                    evaluateCode(projectData.code);
-                    appendConsoleMessage('📂 プロジェクトを読み込みました', 'success');
-                  }
-                } catch (error) {
-                  appendConsoleMessage('⚠️ プロジェクトの読み込みに失敗: ' + (error instanceof Error ? error.message : String(error)), 'error');
-                }
-              };
-              reader.readAsText(file);
-            }
-          };
-          input.click();
-        }}
         onExport={(format) => {
           if (!worker) {
             appendConsoleMessage('❌ ワーカーが初期化されていません', 'error');
@@ -351,6 +373,66 @@ export default function CascadeStudioLayout({
               appendConsoleMessage('🔄 OBJファイルをエクスポートしています...', 'info');
               break;
           }
+        }}
+        onNewProject={() => {
+          // エディタが利用可能ならコードをリセット
+          if (editorInstance) {
+            editorInstance.setValue(STARTER_CODE);
+            lastSavedCodeRef.current = STARTER_CODE;
+            evaluateCode(STARTER_CODE);
+          }
+        }}
+        onSaveProject={() => {
+          if (editorInstance) {
+            const code = editorInstance.getValue();
+            const projectData = {
+              code,
+              guiState
+            };
+            
+            // JSONとしてダウンロード
+            const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'cascade-studio-project.json';
+            a.click();
+            URL.revokeObjectURL(url);
+          }
+        }}
+        onLoadProject={() => {
+          // ファイル選択ダイアログを表示
+          const input = document.createElement('input');
+          input.type = 'file';
+          input.accept = '.json';
+          input.onchange = (e) => {
+            const file = (e.target as HTMLInputElement).files?.[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (event) => {
+                try {
+                  const projectData = JSON.parse(event.target?.result as string);
+                  if (projectData.code && editorInstance) {
+                    editorInstance.setValue(projectData.code);
+                    lastSavedCodeRef.current = projectData.code;
+                    
+                    if (projectData.guiState) {
+                      setGuiState(projectData.guiState);
+                      lastSavedGuiStateRef.current = projectData.guiState;
+                    }
+                    
+                    // 読み込んだコードを実行
+                    evaluateCode(projectData.code);
+                    appendConsoleMessage('📂 プロジェクトを読み込みました', 'success');
+                  }
+                } catch (error) {
+                  appendConsoleMessage('❌ プロジェクトの読み込みに失敗: ' + (error instanceof Error ? error.message : String(error)), 'error');
+                }
+              };
+              reader.readAsText(file);
+            }
+          };
+          input.click();
         }}
         onImportFiles={() => {
           const input = document.createElement('input');
@@ -376,246 +458,20 @@ export default function CascadeStudioLayout({
           }
         }}
       />
-      <div ref={containerRef} className="h-full w-full" />
-      {!isLayoutReady && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-900">
-          <div className="text-center">
-            <span className="loading loading-spinner loading-lg text-primary"></span>
-            <p className="mt-4 text-lg text-gray-300">Golden Layout初期化中...</p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  // CascadeViewコンポーネント作成（ReactコンポーネントをDOM要素として統合）
-  function createCascadeViewComponent(container: any) {
-    // コンテナ作成
-    const viewContainer = document.createElement('div');
-    viewContainer.style.height = '100%';
-    viewContainer.style.position = 'relative';
-    viewContainer.style.backgroundColor = '#2d3748';
-    
-    // フローティングGUIコンテナ
-    const floatingGUIContainer = document.createElement('div');
-    floatingGUIContainer.id = 'tweakpane-gui-container';
-    floatingGUIContainer.style.position = 'absolute';
-    floatingGUIContainer.style.top = '16px';
-    floatingGUIContainer.style.right = '16px';
-    floatingGUIContainer.style.zIndex = '10';
-    viewContainer.appendChild(floatingGUIContainer);
-    
-    // 3Dビューポート用コンテナ
-    const viewportContainer = document.createElement('div');
-    viewportContainer.id = 'cascade-viewport-container';
-    viewportContainer.style.width = '100%';
-    viewportContainer.style.height = '100%';
-    viewContainer.appendChild(viewportContainer);
-    
-    // コンテナをパネルに追加
-    container.element.appendChild(viewContainer);
-    
-    // ReactコンポーネントをDOM要素にレンダリング
-    import('react-dom/client').then(({ createRoot }) => {
-      // Tweakpane GUI要素を描画
-      const tweakpaneRoot = createRoot(floatingGUIContainer);
-      tweakpaneRoot.render(
+      
+      {/* メインコンテンツ */}
+      <div className="flex-grow" ref={containerRef}>
+        {/* レイアウトがここに動的に生成される */}
+      </div>
+      
+      {/* Tweakpane GUI */}
+      <div className="absolute top-16 right-0 z-10">
         <TweakpaneGUI 
-          onGUIUpdate={handleGUIUpdate} 
           initialState={guiState}
+          onGUIUpdate={handleGUIUpdate}
           cadWorkerReady={isWorkerReady}
         />
-      );
-      
-      // 3Dビューポートコンポーネントを描画
-      import('@/components/threejs/CascadeViewport').then(({ default: CascadeViewport }) => {
-        const viewportRoot = createRoot(viewportContainer);
-        
-        // GUIからビューポート設定を取得
-        const viewSettings = {
-          groundPlane: guiState["GroundPlane?"] !== false,
-          grid: guiState["Grid?"] !== false,
-          axes: true,
-          ambientLight: true,
-          ambientLightIntensity: 0.5,
-          backgroundColor: '#2d3748',
-          wireframe: false,
-          shadows: true
-        };
-        
-        // ビューポートをレンダリング
-        viewportRoot.render(
-          <CascadeViewport 
-            shapes={shapes} 
-            viewSettings={viewSettings}
-          />
-        );
-        
-        appendConsoleMessage('🔍 CAD Viewportを初期化しました', 'info');
-      }).catch(err => {
-        console.error('3Dビューポート初期化エラー:', err);
-        appendConsoleMessage('❌ 3Dビューポート初期化に失敗: ' + err.message, 'error');
-      });
-    });
-  }
-  
-  // Monaco Editorコンポーネント作成（ReactコンポーネントをDOM要素として統合）
-  function createCodeEditorComponent(container: any) {
-    // エディターコンテナ作成
-    const editorContainer = document.createElement('div');
-    editorContainer.style.height = '100%';
-    editorContainer.style.width = '100%';
-    editorContainer.style.backgroundColor = '#1e1e1e';
-    container.element.appendChild(editorContainer);
-    
-    // Monaco Editorのワーカー設定
-    if (typeof window !== 'undefined') {
-      // ワーカーを提供する関数を設定
-      (window as any).MonacoEnvironment = {
-        // ワーカーURLを提供する関数
-        getWorkerUrl: function(_moduleId: string, label: string) {
-          if (label === 'typescript' || label === 'javascript') {
-            return '/monaco-editor-workers/ts.worker.js';
-          }
-          return '/monaco-editor-workers/editor.worker.js';
-        },
-        // ワーカーオプションを提供する関数（classicタイプで作成）
-        getWorkerOptions: function() {
-          return {
-            type: 'classic' // モジュールスクリプトではimportScriptsが使えないためclassicを使用
-          };
-        }
-      };
-    }
-    
-    // モナコエディターを動的にインポートして初期化
-    import('monaco-editor').then(monaco => {
-      // URLから読み込んだコードまたはデフォルトを使用
-      const initialCode = lastSavedCodeRef.current || STARTER_CODE;
-      
-      // モナコエディター初期化
-      const editor = monaco.editor.create(editorContainer, {
-        value: initialCode,
-        language: 'typescript',
-        theme: 'vs-dark',
-        minimap: { enabled: true },
-        automaticLayout: true,
-        fontSize: 14,
-        fontFamily: 'Consolas, "Courier New", monospace',
-        scrollBeyondLastLine: false,
-      });
-      
-      // エディター参照を保存
-      editorRef.current = editor;
-      
-      // F5キーとCtrl+Sのキーバインド設定
-      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-        // コード評価を実行
-        const code = editor.getValue();
-        evaluateCode(code);
-      });
-      
-      editor.addCommand(monaco.KeyCode.F5, () => {
-        // コード評価を実行
-        const code = editor.getValue();
-        evaluateCode(code);
-      });
-      
-      // ワーカーが準備できたら、初期コードを評価
-      if (isWorkerReady) {
-        setTimeout(() => {
-          appendConsoleMessage('🚀 初期コードを評価します...', 'info');
-          evaluateCode(initialCode);
-        }, 1000);
-      }
-    });
-  }
-  
-  function createCodeEditorHTML(): string {
-    return `
-      <div id="code-editor-container" style="height: 100%; width: 100%; background-color: #1e1e1e;"></div>
-    `;
-  }
-  
-  function createConsoleHTML(): string {
-    return `
-      <div class="cascade-console-container" style="height: 100%; width: 100%; background-color: #1e1e1e; overflow: hidden; display: flex; flex-direction: column;">
-        <div class="cascade-console" style="flex: 1; padding: 8px; overflow-y: auto; overflow-x: hidden; font-family: Consolas, 'Courier New', monospace; font-size: 13px; color: #dcdcaa; white-space: pre-wrap; word-break: break-all;">
-          <div>> 🚀 CascadeStudio Console</div>
-          <div>> ✅ 初期化完了</div>
-        </div>
       </div>
-    `;
-  }
-
-  // ワーカーメッセージハンドラーを追加
-  useEffect(() => {
-    if (!worker || !isWorkerReady) return;
-
-    // STEPファイルエクスポート処理
-    const handleSaveShapeSTEP = (e: MessageEvent) => {
-      if (e.data.type === 'saveShapeSTEP' && e.data.payload) {
-        const stepContent = e.data.payload;
-        const blob = new Blob([stepContent], { type: 'model/step' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'cascade-model.step';
-        link.click();
-        URL.revokeObjectURL(url);
-        appendConsoleMessage('✅ STEPファイルをエクスポートしました', 'success');
-      }
-    };
-
-    // STLファイルエクスポート処理
-    const handleSaveShapeSTL = (e: MessageEvent) => {
-      if (e.data.type === 'saveShapeSTL' && e.data.payload) {
-        const stlContent = e.data.payload;
-        const blob = new Blob([stlContent], { type: 'model/stl' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'cascade-model.stl';
-        link.click();
-        URL.revokeObjectURL(url);
-        appendConsoleMessage('✅ STLファイルをエクスポートしました', 'success');
-      }
-    };
-
-    // OBJファイルエクスポート処理
-    const handleSaveShapeOBJ = (e: MessageEvent) => {
-      if (e.data.type === 'saveShapeOBJ' && e.data.payload) {
-        const objContent = e.data.payload;
-        const blob = new Blob([objContent], { type: 'model/obj' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'cascade-model.obj';
-        link.click();
-        URL.revokeObjectURL(url);
-        appendConsoleMessage('✅ OBJファイルをエクスポートしました', 'success');
-      }
-    };
-
-    // ファイル読み込み処理
-    const handleLoadFiles = (e: MessageEvent) => {
-      if (e.data.type === 'loadFiles' && e.data.payload) {
-        appendConsoleMessage(`✅ ${Object.keys(e.data.payload).length}個のファイルをインポートしました`, 'success');
-      }
-    };
-
-    // イベントリスナーを登録
-    worker.addEventListener('message', handleSaveShapeSTEP);
-    worker.addEventListener('message', handleSaveShapeSTL);
-    worker.addEventListener('message', handleSaveShapeOBJ);
-    worker.addEventListener('message', handleLoadFiles);
-
-    // クリーンアップ
-    return () => {
-      worker.removeEventListener('message', handleSaveShapeSTEP);
-      worker.removeEventListener('message', handleSaveShapeSTL);
-      worker.removeEventListener('message', handleSaveShapeOBJ);
-      worker.removeEventListener('message', handleLoadFiles);
-    };
-  }, [worker, isWorkerReady]);
+    </div>
+  );
 } 
