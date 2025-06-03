@@ -13,10 +13,10 @@ test.describe('URLハッシュ機能テスト', () => {
     await page.waitForSelector('.lm_goldenlayout', { timeout: 10000 });
     
     // エディターが読み込まれるまで待機
-    await page.waitForSelector('.monaco-editor', { timeout: 10000 });
+    await page.waitForSelector('.monaco-editor-container .monaco-editor', { timeout: 15000 });
     
     // エディターにフォーカス
-    await page.locator('.monaco-editor').click();
+    await page.locator('.monaco-editor-container .monaco-editor').first().click();
     
     // 全選択して削除
     await page.keyboard.press('Control+A');

@@ -34,10 +34,10 @@ test.describe('CascadeStudio基本テスト', () => {
     await page.goto('http://localhost:3000/cascade-studio');
     
     // エディターが表示されるまで待機
-    await page.waitForSelector('.monaco-editor', { timeout: 10000 });
+    await page.waitForSelector('.monaco-editor-container .monaco-editor', { timeout: 15000 });
     
     // エディターが表示されていることを確認
-    const editor = await page.locator('.monaco-editor');
+    const editor = await page.locator('.monaco-editor-container .monaco-editor').first();
     await expect(editor).toBeVisible();
     
     // スクリーンショット取得

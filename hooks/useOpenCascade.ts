@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import initOpenCascade from 'opencascade.js';
+import * as OpenCascadeModule from 'opencascade.js';
 import shapeToUrl from '../lib/shapeToUrl';
 
 interface UseOpenCascadeReturn {
@@ -16,7 +16,7 @@ export function useOpenCascade(): UseOpenCascadeReturn {
   const [oc, setOc] = useState<any>(null);
 
   useEffect(() => {
-    initOpenCascade()
+    OpenCascadeModule.initOpenCascade()
       .then((ocInstance: any) => {
         setOc(ocInstance);
         
@@ -77,7 +77,7 @@ export function useOpenCascade(): UseOpenCascadeReturn {
           setIsLoading(false);
         }
       })
-      .catch((err) => {
+      .catch((err: any) => {
         setError(err instanceof Error ? err.message : 'Failed to initialize OpenCascade');
         setIsLoading(false);
       });

@@ -305,6 +305,22 @@ export default function CascadeStudioLayout({
     }
   }, [appendConsoleMessage, evaluateCode, editorInstance]);
 
+  // beforeunload（F5リロード等）時にも必ずURLハッシュを最新化
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handler = () => {
+      // 最新のコード・GUI状態をURLに保存
+      URLStateManager.saveStateToURL({
+        code: lastSavedCodeRef.current,
+        guiState: lastSavedGuiStateRef.current
+      });
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => {
+      window.removeEventListener('beforeunload', handler);
+    };
+  }, []);
+
   // エラーが発生した場合の表示
   if (error) {
     return (

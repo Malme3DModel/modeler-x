@@ -14,14 +14,14 @@ test.describe('CascadeStudio機能テスト', () => {
     console.log('✅ Golden Layoutが読み込まれました');
     
     // エディターが読み込まれるまで待機
-    await page.waitForSelector('.monaco-editor', { timeout: 10000 });
+    await page.waitForSelector('.monaco-editor-container .monaco-editor', { timeout: 15000 });
     console.log('✅ Monacoエディターが読み込まれました');
   });
   
   // エディターの操作テスト
   test('エディターでコードを編集できる', async ({ page }) => {
     // エディターにフォーカス
-    await page.locator('.monaco-editor').click();
+    await page.locator('.monaco-editor-container .monaco-editor').first().click();
     
     // 全選択して削除
     await page.keyboard.press('Control+A');

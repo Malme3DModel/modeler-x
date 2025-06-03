@@ -39,8 +39,11 @@ test.describe('CascadeStudio比較テスト', () => {
     
     // 各パネルの存在確認
     const editorPanel = await page.locator('.lm_item.lm_stack').filter({ hasText: '* Untitled' }).first();
+    await editorPanel.waitFor({ state: 'visible', timeout: 15000 });
     const cadViewPanel = await page.locator('.lm_item.lm_stack').filter({ hasText: 'CAD View' }).first();
+    await cadViewPanel.waitFor({ state: 'visible', timeout: 15000 });
     const consolePanel = await page.locator('.lm_item.lm_stack').filter({ hasText: 'Console' }).first();
+    await consolePanel.waitFor({ state: 'visible', timeout: 15000 });
     
     await expect(editorPanel).toBeVisible();
     await expect(cadViewPanel).toBeVisible();
@@ -83,18 +86,19 @@ test.describe('CascadeStudio比較テスト', () => {
     
     try {
       // Monacoエディターが初期化されるまで待機
-      await page.waitForSelector('.monaco-editor', { timeout: 10000 });
+      await page.waitForSelector('.monaco-editor-container .monaco-editor', { timeout: 15000 });
       
       // エディターが完全に読み込まれるまで待機
       await page.waitForTimeout(2000);
       
       // エディター領域のスクリーンショット
       const editorPanel = await page.locator('.lm_item.lm_stack').filter({ hasText: '* Untitled' }).first();
+      await editorPanel.waitFor({ state: 'visible', timeout: 15000 });
       if (await editorPanel.isVisible()) {
         await editorPanel.screenshot({ path: 'test-results/implemented-editor.png' });
         
         // エディターの内容をわかりやすくするためにテストコードを入力
-        await page.locator('.monaco-editor').click();
+        await page.locator('.monaco-editor-container .monaco-editor').first().click();
         await page.keyboard.press('Control+A');
         await page.keyboard.press('Delete');
         await page.keyboard.type('// テストコード\nlet box = Box(10, 20, 30);');

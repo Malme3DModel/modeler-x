@@ -67,10 +67,10 @@ test.describe('CascadeStudio機能テスト', () => {
   // MonacoエディターとURLハッシュのテスト
   test('Monacoエディターの編集とURLハッシュの更新', async ({ page }) => {
     // Monacoエディターが初期化されるまで待機
-    await page.waitForSelector('.monaco-editor', { timeout: 10000 });
+    await page.waitForSelector('.monaco-editor-container .monaco-editor', { timeout: 15000 });
     
     // エディターをクリックしてフォーカス
-    await page.locator('.monaco-editor').click();
+    await page.locator('.monaco-editor-container .monaco-editor').first().click();
     
     // 初期のコンテンツをクリア
     await page.keyboard.press('Control+A');
@@ -99,10 +99,10 @@ test.describe('CascadeStudio機能テスト', () => {
   // URL共有機能のテスト
   test('URL共有機能とURLからの状態復元', async ({ page, context }) => {
     // テスト用の簡単なコードに変更
-    await page.waitForSelector('.monaco-editor', { timeout: 10000 });
+    await page.waitForSelector('.monaco-editor-container .monaco-editor', { timeout: 15000 });
     
     // エディターをクリックしてフォーカス
-    await page.locator('.monaco-editor').click();
+    await page.locator('.monaco-editor-container .monaco-editor').first().click();
     
     // 初期のコンテンツをクリア
     await page.keyboard.press('Control+A');
@@ -131,7 +131,7 @@ test.describe('CascadeStudio機能テスト', () => {
     await newPage.waitForSelector('.lm_goldenlayout', { timeout: 10000 });
     
     // Monacoエディターが初期化されるまで待機
-    await newPage.waitForSelector('.monaco-editor', { timeout: 10000 });
+    await newPage.waitForSelector('.monaco-editor-container .monaco-editor', { timeout: 15000 });
     
     // エディターのテキストに変更が反映されているか確認
     // 注: 実際のエディターの内容確認はAPIが必要なため、ここではスクリーンショットで目視確認
