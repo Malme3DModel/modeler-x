@@ -5,7 +5,7 @@ import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment, PerspectiveCamera } from '@react-three/drei';
 import { CADShape } from '@/types/worker';
 import * as THREE from 'three';
-import CameraControls from '@/components/cad/CameraControls';
+import CameraControls, { CameraControlsUI } from '@/components/cad/CameraControls';
 import { ViewSettings, defaultViewSettings, useViewSettings } from '@/hooks/useViewSettings';
 
 interface CascadeViewportProps {
@@ -16,6 +16,21 @@ interface CascadeViewportProps {
 interface ShapeMeshProps {
   shape: CADShape;
   wireframe?: boolean;
+}
+
+// OrbitControlsの型を拡張
+type OrbitControlsType = {
+  target: THREE.Vector3;
+  update: () => void;
+  fitToSphere?: (sphere: THREE.Sphere, enableTransition?: boolean) => void;
+};
+
+// React Three Fiberのキャンバス要素拡張型
+interface ExtendedHTMLCanvasElement extends HTMLCanvasElement {
+  __r3f?: {
+    controls: OrbitControlsType;
+    camera: THREE.PerspectiveCamera;
+  };
 }
 
 // CADシェイプを表示するコンポーネント（メモ化で最適化）
@@ -169,8 +184,11 @@ function RaycastingHandler({
 }
 
 // 3Dシーン設定コンポーネント
-function SceneSetup({ viewSettings }: { viewSettings: ViewSettings }) {
-  const { camera } = useThree();
+function SceneSetup({ viewSettings, onCameraSetup }: { 
+  viewSettings: ViewSettings;
+  onCameraSetup?: (setViewFn: (viewName: string) => void) => void;
+}) {
+  const { camera, controls } = useThree();
   
   // カメラ位置の初期設定
   useEffect(() => {
@@ -184,7 +202,9 @@ function SceneSetup({ viewSettings }: { viewSettings: ViewSettings }) {
   const settings = { ...defaultViewSettings, ...viewSettings };
 
   // カメラビューを設定するコールバック
-  const handleSetView = (viewName: string) => {
+  const handleSetView = useCallback((viewName: string) => {
+    if (!controls || !camera) return;
+    
     if (camera instanceof THREE.PerspectiveCamera) {
       switch (viewName) {
         case 'front':
@@ -215,18 +235,49 @@ function SceneSetup({ viewSettings }: { viewSettings: ViewSettings }) {
           camera.position.set(70, 70, 70);
           camera.up.set(0, 1, 0);
           break;
+        case 'fit':
+          // オブジェクトにフィットするビュー
+          // OrbitControlsのfitToSphereメソッドを安全に呼び出す
+          try {
+            // @ts-ignore - Three.js/R3Fの型定義の問題を回避
+            if (controls.fitToSphere) {
+              // @ts-ignore
+              controls.fitToSphere(new THREE.Sphere(new THREE.Vector3(0, 0, 0), 100), true);
+            }
+          } catch (e) {
+            console.error('fitToSphereメソッドの呼び出しに失敗しました', e);
+          }
+          break;
       }
-      camera.lookAt(0, 0, 0);
+      
+      if (viewName !== 'fit') {
+        camera.lookAt(0, 0, 0);
+      }
+      
+      // OrbitControlsのupdateメソッドを安全に呼び出す
+      try {
+        // @ts-ignore - Three.js/R3Fの型定義の問題を回避
+        if (controls.update) {
+          // @ts-ignore
+          controls.update();
+        }
+      } catch (e) {
+        console.error('updateメソッドの呼び出しに失敗しました', e);
+      }
     }
-  };
+  }, [camera, controls]);
+
+  // 外部からカメラ制御関数を利用できるようにする
+  useEffect(() => {
+    if (onCameraSetup) {
+      onCameraSetup(handleSetView);
+    }
+  }, [handleSetView, onCameraSetup]);
 
   return (
     <>
       <PerspectiveCamera makeDefault position={[100, 100, 100]} fov={45} />
       <OrbitControls makeDefault enableDamping dampingFactor={0.1} />
-      
-      {/* カメラコントロールを追加 */}
-      <CameraControls onSetView={handleSetView} />
       
       {/* 環境光 */}
       {settings.ambientLight && (
@@ -313,6 +364,21 @@ export default function CascadeViewport({
   const [hoveredObject, setHoveredObject] = useState<THREE.Object3D | null>(null);
   const [hoveredFace, setHoveredFace] = useState<number | null>(null);
   const [isRaycastingEnabled, setIsRaycastingEnabled] = useState(true);
+  
+  // カメラ制御関数の参照を保持
+  const [setViewFn, setSetViewFn] = useState<((viewName: string) => void) | null>(null);
+  
+  // Three.jsシーンからカメラ制御関数を受け取るコールバック
+  const handleCameraSetup = useCallback((fn: (viewName: string) => void) => {
+    setSetViewFn(() => fn);
+  }, []);
+
+  // UI側でのカメラビュー変更ハンドラー
+  const handleViewChange = useCallback((viewName: string) => {
+    if (setViewFn) {
+      setViewFn(viewName);
+    }
+  }, [setViewFn]);
 
   // マウスイベントハンドラーの実装
   const handleMouseMove = useCallback((event: React.MouseEvent<HTMLDivElement>) => {
@@ -382,7 +448,10 @@ export default function CascadeViewport({
       data-testid="cascade-3d-viewport"
       onMouseMove={handleMouseMove}
     >
-      <SceneSetup viewSettings={currentSettings} />
+      <SceneSetup 
+        viewSettings={currentSettings} 
+        onCameraSetup={handleCameraSetup}
+      />
       <ShapesList shapes={shapes} wireframe={currentSettings.wireframe} />
       <RaycastingHandler 
         shapes={shapes}
@@ -391,7 +460,15 @@ export default function CascadeViewport({
         onHoverFace={handleHoverFace}
       />
     </Canvas>
-  ), [shapes, currentSettings, isRaycastingEnabled, handleMouseMove, handleHoverObject, handleHoverFace]);
+  ), [
+    shapes, 
+    currentSettings, 
+    isRaycastingEnabled, 
+    handleMouseMove, 
+    handleHoverObject, 
+    handleHoverFace,
+    handleCameraSetup
+  ]);
   
   // ワイヤーフレーム表示切替のハンドラー
   const toggleWireframe = () => toggleSetting('wireframe');
@@ -401,6 +478,14 @@ export default function CascadeViewport({
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      {/* HTMLのカメラコントロールUI - Canvasの外側にレンダリング */}
+      <div className="absolute top-2 right-2 z-10">
+        <div className="bg-gray-800 bg-opacity-80 rounded shadow-lg">
+          {/* カメラコントロールコンポーネント */}
+          <CameraControlsUI onViewChange={handleViewChange} />
+        </div>
+      </div>
+      
       {/* ビューポート設定コントロールパネル */}
       <div className="absolute bottom-2 left-2 z-10 bg-gray-800 bg-opacity-80 p-1 rounded shadow-lg text-white text-sm">
         <label className="flex items-center mb-1">

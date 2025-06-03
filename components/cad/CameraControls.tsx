@@ -27,9 +27,9 @@ type OrbitControlsType = {
 
 /**
  * プリセットカメラビュー設定と3Dビューの制御を提供するコンポーネント
+ * このコンポーネントはThree.jsシーン内でレンダリングされます
  */
 export default function CameraControls({ onSetView }: CameraControlsProps) {
-  const [expanded, setExpanded] = useState(false);
   const { camera, controls } = useThree();
   
   // カメラプリセットの定義
@@ -120,6 +120,28 @@ export default function CameraControls({ onSetView }: CameraControlsProps) {
     }
   };
 
+  // Three.jsシーン内ではなにもレンダリングしない
+  return null;
+}
+
+/**
+ * HTMLとして表示するカメラコントロールUI
+ * このコンポーネントはDOM上にレンダリングされます
+ */
+export function CameraControlsUI({ onViewChange }: { onViewChange: (viewName: string) => void }) {
+  const [expanded, setExpanded] = useState(false);
+  
+  // カメラプリセットの定義（Three.jsオブジェクトなしでHTML用に再定義）
+  const cameraPresets = [
+    { name: 'front', label: '正面', icon: '⬆️' },
+    { name: 'back', label: '背面', icon: '⬇️' },
+    { name: 'left', label: '左側面', icon: '⬅️' },
+    { name: 'right', label: '右側面', icon: '➡️' },
+    { name: 'top', label: '上面', icon: '⬆️' },
+    { name: 'bottom', label: '底面', icon: '⬇️' },
+    { name: 'iso', label: '等角投影', icon: '🔄' },
+  ];
+
   return (
     <div className="absolute top-2 right-2 z-10">
       <div className="bg-gray-800 bg-opacity-80 rounded shadow-lg">
@@ -139,7 +161,7 @@ export default function CameraControls({ onSetView }: CameraControlsProps) {
               <button
                 key={preset.name}
                 className="px-2 py-1 text-sm text-white hover:bg-gray-700 rounded flex items-center"
-                onClick={() => setView(preset)}
+                onClick={() => onViewChange(preset.name)}
                 title={preset.label}
               >
                 <span className="mr-1">{preset.icon}</span>
@@ -150,13 +172,7 @@ export default function CameraControls({ onSetView }: CameraControlsProps) {
             {/* フィットビューボタン */}
             <button
               className="px-2 py-1 text-sm text-white hover:bg-gray-700 rounded col-span-2 flex items-center justify-center"
-              onClick={() => {
-                // オブジェクトにフィットするビュー
-                const orbitControls = controls as unknown as OrbitControlsType;
-                if ('fitToSphere' in orbitControls && orbitControls.fitToSphere) {
-                  orbitControls.fitToSphere(new THREE.Sphere(new THREE.Vector3(0, 0, 0), 100), true);
-                }
-              }}
+              onClick={() => onViewChange('fit')}
               title="モデルにフィット"
             >
               <span className="mr-1">🔍</span>

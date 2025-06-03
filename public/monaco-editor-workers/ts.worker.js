@@ -20,6 +20,12 @@ self.importScripts = function() {
   console.warn('importScripts called but not supported in module scripts');
 };
 
+// FileAccess実装のモンキーパッチ
+self.FileAccess = {
+  asFileUri: function() { return { toString: () => '', fsPath: '' }; },
+  asBrowserUri: function() { return { toString: () => '', fsPath: '' }; }
+};
+
 // TypeScriptワーカー環境設定
 self.MonacoEnvironment = {
   baseUrl: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.35.0/min/'
@@ -30,6 +36,12 @@ fetch('https://cdn.jsdelivr.net/npm/monaco-editor@0.35.0/min/vs/language/typescr
   .then(response => response.text())
   .then(scriptText => {
     try {
+      // FileAccessImplのtoUrlエラーを修正するためのモンキーパッチ
+      scriptText = scriptText.replace(
+        /FileAccessImpl\.prototype\.toUri/g, 
+        'var fixedToUri = function() { return { toString: function() { return ""; } }; }; FileAccessImpl.prototype.toUri'
+      );
+      
       // 直接evalする代わりにFunction経由で実行
       const scriptFunc = new Function(scriptText);
       scriptFunc();

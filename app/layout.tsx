@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import Script from 'next/script'
 
 export const metadata: Metadata = {
   title: 'OpenCascade.js Demo',
@@ -13,6 +14,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <Script src="/monaco-editor-workers/monaco.config.js" strategy="beforeInteractive" />
+      </head>
       <body>{children}</body>
     </html>
   )

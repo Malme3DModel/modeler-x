@@ -53,6 +53,7 @@ function loadMonacoScripts(scriptUrls) {
 
 // メインスレッドでのMonaco設定
 if (typeof window !== 'undefined') {
+  // FileAccessImplのtoUrlエラーを修正するためのモンキーパッチ
   window.MonacoEnvironment = {
     getWorkerUrl: function(_moduleId, label) {
       // TypeScriptかJavaScriptのワーカーの場合
@@ -69,12 +70,36 @@ if (typeof window !== 'undefined') {
       };
     }
   };
+  
+  // FileAccessImpl.toUrlエラーを修正するためのモンキーパッチ
+  setTimeout(() => {
+    if (window.monaco && window.monaco.editor) {
+      const originalCreate = window.monaco.editor.create;
+      window.monaco.editor.create = function(...args) {
+        // FileAccess実装のモンキーパッチ
+        if (window.monaco.fileAccess && !window.monaco.fileAccess.FileAccess) {
+          window.monaco.fileAccess.FileAccess = {
+            asFileUri: function() { return { toString: () => '', fsPath: '' }; },
+            asBrowserUri: function() { return { toString: () => '', fsPath: '' }; }
+          };
+        }
+        return originalCreate.apply(this, args);
+      };
+      console.log('Monaco editor patched to fix FileAccess issues');
+    }
+  }, 500);
 }
 
 // ワーカースクリプトでの処理（Web Worker環境で実行される場合）
 if (typeof self !== 'undefined' && !self.window) {
   self.MonacoEnvironment = {
     baseUrl: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.35.0/min/'
+  };
+  
+  // FileAccess実装のモンキーパッチ
+  self.FileAccess = {
+    asFileUri: function() { return { toString: () => '', fsPath: '' }; },
+    asBrowserUri: function() { return { toString: () => '', fsPath: '' }; }
   };
   
   // ワーカーのタイプに基づいてスクリプトを読み込む
@@ -97,8 +122,10 @@ if (typeof self !== 'undefined' && !self.window) {
   }
 }
 
-// このスクリプトがエクスポートするもの
-export const monacoConfig = {
-  version: '0.35.0',
-  baseUrl: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.35.0/min/'
-}; 
+// このスクリプトがエクスポートするもの（ESMではなくグローバル変数として定義）
+if (typeof window !== 'undefined') {
+  window.monacoConfig = {
+    version: '0.35.0',
+    baseUrl: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.35.0/min/'
+  };
+} 
