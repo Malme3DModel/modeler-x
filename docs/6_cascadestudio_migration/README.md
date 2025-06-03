@@ -3,77 +3,111 @@
 ## 1. プロジェクト概要
 
 ### 1.1 現在の達成状況
-**🎉 フェーズ5基本実装完了版（2025年6月2日現在）**
+**�� フェーズ6実装進行中（2025年6月8日現在）**
 - ✅ **基本CAD機能**: 100%完了
 - ✅ **WebWorker統合**: 100%完了  
 - ✅ **React Three Fiber**: 100%完了
 - ✅ **Monaco Editor**: 100%完了
 - ✅ **ファイルI/O**: STEP/STL/OBJ対応完了
-- 🎯 **Golden Layout基盤**: **100%完了** (NEW!)
-- 🎯 **CascadeStudio風レイアウト**: **100%完了** (NEW!)
-- 🎯 **フローティングGUI配置**: **100%完了** (NEW!)
+- ✅ **Golden Layout基盤**: 100%完了
+- ✅ **CascadeStudio風レイアウト**: 100%完了
+- ✅ **フローティングGUI配置**: 100%完了
+- ✅ **Monaco編集機能**: 100%完了（F5/Ctrl+Sキーバインド実装）
+- ✅ **URL状態管理**: 100%完了（Base64エンコード実装）
+- ✅ **Playwright自動テスト**: 100%完了
+- ✅ **Tweakpane GUI統合**: 100%完了（Tweakpane 4.0.1対応）
+- 🔄 **CADワーカー連携**: 90%完了（通信基盤実装済、評価機能強化済）
 
 **アクセス先**: `http://localhost:3000/cascade-studio`
 
 ### 1.2 完全コピーの目標
 **CascadeStudio (docs/template) との100%機能・UI一致**
 - ✅ **Golden Layout風のドッキングシステム** ← **完了！**
-- 🎯 **Tweakpane風のGUIコントロール** ← **次のターゲット**
-- 🎯 **CascadeStudio風のトップナビゲーション**
-- 🎯 **CascadeStudio風のコンソール表示**
-- 🎯 **URL状態管理とプロジェクト共有**
-- 🎯 **CascadeStudio風の3Dビューポート設定**
+- ✅ **Monaco Editorの機能とキーバインド** ← **完了！**
+- ✅ **URL状態管理とプロジェクト共有** ← **完了！**
+- ✅ **Tweakpane風のGUIコントロール** ← **完了！**
+- 🔄 **CascadeStudio風のトップナビゲーション** ← **次ターゲット**
+- 🔄 **CascadeStudio風の3Dビューポート設定** ← **次ターゲット**
 
-## 🚨 **重要**: Golden Layout 2.6.0 新発見ナレッジ
+## 🚨 **新発見ナレッジ**
 
-### Golden Layout V1 → V2 重大変更点
+### 1. Tweakpane 4.0.1の対応方法
 
-⚠️ **API完全変更**: CascadeStudioは古いV1仕様のため、V2への完全移行が必要
+Tweakpane 4.0.1では、APIの一部が変更されています。特に重要な点は以下の通りです：
 
-#### 1. **コンストラクタ変更**
-```javascript
-// ❌ V1方式（CascadeStudio使用）
-new GoldenLayout(config, container);
+- `addInput`メソッドが`addBinding`に変更されました
+- GUIコントロールの追加方法が以下のように変更されています：
 
-// ✅ V2方式（実装済み）
-const layout = new GoldenLayout(container);
-layout.loadLayout(config);
+```typescript
+// 従来のTweakpane
+pane.addInput(guiState, 'propertyName', options);
+
+// Tweakpane 4.0.1
+pane.addBinding(guiState, 'propertyName', options);
 ```
 
-#### 2. **設定オブジェクト構造変更**
-```javascript
-// ❌ V1方式
-{
-  content: [{ componentName: 'editor', isClosable: false, ... }]
-}
+この変更に対応するために、`TweakpaneGUI.tsx`と`CascadeGUIHandlers.ts`を更新しました。
 
-// ✅ V2方式（実装済み）
-{
-  root: {
-    content: [{ componentType: 'editor', ... }]
-  }
+### 2. Monaco EditorのWebWorkerの設定方法
+
+Monaco Editorを正しく動作させるには、専用のWebWorkerを設定する必要があります。これは特に次のエラーを解決するために重要です：
+
+```
+Could not create web worker(s). Falling back to loading web worker code in main thread, which might cause UI freezes.
+You must define a function MonacoEnvironment.getWorkerUrl or MonacoEnvironment.getWorker
+```
+
+#### 解決方法：
+
+```typescript
+// Monaco Editorのワーカー設定
+if (typeof window !== 'undefined') {
+  (window as any).MonacoEnvironment = {
+    getWorkerUrl: function(_moduleId: string, label: string) {
+      if (label === 'typescript' || label === 'javascript') {
+        return '/monaco-editor-workers/ts.worker.js';
+      }
+      return '/monaco-editor-workers/editor.worker.js';
+    }
+  };
 }
 ```
 
-#### 3. **コンポーネント登録方式変更**
-```javascript
-// ❌ V1方式（registerComponent）
-layout.registerComponent('editor', MyComponent);
+そして、`public/monaco-editor-workers/`ディレクトリに以下のワーカーファイルを作成します：
 
-// ✅ V2方式（Embedding via Events - 実装済み）
-layout.bindComponentEvent = (container, itemConfig) => {
-  const component = createComponent(itemConfig.componentType, container);
-  return { component, virtual: false };
+```javascript
+// editor.worker.js
+self.MonacoEnvironment = {
+  baseUrl: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.35.0/min/'
 };
+
+importScripts('https://cdn.jsdelivr.net/npm/monaco-editor@0.35.0/min/vs/base/worker/workerMain.js');
 ```
 
-#### 4. **CSS パス変更**
 ```javascript
-// ❌ 古いパス
-'golden-layout/dist/css/goldenlayout-dark-theme.css'
+// ts.worker.js
+self.MonacoEnvironment = {
+  baseUrl: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.35.0/min/'
+};
 
-// ✅ 新しいパス（修正必要）
-'golden-layout/dist/css/themes/goldenlayout-dark-theme.css'
+importScripts('https://cdn.jsdelivr.net/npm/monaco-editor@0.35.0/min/vs/language/typescript/tsWorker.js');
+```
+
+### 3. URL状態管理とBase64エンコーディング
+
+#### 実装の基本概念
+URLハッシュを使用してコードとGUI状態を保存・復元する機能が実装されました。この実装では、JSON形式のデータをUTF-8対応のBase64エンコーディングで変換し、URLハッシュとして保存しています。
+
+```typescript
+// URLStateManager - 状態管理の核心部分
+static saveStateToURL(state: URLState): void {
+  // JSON文字列化してBase64エンコード
+  const json = JSON.stringify(state);
+  const encoded = this.encodeToBase64(json);
+  
+  // URLハッシュを更新
+  window.location.hash = encoded;
+}
 ```
 
 ## 2. 詳細機能比較分析
@@ -83,329 +117,192 @@ layout.bindComponentEvent = (container, itemConfig) => {
 #### ✅ 実装完了: CascadeStudio風Golden Layout
 ```
 ✅ 実装済み CascadeStudio風UI
-├── 🎯 左パネル: Monaco Editor（コードエディター）
+├── ✅ 左パネル: Monaco Editor（コードエディター）
 │   ├── ✅ タイトル: "* Untitled"
 │   ├── ✅ VS Code風ダークテーマ
 │   ├── ✅ STARTER_CODE表示
-│   └── 🔄 TypeScript Intellisense（準備中）
-├── 🎯 右上パネル: CAD View（3Dビューポート）
+│   ├── ✅ F5キー実行機能
+│   └── ✅ Ctrl+Sキー保存＆実行機能
+├── ✅ 右上パネル: CAD View（3Dビューポート）
 │   ├── ✅ フローティングGUI配置（右上）
 │   ├── ✅ Tweakpane GUIエリア
-│   └── 🔄 React Three Fiber統合（準備中）
-└── 🎯 右下パネル: Console（20%高さ）
+│   └── ✅ React Three Fiber統合（基本実装完了）
+└── ✅ 右下パネル: Console（20%高さ）
     ├── ✅ CascadeStudio風デザイン
     ├── ✅ Consolas フォント
     └── ✅ システムログ表示
-```
-
-#### 現在のNext.jsアプリ（DaisyUI Grid）
-```
-Next.js CADエディター
-├── 固定ヘッダー（フル幅）
-│   ├── タイトル + バッジ表示
-│   └── ワーカー状態インジケーター
-├── Grid Layout（TailwindCSS）
-│   ├── 左: CodeEditor（2xl:col-span-2）
-│   ├── 中央: CADViewport（1列）
-│   └── 右: タブ切り替えパネル（2xl:col-span-2）
-│       ├── GUI制御タブ
-│       ├── プロジェクトタブ
-│       └── ファイルタブ
-└── デバッグパネル（開発時のみ表示）
 ```
 
 ### 2.2 主要な仕様差分（更新）
 
 | 機能カテゴリ | CascadeStudio | 現在のNext.jsアプリ | 差分レベル | 実装状況 |
 |------------|---------------|-------------------|----------|---------|
-| **レイアウトシステム** | Golden Layout | TailwindCSS Grid | ~~🔴 大幅~~ | ✅ **完了** |
-| **GUI要素** | Tweakpane | DaisyUI | 🔴 大幅 | 🔄 **次実装** |
-| **トップナビ** | 専用デザイン | モダンヘッダー | 🟡 中程度 | 📋 **計画中** |
-| **コンソール** | ドッキング式 | デバッグパネル | ~~🟡 中程度~~ | ✅ **基盤完了** |
-| **3Dビューポート** | フローティングGUI | 分離レイアウト | 🟡 中程度 | 🔄 **基盤完了** |
-| **URL管理** | encode/decode | 未実装 | 🔴 大幅 | 📋 **計画中** |
+| **レイアウトシステム** | Golden Layout | Golden Layout V2 | ✅ 完了 | ✅ **完了** |
+| **GUI要素** | Tweakpane | Tweakpane 4.0.1 | ✅ 完了 | ✅ **完了** |
+| **エディター** | Monaco Editor | Monaco Editor | ✅ 完了 | ✅ **完了** |
+| **コンソール** | ドッキング式 | ドッキング式 | ✅ 完了 | ✅ **完了** |
+| **URL管理** | encode/decode | Base64 Encode/Decode | ✅ 完了 | ✅ **完了** |
+| **トップナビ** | 専用デザイン | 未実装 | 🔴 大幅 | 📋 **計画中** |
+| **3Dビューポート** | フローティングGUI | 分離レイアウト | 🔄 中程度 | 🔄 **実装中** |
 | **プロジェクト管理** | JSON Layout | ローカルストレージ | 🟡 中程度 | 📋 **計画中** |
-| **キーボードショートカット** | F5, Ctrl+S | 未実装 | 🔴 大幅 | 📋 **計画中** |
 
-## 🔧 技術実装詳細（更新済み）
+## 🔧 技術実装詳細（最新情報）
 
-### Golden Layout 2.6.0統合実装
+### 1. Monaco Editor統合実装と課題解決
 
-#### ✅ 実装済みファイル構成
-```
-app/cascade-studio/page.tsx          # ✅ CascadeStudioページ
-lib/layout/cascadeLayoutConfig.ts    # ✅ レイアウト設定
-components/layout/CascadeStudioLayout.tsx # ✅ Golden Layout統合
-```
-
-#### ✅ 成功実装例
 ```typescript
-// Embedding via Events方式（V2）
-layoutRef.current.bindComponentEvent = (container: any, itemConfig: any) => {
-  const componentType = itemConfig.componentType;
-  const component = createComponent(componentType, container, itemConfig);
-  return {
-    component,
-    virtual: false, // Embedding方式
-  };
-};
-
-// V2設定形式
-export const DEFAULT_LAYOUT_CONFIG = {
-  root: {
-    type: 'row',
-    content: [{
-      type: 'component',
-      componentType: 'codeEditor', // V2では componentType
-      title: '* Untitled',
-      componentState: { code: STARTER_CODE },
-      width: 50.0,
-    }, {
-      type: 'column',
-      content: [{
-        type: 'component',
-        componentType: 'cascadeView',
-        title: 'CAD View',
-        componentState: {},
-      }, {
-        type: 'component',
-        componentType: 'console',
-        title: 'Console',
-        componentState: {},
-        height: 20.0,
-      }]
-    }]
+// CascadeStudioLayout.tsx 内のMonacoエディター初期化関数
+function createCodeEditorComponent(container: any) {
+  // エディターコンテナ作成
+  const editorContainer = document.createElement('div');
+  editorContainer.style.height = '100%';
+  editorContainer.style.width = '100%';
+  editorContainer.style.backgroundColor = '#1e1e1e';
+  container.element.appendChild(editorContainer);
+  
+  // Monaco Editorのワーカー設定
+  if (typeof window !== 'undefined') {
+    (window as any).MonacoEnvironment = {
+      getWorkerUrl: function(_moduleId: string, label: string) {
+        if (label === 'typescript' || label === 'javascript') {
+          return '/monaco-editor-workers/ts.worker.js';
+        }
+        return '/monaco-editor-workers/editor.worker.js';
+      }
+    };
   }
-};
-```
-
-### ⚠️ 現在の既知問題
-
-1. **CSSパスエラー**
-```bash
-Module not found: Can't resolve 'golden-layout/dist/css/goldenlayout-dark-theme.css'
-```
-**修正方法**: `themes/` フォルダを追加
-
-2. **依存関係修正**
-- ✅ `rawflate` → `fflate@0.8.2` 置換完了
-- ✅ `golden-layout@2.6.0` インストール完了
-- ✅ `tweakpane@4.0.1` インストール完了
-
-## 3. 完全コピー実装計画（更新）
-
-### ✅ フェーズ5: レイアウトシステム完全移行（完了！）
-
-#### ✅ 5.1 Golden Layout統合（100%完了）
-**目標**: CascadeStudio風のドッキングレイアウトシステム
-
-**実装完了内容**:
-- ✅ Golden Layout npm依存関係追加
-- ✅ CascadeStudioLayout コンポーネント作成
-- ✅ V2 API対応レイアウト設定JSON管理
-- ✅ パネル登録システム（codeEditor, cascadeView, console）
-- ✅ Embedding via Events実装
-- ✅ レスポンシブ対応
-
-#### ✅ 5.2 ドッキング式コンソール（基盤完了）
-**目標**: CascadeStudio風のコンソールパネル
-
-**実装完了内容**:
-- ✅ ダークテーマコンソール表示
-- ✅ Consolas フォントファミリー
-- ✅ CascadeStudio風ログ出力形式
-- ✅ システム初期化メッセージ
-
-### 🎯 フェーズ6: GUI要素完全移行（次のターゲット）
-
-#### 6.1 Tweakpane基盤実装
-**目標**: CascadeStudio完全互換GUI
-
-**実装計画**:
-```typescript
-// components/gui/TweakpaneGUI.tsx
-export default function TweakpaneGUI({ 
-  onGUIUpdate,
-  guiState 
-}: TweakpaneGUIProps) {
-  // Tweakpane動的読み込み
-  // addSlider, addButton等のメッセージハンドラー
-  // フローティングパネル統合
+  
+  // モナコエディターを動的にインポートして初期化
+  import('monaco-editor').then(monaco => {
+    // URLから読み込んだコードまたはデフォルトを使用
+    const initialCode = lastSavedCodeRef.current || STARTER_CODE;
+    
+    // モナコエディター初期化
+    const editor = monaco.editor.create(editorContainer, {
+      value: initialCode,
+      language: 'typescript',
+      theme: 'vs-dark',
+      minimap: { enabled: true },
+      automaticLayout: true,
+      fontSize: 14,
+      fontFamily: 'Consolas, "Courier New", monospace',
+      scrollBeyondLastLine: false,
+    });
+    
+    // エディター参照を保存
+    editorRef.current = editor;
+    
+    // F5キーとCtrl+Sのキーバインド設定
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      // コード評価を実行
+      const code = editor.getValue();
+      evaluateCode(code);
+    });
+    
+    editor.addCommand(monaco.KeyCode.F5, () => {
+      // コード評価を実行
+      const code = editor.getValue();
+      evaluateCode(code);
+    });
+  });
 }
 ```
 
-**実装項目**:
-- [ ] TweakpaneGUI コンポーネント作成
-- [ ] 動的GUI要素追加システム
-- [ ] addSlider メッセージハンドラー
-- [ ] addButton メッセージハンドラー  
-- [ ] addCheckbox メッセージハンドラー
-- [ ] CADWorker連携
+### 2. Tweakpane 4.0.1対応実装
 
-#### 6.2 Monaco Editor Golden Layout統合
-**目標**: CascadeStudio風エディター機能
-
-**実装計画**:
 ```typescript
-// lib/editor/cascadeMonacoEditor.ts
-export function initializeCascadeMonacoEditor(
-  container: HTMLElement,
-  initialCode: string,
-  onCodeChange: (code: string) => void
-) {
-  // Monaco Editor初期化
-  // TypeScript Intellisense設定
-  // 関数折りたたみ機能
-  // F5: コード実行バインド
-  // Ctrl+S: 保存 + 実行バインド
+// components/gui/TweakpaneGUI.tsx 内のGUI要素追加部分
+const addBasicGUIElements = useCallback((pane: any) => {
+  try {
+    // Evaluate ボタン
+    pane.addButton({
+      title: 'Evaluate',
+      label: '🔄 Evaluate'
+    }).on('click', () => {
+      console.log('🎯 [TweakpaneGUI] Evaluate button clicked');
+      handleGUIUpdate(guiState);
+    });
+
+    // Mesh Settings フォルダ
+    const meshResFolder = pane.addFolder({
+      title: 'Mesh Settings'
+    });
+
+    // Mesh Resolution スライダー
+    meshResFolder.addBinding(guiState, 'MeshRes', {
+      min: 0.01,
+      max: 1.0,
+      step: 0.01,
+      label: 'Resolution'
+    }).on('change', (ev: any) => {
+      updateGUIState('MeshRes', ev.value);
+    });
+
+    // Cache チェックボックス
+    meshResFolder.addBinding(guiState, 'Cache?', {
+      label: 'Cache'
+    }).on('change', (ev: any) => {
+      updateGUIState('Cache?', ev.value);
+    });
+    
+    // ... 他のGUI要素
+  } catch (error) {
+    console.error('❌ [TweakpaneGUI] Failed to add GUI elements:', error);
+  }
+}, [guiState, handleGUIUpdate, updateGUIState]);
+```
+
+### 3. CascadeGUIHandlers実装改善
+
+```typescript
+// lib/gui/cascadeGUIHandlers.ts 内のSlider追加メソッド
+addSlider(name: string, defaultValue: number, min: number, max: number, step: number = 0.1): number {
+  if (!this.pane || !this.dynamicFolder) {
+    console.warn(`🚨 [CascadeGUIHandlers] Cannot add slider '${name}': Pane not initialized`);
+    return defaultValue;
+  }
+  
+  // 既存のGUI状態を更新
+  this.guiState[name] = defaultValue;
+  
+  try {
+    // Tweakpane入力コントロール追加（v4.0.1ではaddBindingを使用）
+    this.dynamicFolder.addBinding(this.guiState, name, {
+      min,
+      max,
+      step
+    }).on('change', (ev: any) => {
+      this.updateGUIState(name, ev.value);
+    });
+    
+    console.log(`✅ [CascadeGUIHandlers] Added slider: ${name} (${defaultValue}, ${min}-${max})`);
+  } catch (error) {
+    console.error(`❌ [CascadeGUIHandlers] Failed to add slider '${name}':`, error);
+  }
+  
+  return defaultValue;
 }
 ```
 
-**実装項目**:
-- [ ] cascadeMonacoEditor.ts 実装
-- [ ] TypeScript Intellisense設定
-- [ ] 関数折りたたみ機能
-- [ ] F5キーバインド（コード実行）
-- [ ] Ctrl+Sキーバインド（保存+実行）
-- [ ] evaluateCode メソッド追加
+## 3. 今後の優先タスク
 
-#### 6.3 React Three Fiber統合
-**目標**: CascadeStudio風3Dビューポート
+### 3.1 トップナビゲーション実装
+- CascadeStudio風のトップナビゲーションバーを実装
+- ファイル操作メニュー（新規作成、保存、ロード）の追加
+- エクスポート機能（STEP, STL）の統合
 
-**実装計画**:
-```typescript
-// components/cad/CascadeCADViewport.tsx
-export default function CascadeCADViewport({
-  shapes,
-  isWorking,
-  onShapeClick
-}: CascadeCADViewportProps) {
-  // React Three Fiber Canvas
-  // OrbitControls
-  // CAD形状レンダリング
-  // フローティングGUI統合
-}
-```
+### 3.2 3Dビューポート機能拡張
+- カメラコントロールの改善（ズーム、パン、回転）
+- 視点プリセット（フロント、トップ、サイド、アイソメトリック）
+- 表示設定（ワイヤーフレーム、シェーディングモード）
 
-**実装項目**:
-- [ ] CascadeCADViewport コンポーネント作成
-- [ ] CAD形状レンダリング統合
-- [ ] フローティングGUI配置
-- [ ] WebWorker状態表示
+### 3.3 最終機能統合
+- エラーハンドリングの強化
+- パフォーマンス最適化
+- ドキュメント整備
 
-## 🚀 次の作業指針
-
-### 優先度1: CSS修正（即座実行）
-```bash
-# CSSパス修正
-'golden-layout/dist/css/themes/goldenlayout-dark-theme.css'
-```
-
-### 優先度2: Tweakpane GUI実装
-- フローティングGUI統合
-- 動的GUI要素追加システム
-- CADWorker連携
-
-### 優先度3: Monaco Editor統合
-- Golden Layout内でのMonaco Editor
-- TypeScript Intellisense
-- キーバインド実装
-
-**🎊 現在の達成度: フェーズ5基盤 100%完了！**
-
-## 4. 実装優先度とスケジュール
-
-### Week 1-2: フェーズ5実装（レイアウトシステム）
-- [x] Golden Layout npm依存関係追加
-- [x] GoldenLayoutWrapper基本実装
-- [x] ドッキング式パネル実装
-- [x] レイアウト設定保存/読込
-
-### Week 3-4: フェーズ6実装（GUI要素）
-- [x] Tweakpane npm依存関係追加
-- [x] TweakpaneGUI基本実装
-- [x] 動的GUI要素追加システム
-- [x] フローティングレイアウト実装
-
-### Week 5-6: フェーズ7実装（UI完全一致）
-- [x] CascadeTopNav実装
-- [x] CascadeCodeEditor完全実装
-- [x] コンソール表示完全実装
-- [x] キーボードショートカット実装
-
-### Week 7-8: フェーズ8実装（高度機能）
-- [x] URL状態管理システム実装
-- [x] プロジェクト管理完全移行
-- [x] 進捗表示システム実装
-- [x] 最終調整と品質確保
-
-## 5. 技術的考慮事項
-
-### 5.1 Next.js環境での制約
-- **SSR対応**: Golden Layout, TweakpaneのCSR限定使用
-- **依存関係管理**: CascadeStudioのnode_modules構成に合わせた調整
-- **パフォーマンス**: Dynamic Importによる最適化
-
-### 5.2 互換性要件
-- **プロジェクトファイル**: CascadeStudioとの完全互換性
-- **URL共有**: CascadeStudioのURL形式との互換性
-- **ファイル形式**: STEP/STL/OBJ のCascadeStudio互換性
-
-### 5.3 品質保証
-- **視覚的一致**: CascadeStudioとのピクセル単位での一致確認
-- **機能的一致**: 全機能の動作確認とテスト
-- **パフォーマンス**: CascadeStudio相当またはそれ以上の性能
-
-## 6. 成功指標
-
-### 6.1 視覚的一致度
-- [x] レイアウト構造: 100%一致
-- [x] GUI要素デザイン: 100%一致
-- [x] トップナビゲーション: 100%一致
-- [x] コンソール表示: 100%一致
-
-### 6.2 機能的一致度
-- [x] ドッキングシステム: 100%動作
-- [x] GUI要素操作: 100%動作
-- [x] プロジェクト管理: 100%互換
-- [x] URL共有: 100%互換
-
-### 6.3 ユーザー体験
-- [x] CascadeStudioユーザーが違和感なく移行可能
-- [x] 全ての機能がCascadeStudioと同等に動作
-- [x] プロジェクトファイルの相互互換性確保
-
-## 7. リスク要因と対策
-
-### 7.1 技術的リスク
-- **Golden Layout統合**: Next.js SSR環境での制限 → Dynamic Import対応
-- **Tweakpane統合**: React状態管理との競合 → ref-based統合
-- **レイアウト互換性**: 細かなCSSスタイリング差分 → CascadeStudio CSS直接利用
-
-### 7.2 開発効率リスク
-- **複雑性増加**: Golden Layout + Tweakpane統合 → 段階的実装
-- **デバッグ難易度**: 複数ライブラリの相互作用 → MCP browser-tools活用
-- **保守性懸念**: CascadeStudio依存のコード → 適切な抽象化レイヤー
-
-### 7.3 対策方針
-1. **プロトタイプ先行**: 各フェーズでプロトタイプ実装
-2. **CascadeStudioとの詳細比較**: 各機能の動作確認
-3. **継続的デバッグ**: MCP browser-toolsによる品質確保
-
-## 8. 最終目標の明確化
-
-**🎯 最終成果物**: CascadeStudioの機能とUIを100%再現したNext.js CADエディター
-
-**特徴**:
-- ✅ **完全な視覚的一致**: CascadeStudioと見分けがつかないUI
-- ✅ **完全な機能的一致**: 全機能がCascadeStudio相当に動作
-- ✅ **完全な互換性**: プロジェクトファイル・URL共有の相互互換
-- ✅ **Next.js最適化**: TypeScript型安全性とReact Three Fiberの利点活用
-
-**成功の証明**:
-- CascadeStudioユーザーが移行時に違和感を感じない
-- CascadeStudioのプロジェクトファイルが完全に読み込める
-- CascadeStudioのURL共有リンクが完全に動作する
-- 全てのサンプルコードがCascadeStudioと同等に動作する
-
-この計画により、CascadeStudioの完全コピーという目標を確実に達成できます。 
+## 4. 実装スケジュール
+1. トップナビゲーション実装 (2日)
+2. 3Dビューポート機能拡張 (3日)
+3. 最終機能統合とテスト (2日)
+4. ドキュメント整備 (1日) 

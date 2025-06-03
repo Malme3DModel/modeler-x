@@ -39,3 +39,6 @@ next-env.d.ts
 .next/
 node_modules/
 *.log
+
+playwright-report/
+test-results/

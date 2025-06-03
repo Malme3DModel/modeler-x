@@ -1,6 +1,6 @@
 # CascadeStudio完全コピー実行計画 - Playwright MCP活用版
 
-## 🎊 **重要更新**: フェーズ5基盤実装完了！（2025年6月2日）
+## 🎊 **重要更新**: フェーズ6実装完了！（2025年6月8日）
 
 ### ✅ **達成済み項目**
 - ✅ **Golden Layout 2.6.0基盤統合**: 100%完了
@@ -9,667 +9,318 @@
 - ✅ **フローティングGUI配置**: 完了
 - ✅ **Embedding via Events実装**: V2 API対応完了
 - ✅ **STARTER_CODE表示**: CascadeStudio互換
+- ✅ **Monaco Editor統合**: F5キー、Ctrl+Sキーバインド実装
+- ✅ **Monaco Editorワーカー設定**: WebWorkerエラー解決
+- ✅ **URL状態管理システム**: コードとGUI状態をURLハッシュに保存・復元
+- ✅ **Tweakpane GUI完全統合**: Tweakpane 4.0.1対応完了
+- ✅ **Playwright自動テスト**: 機能テストと比較テスト実装
+
+### 🏗️ **進行中の項目**
+- 🔄 **3Dビューポート機能拡張**: カメラコントロール、視点プリセット
+- 🔄 **トップナビゲーション実装**: ファイル操作、エクスポート機能
 
 **🌐 アクセス先**: `http://localhost:3000/cascade-studio`
 
-### 🚨 **重要な新発見ナレッジ**
+### 🚨 **新発見ナレッジ**
 
-#### **Golden Layout V1 → V2 重大変更点**
-⚠️ **CascadeStudioは古いV1仕様**: 完全にV2 APIに移行済み
+#### **Tweakpane 4.0.1の対応方法**
+
+Tweakpane 4.0.1では、APIの一部が変更されています。特に重要な点は以下の通りです：
+
+- `addInput`メソッドが`addBinding`に変更されました
+- GUIコントロールの追加方法が以下のように変更されています：
+
+```typescript
+// 従来のTweakpane
+pane.addInput(guiState, 'propertyName', options);
+
+// Tweakpane 4.0.1
+pane.addBinding(guiState, 'propertyName', options);
+```
+
+この変更に対応するために、`TweakpaneGUI.tsx`と`CascadeGUIHandlers.ts`を更新しました。
+
+#### **Monaco EditorのWebWorkerの設定方法**
+
+Monaco Editorを正しく動作させるには、専用のWebWorkerを設定する必要があります。これは特に次のエラーを解決するために重要です：
+
+```
+Could not create web worker(s). Falling back to loading web worker code in main thread, which might cause UI freezes.
+You must define a function MonacoEnvironment.getWorkerUrl or MonacoEnvironment.getWorker
+```
+
+#### 解決方法：
+
+1. **MonacoEnvironmentの設定**:
+```typescript
+// Monaco Editorのワーカー設定
+if (typeof window !== 'undefined') {
+  (window as any).MonacoEnvironment = {
+    getWorkerUrl: function(_moduleId: string, label: string) {
+      if (label === 'typescript' || label === 'javascript') {
+        return '/monaco-editor-workers/ts.worker.js';
+      }
+      return '/monaco-editor-workers/editor.worker.js';
+    }
+  };
+}
+```
+
+2. **ワーカーファイルの作成**:
+```javascript
+// editor.worker.js
+self.MonacoEnvironment = {
+  baseUrl: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.35.0/min/'
+};
+
+importScripts('https://cdn.jsdelivr.net/npm/monaco-editor@0.35.0/min/vs/base/worker/workerMain.js');
+```
 
 ```javascript
-// ❌ V1方式（CascadeStudio使用）
-new GoldenLayout(config, container);
-registerComponent('editor', MyComponent);
+// ts.worker.js
+self.MonacoEnvironment = {
+  baseUrl: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.35.0/min/'
+};
 
-// ✅ V2方式（実装完了）
-const layout = new GoldenLayout(container);
-layout.loadLayout(config);
-layout.bindComponentEvent = (container, itemConfig) => { ... };
+importScripts('https://cdn.jsdelivr.net/npm/monaco-editor@0.35.0/min/vs/language/typescript/tsWorker.js');
 ```
 
-#### **CSS パス変更**
-```bash
-# ❌ 古いパス（現在エラー発生中）
-'golden-layout/dist/css/goldenlayout-dark-theme.css'
+#### **URL状態管理とBase64エンコーディング**
+URLハッシュを使用してコードとGUI状態を保存・復元する機能が実装されました。この実装では、JSON形式のデータをUTF-8対応のBase64エンコーディングで変換し、URLハッシュとして保存しています。
 
-# ✅ 新しいパス（修正必要）
-'golden-layout/dist/css/themes/goldenlayout-dark-theme.css'
-```
-
-#### **依存関係修正完了**
-- ✅ `rawflate` → `fflate@0.8.2` 置換完了
-- ✅ `golden-layout@2.6.0` インストール完了
-- ✅ `tweakpane@4.0.1` インストール完了
-
----
-
-## 🎯 プロジェクト目標
-**CascadeStudio (docs/template) の機能とUIを100%再現したNext.js CADエディターを構築**
-
-### 📂 CascadeStudioソースコード参照先
-**重要**: 実装時の参考ソースコードは `docs/template` に配置されています
-```
-docs/template/
-├── index.html              # メインHTML - レイアウト構造参照
-├── js/
-│   ├── MainPage/
-│   │   ├── CascadeMain.js   # Golden Layout設定、GUI管理の核心実装
-│   │   └── CascadeView.js   # 3Dビューポート、フローティングGUI配置
-│   └── CascadeStudioStandardLibrary.js  # CAD関数ライブラリ
-├── css/
-│   └── main.css            # CascadeStudio風スタイリング
-└── opencascade/
-    └── opencascade.wasm    # WebAssembly CADエンジン
-```
-
-**実装時の参照方法**:
-- Golden Layout実装 → `CascadeMain.js` の layoutConfig, componentRegistration参照
-- Tweakpane GUI → `CascadeView.js` の messageHandlers, GUI要素追加処理参照  
-- スタイリング → `main.css` の topnav, console, GUI panel設定参照
-- 機能実装 → `index.html` のWebWorker連携、初期化フロー参照
-
-### 🚀 Playwright MCP活用戦略
-- **リアルタイム並行比較**: CascadeStudioと開発中アプリを同時表示・比較
-- **自動UI検証**: アクセシビリティスナップショットによるピクセル単位比較
-- **継続的品質保証**: 各実装ステップでリアルタイム動作確認
-- **効率的デバッグ**: ブラウザツールとの連携によるリアルタイムデバッグ
-
-### 成功指標
-- ✅ **視覚的一致**: CascadeStudioと見分けがつかないUI
-- ✅ **機能的一致**: 全機能がCascadeStudio相当に動作
-- ✅ **完全な互換性**: プロジェクトファイル・URL共有の相互互換
-
-## 🎊 **現在の状況**: フェーズ5基盤実装完了！（2025年6月2日更新）
-
-### ✅ 達成済み項目
-- ✅ **Golden Layout 2.6.0基盤統合**: 100%完了
-- ✅ **CascadeStudio風レイアウト構成**: 100%完了
-- ✅ **3パネル構成**: 左（Monaco Editor）+ 右上（CAD View）+ 右下（Console）
-- ✅ **フローティングGUI配置**: 完了
-- ✅ **Embedding via Events実装**: V2 API対応完了
-- ✅ **STARTER_CODE表示**: CascadeStudio互換
-
-**アクセス先**: `http://localhost:3000/cascade-studio`
-
----
-
-## 🚨 **緊急修正項目**
-
-### 1. **CSSパスエラー修正**（即座実行）
-```bash
-# 現在のエラー
-Module not found: Can't resolve 'golden-layout/dist/css/goldenlayout-dark-theme.css'
-
-# 修正必要
-'golden-layout/dist/css/themes/goldenlayout-dark-theme.css'
-```
-
-### 2. **Golden Layout V2 API完全移行済み**
-- ✅ `componentName` → `componentType` 変更完了
-- ✅ `{ content: [...] }` → `{ root: { content: [...] } }` 変更完了
-- ✅ `new GoldenLayout(config, container)` → `new GoldenLayout(container)` + `loadLayout(config)` 変更完了
-- ✅ `registerComponent` → `bindComponentEvent` 変更完了
-
----
-
-## 📋 **Week 1-2: GUI要素完全移行** （次のターゲット）
-
-### Day 1-2: Tweakpane統合基盤
-**目標**: CascadeStudio完全互換GUI実装
-
-#### ⚡ 緊急修正: CSS修正（30分）
 ```typescript
-// components/layout/CascadeStudioLayout.tsx 修正
-- import 'golden-layout/dist/css/goldenlayout-dark-theme.css';
-+ import 'golden-layout/dist/css/themes/goldenlayout-dark-theme.css';
-```
-
-#### 🎯 TweakpaneGUI コンポーネント作成（1-2時間）
-```typescript
-// components/gui/TweakpaneGUI.tsx 新規作成
-'use client';
-import { useEffect, useRef, useState } from 'react';
-
-export default function TweakpaneGUI({ 
-  onGUIUpdate,
-  guiState,
-  cadWorkerState 
-}: TweakpaneGUIProps) {
-  const paneRef = useRef<any>(null);
-  const [pane, setPane] = useState<any>(null);
+// URLStateManager - 状態管理の核心部分
+static saveStateToURL(state: URLState): void {
+  // JSON文字列化してBase64エンコード
+  const json = JSON.stringify(state);
+  const encoded = this.encodeToBase64(json);
   
-  useEffect(() => {
-    // Tweakpane動的インポート
-    import('tweakpane').then(({ Pane }) => {
-      const newPane = new Pane({
-        title: 'Cascade Control Panel',
-        container: paneRef.current,
-        expanded: true
-      });
-      
-      // 基本GUI要素追加
-      addEvaluateButton(newPane);
-      addMeshResSlider(newPane);
-      addCacheCheckbox(newPane);
-      addGroundPlaneCheckbox(newPane);
-      addGridCheckbox(newPane);
-      
-      setPane(newPane);
-    });
-  }, []);
-  
-  return (
-    <div 
-      ref={paneRef} 
-      className="tweakpane-container"
-      style={{
-        backgroundColor: 'rgba(0,0,0,0.8)',
-        padding: '16px',
-        borderRadius: '8px',
-        minWidth: '250px'
-      }}
-    />
-  );
-}
-```
-
-#### 🔧 動的GUI要素追加システム（2-3時間）
-```typescript
-// lib/gui/cascadeGUIHandlers.ts 新規作成
-export class CascadeGUIHandlers {
-  private pane: any;
-  private guiState: Record<string, any> = {};
-  
-  constructor(pane: any) {
-    this.pane = pane;
-  }
-  
-  // CascadeStudio互換メッセージハンドラー
-  addSlider(payload: {
-    name: string;
-    min: number;
-    max: number;
-    step?: number;
-    realTime?: boolean;
-  }) {
-    const slider = this.pane.addInput(this.guiState, payload.name, {
-      min: payload.min,
-      max: payload.max,
-      step: payload.step || 1
-    });
-    
-    if (payload.realTime) {
-      slider.on('change', (e: any) => {
-        if (e.last) {
-          // CADWorkerに変更通知
-          this.notifyCADWorker();
-        }
-      });
-    }
-  }
-  
-  addButton(payload: { name: string; callback: () => void }) {
-    this.pane.addButton({ 
-      title: payload.name 
-    }).on('click', payload.callback);
-  }
-  
-  addCheckbox(payload: { name: string; realTime?: boolean }) {
-    const checkbox = this.pane.addInput(this.guiState, payload.name, {});
-    
-    if (payload.realTime) {
-      checkbox.on('change', () => {
-        this.notifyCADWorker();
-      });
-    }
-  }
-  
-  private notifyCADWorker() {
-    // delayReloadEditor() 相当の処理
-    console.log('GUI状態変更:', this.guiState);
-  }
-}
-```
-
-### Day 3-4: Monaco Editor Golden Layout統合
-**目標**: CascadeStudio風エディター機能
-
-#### 🖥️ CascadeMonacoEditor実装（3-4時間）
-```typescript
-// lib/editor/cascadeMonacoEditor.ts 新規作成
-import * as monaco from 'monaco-editor';
-
-export function initializeCascadeMonacoEditor(
-  container: HTMLElement,
-  initialCode: string,
-  onCodeChange: (code: string) => void
-) {
-  // Monaco Editor初期化
-  const editor = monaco.editor.create(container, {
-    value: initialCode,
-    language: 'typescript',
-    theme: 'vs-dark',
-    automaticLayout: true,
-    fontSize: 14,
-    fontFamily: 'Consolas, monospace',
-    minimap: { enabled: false },
-    folding: true,
-    foldingStrategy: 'indentation'
-  });
-  
-  // TypeScript設定（CascadeStudio互換）
-  monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-    target: monaco.languages.typescript.ScriptTarget.ES2020,
-    allowNonTsExtensions: true,
-    moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-    module: monaco.languages.typescript.ModuleKind.CommonJS,
-    noEmit: true,
-    esModuleInterop: true,
-    jsx: monaco.languages.typescript.JsxEmit.React,
-    reactNamespace: 'React',
-    allowJs: true,
-    typeRoots: ['node_modules/@types']
-  });
-  
-  // 関数折りたたみ設定
-  const collapsed = extractFunctionRanges(initialCode);
-  editor.restoreViewState({
-    contributionsState: {
-      'editor.contrib.folding': {
-        collapsedRegions: collapsed,
-        lineCount: initialCode.split('\n').length,
-        provider: 'indent'
-      }
-    }
-  } as any);
-  
-  // F5キーバインド: コード実行
-  editor.addCommand(monaco.KeyCode.F5, () => {
-    onCodeChange(editor.getValue());
-  });
-  
-  // Ctrl+S キーバインド: 保存+実行
-  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-    const code = editor.getValue();
-    // 保存処理（URL状態更新）
-    saveCodeToURL(code);
-    // 実行
-    onCodeChange(code);
-  });
-  
-  return editor;
-}
-
-function extractFunctionRanges(code: string): any[] {
-  const lines = code.split('\n');
-  const ranges: any[] = [];
-  
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    if (line.includes('function ') || line.includes('() => {') || line.includes('= {')) {
-      // 関数開始検出 -> 折りたたみ範囲計算
-      const endLine = findMatchingBrace(lines, i);
-      if (endLine > i) {
-        ranges.push({
-          startLineNumber: i + 1,
-          endLineNumber: endLine + 1,
-          isCollapsed: true
-        });
-      }
-    }
-  }
-  
-  return ranges;
-}
-```
-
-#### 🔄 Golden Layout内Monaco統合（2時間）
-```typescript
-// components/layout/CascadeStudioLayout.tsx 更新
-function createCodeEditorComponent(container: any, itemConfig: any) {
-  const editorContainer = document.createElement('div');
-  editorContainer.style.height = '100%';
-  editorContainer.style.position = 'relative';
-  
-  // Monaco Editor初期化
-  setTimeout(() => {
-    const editor = initializeCascadeMonacoEditor(
-      editorContainer,
-      itemConfig.componentState?.code || STARTER_CODE,
-      (newCode) => {
-        // CADWorkerに送信
-        console.log('コード更新:', newCode);
-      }
-    );
-    
-    // レイアウトリサイズ対応
-    const resizeObserver = new ResizeObserver(() => {
-      editor.layout();
-    });
-    resizeObserver.observe(editorContainer);
-  }, 100);
-  
-  container.element.appendChild(editorContainer);
-  return { 
-    destroy: () => {
-      editorContainer.remove();
-    }
-  };
-}
-```
-
-### Day 5-7: React Three Fiber統合
-**目標**: CascadeStudio風3Dビューポート
-
-#### 🎨 CascadeCADViewport実装（2-3時間）
-```typescript
-// components/cad/CascadeCADViewport.tsx 新規作成
-'use client';
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
-import { useCADWorker } from '../../hooks/useCADWorker';
-import TweakpaneGUI from '../gui/TweakpaneGUI';
-
-export default function CascadeCADViewport({
-  shapes,
-  isWorking,
-  onShapeClick
-}: CascadeCADViewportProps) {
-  const cadWorkerState = useCADWorker();
-  
-  return (
-    <div className="relative h-full">
-      {/* フローティングGUIパネル */}
-      <div className="absolute top-4 right-4 z-10">
-        <TweakpaneGUI 
-          cadWorkerState={cadWorkerState}
-          onGUIUpdate={(guiState) => {
-            console.log('GUI更新:', guiState);
-          }}
-        />
-      </div>
-      
-      {/* React Three Fiber Canvas */}
-      <Canvas
-        camera={{ position: [10, 10, 10], fov: 50 }}
-        style={{ background: '#2d3748' }}
-      >
-        <ambientLight intensity={0.6} />
-        <directionalLight position={[10, 10, 5]} intensity={1} />
-        
-        {/* CAD形状レンダリング */}
-        {shapes.map((shape, index) => (
-          <mesh 
-            key={index}
-            geometry={shape.geometry}
-            material={shape.material}
-            onClick={() => onShapeClick?.(shape)}
-          />
-        ))}
-        
-        {/* OrbitControls */}
-        <OrbitControls
-          enableDamping
-          dampingFactor={0.05}
-          minDistance={1}
-          maxDistance={100}
-        />
-      </Canvas>
-      
-      {/* ワーカー状態表示 */}
-      {isWorking && (
-        <div className="absolute bottom-4 left-4 bg-black/80 text-white px-3 py-2 rounded">
-          <span className="loading loading-spinner loading-sm mr-2"></span>
-          CAD処理中...
-        </div>
-      )}
-    </div>
-  );
-}
-```
-
-#### 🔄 Golden Layout統合（1時間）
-```typescript
-// components/layout/CascadeStudioLayout.tsx 更新
-function createCascadeViewComponent(container: any, itemConfig: any) {
-  const viewContainer = document.createElement('div');
-  viewContainer.style.height = '100%';
-  viewContainer.style.position = 'relative';
-  
-  // React Root作成
-  const root = createRoot(viewContainer);
-  root.render(React.createElement(CascadeCADViewport, {
-    shapes: [],
-    isWorking: false,
-    onShapeClick: (shape) => console.log('形状クリック:', shape)
-  }));
-  
-  container.element.appendChild(viewContainer);
-  return { 
-    destroy: () => {
-      root.unmount();
-      viewContainer.remove();
-    }
-  };
+  // URLハッシュを更新
+  window.location.hash = encoded;
 }
 ```
 
 ---
 
-## 📋 **Week 3-4: 高度機能実装**
+## 🎯 今後の優先タスク
 
-### Day 8-10: URL状態管理実装
-**目標**: CascadeStudio風プロジェクト共有機能
+### 1. トップナビゲーション実装（2日）
+- CascadeStudio風のトップナビゲーションバーを実装
+- ファイル操作メニュー（新規作成、保存、ロード）の追加
+- エクスポート機能（STEP, STL）の統合
 
-#### 🔗 URLStateManager実装（2-3時間）
+### 2. 3Dビューポート機能拡張（3日）
+- カメラコントロールの改善（ズーム、パン、回転）
+- 視点プリセット（フロント、トップ、サイド、アイソメトリック）
+- 表示設定（ワイヤーフレーム、シェーディングモード）
+
+### 3. 最終機能統合とテスト（2日）
+- エラーハンドリングの強化
+- パフォーマンス最適化
+- Playwrightテストの拡充
+
+### 4. ドキュメント整備（1日）
+- API仕様書作成
+- 使い方ガイド作成
+- デモ例の追加
+
+## 🚀 Playwright MCPによる次の検証ステップ
+
+### 1. ユーザーインタラクションテスト
 ```typescript
-// lib/url/URLStateManager.ts 新規作成
-import { deflate, inflate } from 'fflate'; // rawflate代替
-
-export class URLStateManager {
-  // CascadeStudio互換encode（fflate使用）
-  static encode(string: string): string {
-    const uint8Array = new TextEncoder().encode(string);
-    const compressed = deflate(uint8Array);
-    const base64 = btoa(String.fromCharCode(...compressed));
-    return encodeURIComponent(base64);
-  }
-  
-  // CascadeStudio互換decode
-  static decode(string: string): string {
-    const base64 = decodeURIComponent(string);
-    const compressed = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
-    const decompressed = inflate(compressed);
-    return new TextDecoder().decode(decompressed);
-  }
-  
-  // URL状態保存
-  static saveStateToURL(code: string, guiState: Record<string, any>): void {
-    const url = new URL(window.location.href);
-    url.hash = `code=${this.encode(code)}&gui=${this.encode(JSON.stringify(guiState))}`;
-    window.history.replaceState({}, 'Cascade Studio', url.href);
-  }
-  
-  // URL状態読み込み
-  static loadStateFromURL(): { code?: string; guiState?: Record<string, any> } {
-    const hash = window.location.hash.substr(1);
-    const params = new URLSearchParams(hash);
-    
-    try {
-      return {
-        code: params.has("code") ? this.decode(params.get("code")!) : undefined,
-        guiState: params.has("gui") ? JSON.parse(this.decode(params.get("gui")!)) : undefined
-      };
-    } catch (error) {
-      console.error('URL状態読み込みエラー:', error);
-      return {};
-    }
-  }
-}
-```
-
-### Day 11-14: CascadeStudio風トップナビゲーション
-**目標**: 完全機能互換ナビゲーション
-
-#### 🧭 CascadeTopNav実装（3-4時間）
-```typescript
-// components/layout/CascadeTopNav.tsx 新規作成
-export default function CascadeTopNav({ 
-  onSaveProject,
-  onLoadProject,
-  onSaveSTEP,
-  onSaveSTL,
-  onSaveOBJ,
-  onImportFiles,
-  onClearFiles
-}: CascadeTopNavProps) {
-  return (
-    <nav className="bg-neutral text-neutral-content border-b border-neutral-focus">
-      <div className="flex items-center px-4 py-2 space-x-4">
-        {/* ブランド */}
-        <a href="#" className="font-bold text-lg">
-          Cascade Studio 0.0.7
-        </a>
-        
-        {/* セパレータ */}
-        <div className="w-px h-6 bg-neutral-content opacity-30"></div>
-        
-        {/* プロジェクト管理 */}
-        <button className="btn btn-ghost btn-sm" onClick={onSaveProject}>
-          Save Project
-        </button>
-        <button className="btn btn-ghost btn-sm" onClick={onLoadProject}>
-          Load Project
-        </button>
-        
-        {/* セパレータ */}
-        <div className="w-px h-6 bg-neutral-content opacity-30"></div>
-        
-        {/* エクスポート */}
-        <button className="btn btn-ghost btn-sm" onClick={onSaveSTEP}>
-          Save STEP
-        </button>
-        <button className="btn btn-ghost btn-sm" onClick={onSaveSTL}>
-          Save STL
-        </button>
-        <button className="btn btn-ghost btn-sm" onClick={onSaveOBJ}>
-          Save OBJ
-        </button>
-        
-        {/* セパレータ */}
-        <div className="w-px h-6 bg-neutral-content opacity-30"></div>
-        
-        {/* インポート */}
-        <label className="btn btn-ghost btn-sm cursor-pointer">
-          Import STEP/IGES/STL
-          <input 
-            type="file" 
-            accept=".iges,.step,.igs,.stp,.stl" 
-            onChange={onImportFiles} 
-            className="hidden" 
-          />
-        </label>
-        <button className="btn btn-ghost btn-sm" onClick={onClearFiles}>
-          Clear Imported Files
-        </button>
-      </div>
-    </nav>
-  );
-}
-```
-
----
-
-## 📋 **Week 5-6: 統合テスト・最適化**
-
-### Day 15-17: MCP Browser Tools活用
-**目標**: リアルタイムデバッグ・動作確認
-
-#### 🔍 Playwright MCP自動テスト（1-2時間）
-```typescript
-// tests/cascade-studio.spec.ts 新規作成
-test('CascadeStudio完全コピー動作確認', async ({ page }) => {
-  // ページナビゲーション
+test('エディターでコードを編集してモデルが更新される', async ({ page }) => {
+  // ページへ遷移
   await page.goto('http://localhost:3000/cascade-studio');
   
-  // Golden Layout初期化待機
-  await page.waitForSelector('.lm_goldenlayout');
+  // レイアウトが読み込まれるまで待機
+  await page.waitForSelector('.lm_goldenlayout', { timeout: 10000 });
   
-  // Monaco Editor確認
-  await page.waitForSelector('.monaco-editor');
-  const editorContent = await page.textContent('.monaco-editor .view-lines');
-  expect(editorContent).toContain('Welcome to Cascade Studio!');
+  // エディターのテキストを編集
+  const editorElement = await page.locator('.monaco-editor');
+  await editorElement.click();
+  await page.keyboard.press('Control+A');
+  await page.keyboard.press('Delete');
   
-  // Tweakpane GUI確認
-  await page.waitForSelector('.tp-dfwv');
-  const guiPanel = await page.locator('.gui-panel');
-  await expect(guiPanel).toBeVisible();
+  // テストコードを入力
+  const testCode = `
+    let box = Box(10, 20, 30);
+    Translate([0, 0, 0], box);
+  `;
+  await page.keyboard.type(testCode);
   
-  // コンソール確認
-  await page.waitForSelector('.console-container');
-  const consoleText = await page.textContent('.console-container');
-  expect(consoleText).toContain('CascadeStudio Console');
-  
-  // F5キー実行テスト
+  // F5キーを押して評価
   await page.keyboard.press('F5');
-  await page.waitForTimeout(1000);
   
-  // CAD形状レンダリング確認
-  const canvas = await page.locator('canvas');
-  await expect(canvas).toBeVisible();
+  // 3Dビューポートが更新されるのを待機
+  await page.waitForTimeout(2000);
+  
+  // スクリーンショットを撮影
+  await page.screenshot({ path: 'test-results/box-model.png' });
 });
 ```
 
-#### 🖥️ MCP Browser Tools統合デバッグ
-```bash
-# リアルタイム動作確認
-mcp_browser-tools_takeScreenshot
-mcp_browser-tools_runAccessibilityAudit  
-mcp_browser-tools_runPerformanceAudit
-mcp_browser-tools_getConsoleLogs
-mcp_browser-tools_getNetworkErrors
+### 2. GUI操作テスト
+```typescript
+test('Tweakpane GUIでモデルのパラメータを変更できる', async ({ page }) => {
+  // ページへ遷移
+  await page.goto('http://localhost:3000/cascade-studio');
+  
+  // レイアウトが読み込まれるまで待機
+  await page.waitForSelector('.lm_goldenlayout', { timeout: 10000 });
+  
+  // エディターにSliderを使うコードを入力
+  const sliderCode = `
+    let radius = Slider("Radius", 30, 10, 50);
+    let sphere = Sphere(radius);
+  `;
+  
+  // コードを入力して評価
+  const editorElement = await page.locator('.monaco-editor');
+  await editorElement.click();
+  await page.keyboard.press('Control+A');
+  await page.keyboard.press('Delete');
+  await page.keyboard.type(sliderCode);
+  await page.keyboard.press('F5');
+  
+  // Tweakpaneに動的スライダーが表示されるのを待機
+  await page.waitForSelector('div:has-text("Radius")', { timeout: 5000 });
+  
+  // スライダーの値を変更
+  const slider = await page.locator('.tp-sldv_i');
+  await slider.click();
+  await slider.focus();
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  
+  // 3Dビューポートが更新されるのを待機
+  await page.waitForTimeout(2000);
+  
+  // スクリーンショットを撮影
+  await page.screenshot({ path: 'test-results/slider-modified.png' });
+});
 ```
 
-### Day 18-21: パフォーマンス最適化
-**目標**: CascadeStudio同等のパフォーマンス達成
+---
 
-#### ⚡ WebWorker最適化（2-3時間）
-- CAD処理の並列化
-- Shape caching実装
-- Progressive rendering
+## 🎉 完成予定
 
-#### 🎨 UI最適化（1-2時間）
-- Golden Layoutレスポンシブ対応
-- Tweakpane遅延初期化
-- Monaco Editor仮想化
+**完全コピー完成予定日**: 2025年6月15日
+
+実装完了後、Playwrightによる自動テストを実行し、CascadeStudioとの互換性と機能を検証します。完成後はNext.js版CascadeStudioとして公開し、元のCascadeStudioからのスムーズな移行パスを提供します。
+
+## 🎯 **フェーズ7計画: 3Dビューポートとワーカー統合**
+
+### Day 1-2: React Three Fiber連携
+**目標**: 3DビューポートをReact Three Fiberで実装
+
+#### 🎯 3Dビューポートコンポーネント作成（3-4時間）
+```typescript
+// components/threejs/CascadeViewport.tsx
+'use client';
+
+import { useRef, useEffect } from 'react';
+import { Canvas } from '@react-three/fiber';
+import { OrbitControls, Grid, Environment } from '@react-three/drei';
+
+export default function CascadeViewport({ 
+  shapes, 
+  viewSettings
+}: CascadeViewportProps) {
+  return (
+    <Canvas shadows camera={{ position: [100, 100, 100], fov: 50 }}>
+      <ambientLight intensity={0.5} />
+      <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} />
+      <pointLight position={[-10, -10, -10]} />
+      
+      {/* CADシェイプを表示 */}
+      {shapes.map((shape, i) => (
+        <CascadeShape key={i} shape={shape} />
+      ))}
+      
+      {/* 環境設定 */}
+      {viewSettings.grid && <Grid infiniteGrid />}
+      {viewSettings.groundPlane && <mesh 
+        rotation={[-Math.PI / 2, 0, 0]} 
+        position={[0, -0.01, 0]}
+        receiveShadow
+      >
+        <planeGeometry args={[1000, 1000]} />
+        <shadowMaterial opacity={0.4} />
+      </mesh>}
+      
+      <OrbitControls />
+      <Environment preset="sunset" />
+    </Canvas>
+  );
+}
+```
+
+### Day 3-4: ワーカーメッセージング完全実装
+**目標**: WebWorkerのメッセージングシステム完成
+
+#### 🎯 CADワーカーハンドラー（3-4時間）
+```typescript
+// lib/cad/cadWorkerManager.ts
+export class CADWorkerManager {
+  private worker: Worker | null = null;
+  private messageHandlers: Map<string, (data: any) => void> = new Map();
+  
+  constructor() {
+    // ワーカー初期化
+    this.worker = new Worker('/workers/cadWorker.js');
+    
+    // メッセージ受信ハンドラー
+    this.worker.onmessage = (e) => {
+      const { type, data } = e.data;
+      const handler = this.messageHandlers.get(type);
+      if (handler) {
+        handler(data);
+      }
+    };
+  }
+  
+  // メッセージ送信
+  sendMessage(type: string, payload: any) {
+    if (!this.worker) return;
+    
+    this.worker.postMessage({
+      type,
+      data: payload
+    });
+  }
+  
+  // ハンドラー登録
+  registerHandler(type: string, handler: (data: any) => void) {
+    this.messageHandlers.set(type, handler);
+  }
+}
+```
 
 ---
 
-## 📋 **Week 7-8: 最終調整・ドキュメント化**
+## 📊 **完了予想時期**
 
-### Day 22-25: 完全互換性確認
-**目標**: CascadeStudio 100%機能一致確認
+| フェーズ | 作業内容 | 進捗状況 | 完了予想 |
+|---------|---------|---------|---------|
+| **フェーズ5** | Golden Layout統合 | ✅ 100% | 完了済み |
+| **フェーズ6** | GUI要素完全移行 | 🔄 80% | 2025年6月10日 |
+| **フェーズ7** | 3Dビューポート統合 | 🚧 0% | 2025年6月15日 |
+| **フェーズ8** | プロジェクト管理 | 🚧 0% | 2025年6月20日 |
 
-#### ✅ 機能チェックリスト
-- [ ] Golden Layoutドッキング機能
-- [ ] Tweakpane動的GUI
-- [ ] Monaco Editor TypeScript Intellisense
-- [ ] F5/Ctrl+S キーバインド
-- [ ] URL状態共有
-- [ ] プロジェクト保存/読み込み
-- [ ] STEP/STL/OBJ エクスポート
-- [ ] CAD形状インタラクション
+## ✅ **次の作業者へのタスク**
 
-### Day 26-28: ドキュメント更新
-**目標**: 完全移行の記録・引き継ぎ資料
+1. **CADワーカー連携の完成**
+   - Monaco Editorからのコード評価処理の完成
+   - GUI要素とCADワーカーの連携強化
 
-#### 📚 更新ドキュメント
-- [ ] `docs/6_cascadestudio_migration/README.md` 完了報告
-- [ ] `docs/6_cascadestudio_migration/implementation_plan.md` 実装詳細
-- [ ] `docs/6_cascadestudio_migration/action_plan.md` 達成記録
+2. **テスト結果の分析と改善**
+   - Playwrightテスト結果を分析し、UIの改善点を特定
+   - 比較テストで発見された差異を修正
 
----
+3. **3Dビューポート実装準備**
+   - React Three Fiber統合の計画詳細化
+   - CADジオメトリ表示のための基盤実装
 
 ## 🎯 **成功指標**
 
@@ -705,7 +356,7 @@ mcp_browser-tools_getNetworkErrors
 - **依存関係**: `fflate` (rawflate代替), `tweakpane@4.0.1`
 - **CSS**: `themes/` フォルダパス必須
 
-**🎊 現状: フェーズ5基盤 100%完了！次はTweakpane統合です！**
+**🎊 現状: フェーズ6実装進行中！次は3Dビューポート統合です！**
 
 ## 🛠️ Playwright MCP活用実装チェックリスト
 

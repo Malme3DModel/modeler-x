@@ -36,8 +36,8 @@ export class CascadeGUIHandlers {
     this.guiState[name] = defaultValue;
     
     try {
-      // Tweakpane入力コントロール追加
-      this.dynamicFolder.addInput(this.guiState, name, {
+      // Tweakpane入力コントロール追加（v4.0.1ではaddBindingを使用）
+      this.dynamicFolder.addBinding(this.guiState, name, {
         min,
         max,
         step
@@ -66,8 +66,8 @@ export class CascadeGUIHandlers {
     this.guiState[name] = defaultValue;
     
     try {
-      // Tweakpaneチェックボックス追加
-      this.dynamicFolder.addInput(this.guiState, name).on('change', (ev: any) => {
+      // Tweakpaneチェックボックス追加（v4.0.1ではaddBindingを使用）
+      this.dynamicFolder.addBinding(this.guiState, name).on('change', (ev: any) => {
         this.updateGUIState(name, ev.value);
       });
       
@@ -117,8 +117,8 @@ export class CascadeGUIHandlers {
     this.guiState[name] = defaultValue;
     
     try {
-      // Tweakpaneテキスト入力追加
-      this.dynamicFolder.addInput(this.guiState, name).on('change', (ev: any) => {
+      // Tweakpaneテキスト入力追加（v4.0.1ではaddBindingを使用）
+      this.dynamicFolder.addBinding(this.guiState, name).on('change', (ev: any) => {
         this.updateGUIState(name, ev.value);
       });
       
@@ -143,8 +143,8 @@ export class CascadeGUIHandlers {
     this.guiState[name] = options[defaultIndex] || options[0] || '';
     
     try {
-      // Tweakpaneドロップダウン追加
-      this.dynamicFolder.addInput(this.guiState, name, {
+      // Tweakpaneドロップダウン追加（v4.0.1ではaddBindingを使用）
+      this.dynamicFolder.addBinding(this.guiState, name, {
         options: options.reduce((acc, option) => {
           acc[option] = option;
           return acc;

@@ -1,6 +1,6 @@
 # CascadeStudio完全コピー実装計画詳細
 
-## 🎊 **フェーズ6実装進捗状況**（2025年6月7日更新）
+## 🎊 **フェーズ6実装完了**（2025年6月8日更新）
 
 ### ✅ **実装完了項目**
 - ✅ **Golden Layout 2.6.0基盤**: V2 API完全対応済み
@@ -8,1217 +8,465 @@
 - ✅ **フローティングGUI配置**: Tweakpane領域確保
 - ✅ **STARTER_CODE表示**: CascadeStudio互換
 - ✅ **コンソールパネル**: CascadeStudio風デザイン
-- ✅ **CascadeGUIHandlers**: Tweakpane機能基本統合
+- ✅ **Monaco Editor統合**: F5キー、Ctrl+Sキーバインド実装
+- ✅ **Monaco Editorワーカー設定**: WebWorkerエラー解決
+- ✅ **URL状態管理システム**: Base64エンコードによるURL共有
+- ✅ **CascadeGUIHandlers**: Tweakpane 4.0.1に対応完了
+- ✅ **Playwright自動テスト**: 機能テストと比較テスト実装
 
-### 🚨 **現在の問題点**
-- 🔴 **404エラー**: `/cascade-studio/simple`ページが正しく表示されない
-- 🔴 **静的アセット読み込みエラー**: `main-app.js`, `app-pages-internals.js`ファイルの404エラー
-- 🔴 **Webpackビルドエラー**: キャッシュ関連の問題でビルドが不安定
+### 🔄 **実装中の項目**
+- 🔄 **トップナビゲーション**: メニュー構成の設計中
+- 🔄 **3Dビューポート機能拡張**: カメラコントロール改善中
 
-#### **エラーログ抜粋**
-```
-GET /cascade-studio/simple 404 in 330ms
-GET /_next/static/chunks/main-app.js?v=1748911781819 404 in 32ms
-GET /_next/static/chunks/app-pages-internals.js 404 in 29ms
-```
+### 🚨 **新発見ナレッジ**
 
-### 🔧 **試行中の解決策**
-1. **ページファイル復元**: 削除された`app/cascade-studio/simple.tsx`ファイルの再作成
-2. **Next.jsキャッシュクリア**: `.next`フォルダを削除して完全な再ビルド
-3. **インポートパス修正**: @エイリアスを使用した相対パスの修正
-4. **コンポーネント分離**: 複雑な依存関係を持つコンポーネントの分離
-
-### 🧠 **技術的知見**
-
-#### **Golden Layout V1 → V2 API重大変更**
-CascadeStudioは古いV1仕様を使用しているため、完全にV2 APIに移行する必要がありました。
+#### **1. Tweakpane 4.0.1のAPIの変更点**
+Tweakpane 4.0.1では、APIが大幅に変更されています。主な変更点は以下の通りです：
 
 ```typescript
-// ❌ V1方式（CascadeStudio docs/template使用）
-const config = {
-  content: [{
-    componentName: 'codeEditor',  // V1では componentName
-    isClosable: false,
-    // ...
-  }]
-};
-new GoldenLayout(config, container);
-layout.registerComponent('codeEditor', MyComponent);
+// 従来のTweakpane
+pane.addInput(guiState, 'propertyName', options);
 
-// ✅ V2方式（実装完了）
-const config = {
-  root: {  // V2では root プロパティが必要
-    content: [{
-      componentType: 'codeEditor',  // V2では componentType
-      // isClosable は削除（V2では不要）
-      // ...
-    }]
-  }
-};
-const layout = new GoldenLayout(container);  // configは渡さない
-layout.loadLayout(config);  // 設定は後から読み込み
-
-// Embedding via Events方式（V2推奨）
-layout.bindComponentEvent = (container, itemConfig) => {
-  const component = createComponent(itemConfig.componentType, container);
-  return { component, virtual: false };
-};
+// Tweakpane 4.0.1
+pane.addBinding(guiState, 'propertyName', options);
 ```
 
-#### **Next.js App Routerに関する発見**
-シンプル版CascadeStudioページの実装では、単一のページコンポーネントを作成するだけでなく、ディレクトリ構造も正しく設定する必要があります。
+この変更に対応するためには、`TweakpaneGUI.tsx`と`CascadeGUIHandlers.ts`の両方のファイルで、すべての`addInput`メソッドを`addBinding`に変更する必要がありました。
+
+#### **2. Monaco EditorのWebWorker設定**
+Monaco Editorを正しく動作させるには、専用のWebWorkerを設定する必要があります。以下のエラーが発生した場合：
 
 ```
-app/cascade-studio/simple/page.tsx  # ✅ 正しいパス
-app/cascade-studio/simple.tsx       # ❌ 404エラーの原因
+Could not create web worker(s). Falling back to loading web worker code in main thread, which might cause UI freezes.
+You must define a function MonacoEnvironment.getWorkerUrl or MonacoEnvironment.getWorker
 ```
 
-#### **CSSパス変更**
+解決方法は以下の通りです：
+
+1. **MonacoEnvironmentの設定**:
 ```typescript
-// ❌ 古いパス（エラー発生）
-import 'golden-layout/dist/css/goldenlayout-dark-theme.css';
-
-// ✅ 新しいパス（修正必要）
-import 'golden-layout/dist/css/themes/goldenlayout-dark-theme.css';
-```
-
-### 📁 **実装済みファイル構成**
-```
-app/cascade-studio/page.tsx          # ✅ CascadeStudioメインページ
-app/cascade-studio/simple/page.tsx   # 🚧 シンプル版ページ（修正中）
-lib/layout/cascadeLayoutConfig.ts    # ✅ V2レイアウト設定
-components/layout/CascadeStudioLayout.tsx # ✅ Golden Layout統合
-components/gui/TweakpaneGUI.tsx      # ✅ Tweakpane統合
-```
-
----
-
-## 1. フェーズ5: Golden Layout統合詳細実装
-
-### 1.1 依存関係追加と設定
-
-```bash
-# 必要なライブラリ追加
-npm install golden-layout@2.6.0 tweakpane@4.0.1 rawflate@0.3.0 
-npm install @types/golden-layout --save-dev
-```
-
-### 1.2 CascadeStudio用レイアウト設定
-
-```typescript
-// lib/layout/cascadeLayoutConfig.ts
-export const DEFAULT_LAYOUT_CONFIG = {
-  content: [{
-    type: 'row',
-    content: [{
-      type: 'component',
-      componentName: 'codeEditor',
-      title: '* Untitled',
-      componentState: { code: STARTER_CODE },
-      width: 50.0,
-      isClosable: false
-    }, {
-      type: 'column',
-      content: [{
-        type: 'component',
-        componentName: 'cascadeView',
-        title: 'CAD View',
-        componentState: {},
-        isClosable: false
-      }, {
-        type: 'component',
-        componentName: 'console',
-        title: 'Console',
-        componentState: {},
-        height: 20.0,
-        isClosable: false
-      }]
-    }]
-  }],
-  settings: {
-    showPopoutIcon: false,
-    showMaximiseIcon: false,
-    showCloseIcon: false
-  }
-};
-
-export const STARTER_CODE = `// Welcome to Cascade Studio!   Here are some useful functions:
-//  Translate(), Rotate(), Scale(), Mirror(), Union(), Difference(), Intersection()
-//  Box(), Sphere(), Cylinder(), Cone(), Text3D(), Polygon()
-//  Offset(), Extrude(), RotatedExtrude(), Revolve(), Pipe(), Loft(), 
-//  FilletEdges(), ChamferEdges(),
-//  Slider(), Checkbox(), TextInput(), Dropdown()
-
-let holeRadius = Slider("Radius", 30 , 20 , 40);
-
-let sphere     = Sphere(50);
-let cylinderZ  =                     Cylinder(holeRadius, 200, true);
-let cylinderY  = Rotate([0,1,0], 90, Cylinder(holeRadius, 200, true));
-let cylinderX  = Rotate([1,0,0], 90, Cylinder(holeRadius, 200, true));
-
-Translate([0, 0, 50], Difference(sphere, [cylinderX, cylinderY, cylinderZ]));
-
-Translate([-25, 0, 40], Text3D("Hi!", 36, 0.15, 'Consolas'));
-
-// Don't forget to push imported or oc-defined shapes into sceneShapes to add them to the workspace!`;
-```
-
-### 1.3 Golden Layout Wrapper実装
-
-```typescript
-// components/layout/GoldenLayoutWrapper.tsx
-'use client';
-
-import { useEffect, useRef, useState } from 'react';
-import dynamic from 'next/dynamic';
-import { DEFAULT_LAYOUT_CONFIG } from '../../lib/layout/cascadeLayoutConfig';
-
-// Golden Layout のCSS
-import 'golden-layout/dist/css/goldenlayout-base.css';
-import 'golden-layout/dist/css/themes/goldenlayout-dark-theme.css';
-
-interface GoldenLayoutWrapperProps {
-  cadWorkerState: ReturnType<typeof useCADWorker>;
-  onProjectLoad?: (project: any) => void;
-}
-
-export default function GoldenLayoutWrapper({ 
-  cadWorkerState,
-  onProjectLoad 
-}: GoldenLayoutWrapperProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const layoutRef = useRef<any>(null);
-  const [isLayoutReady, setIsLayoutReady] = useState(false);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-
-    // Golden Layout動的インポート
-    import('golden-layout').then(({ GoldenLayout }) => {
-      // 既存レイアウトを破棄
-      if (layoutRef.current) {
-        layoutRef.current.destroy();
-        layoutRef.current = null;
+// Monaco Editorのワーカー設定
+if (typeof window !== 'undefined') {
+  (window as any).MonacoEnvironment = {
+    getWorkerUrl: function(_moduleId: string, label: string) {
+      if (label === 'typescript' || label === 'javascript') {
+        return '/monaco-editor-workers/ts.worker.js';
       }
-
-      // 新しいレイアウト作成
-      layoutRef.current = new GoldenLayout(DEFAULT_LAYOUT_CONFIG, containerRef.current);
-
-      // コンポーネント登録
-      registerComponents(layoutRef.current, cadWorkerState);
-
-      // レイアウト初期化
-      layoutRef.current.init();
-      
-      // リサイズ対応
-      const handleResize = () => {
-        if (layoutRef.current && containerRef.current) {
-          layoutRef.current.updateSize();
-        }
-      };
-      
-      window.addEventListener('resize', handleResize);
-      setIsLayoutReady(true);
-
-      return () => {
-        window.removeEventListener('resize', handleResize);
-        if (layoutRef.current) {
-          layoutRef.current.destroy();
-        }
-      };
-    });
-  }, [cadWorkerState]);
-
-  return (
-    <div className="h-full w-full">
-      <div ref={containerRef} className="h-full w-full" />
-      {!isLayoutReady && (
-        <div className="absolute inset-0 flex items-center justify-center bg-base-100">
-          <span className="loading loading-spinner loading-lg"></span>
-          <span className="ml-2">レイアウト初期化中...</span>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// コンポーネント登録関数
-function registerComponents(layout: any, cadWorkerState: any) {
-  // コードエディターコンポーネント
-  layout.registerComponent('codeEditor', (container: any, state: any) => {
-    // CascadeCodeEditor の実装
-    const editorContainer = document.createElement('div');
-    editorContainer.style.height = '100%';
-    container.getElement().append(editorContainer);
-    
-    // Monaco Editor初期化
-    initializeMonacoEditor(editorContainer, state, cadWorkerState);
-  });
-
-  // 3Dビューポートコンポーネント
-  layout.registerComponent('cascadeView', (container: any, state: any) => {
-    // CascadeView の実装
-    const viewContainer = document.createElement('div');
-    viewContainer.style.height = '100%';
-    viewContainer.style.position = 'relative';
-    container.getElement().append(viewContainer);
-    
-    // フローティングGUIコンテナ追加
-    const floatingGUIContainer = document.createElement('div');
-    floatingGUIContainer.className = 'gui-panel';
-    floatingGUIContainer.id = 'guiPanel';
-    viewContainer.appendChild(floatingGUIContainer);
-    
-    // CADViewport初期化
-    initializeCascadeView(viewContainer, state, cadWorkerState);
-  });
-
-  // コンソールコンポーネント
-  layout.registerComponent('console', (container: any) => {
-    // CascadeConsole の実装
-    const consoleContainer = document.createElement('div');
-    consoleContainer.style.height = '100%';
-    consoleContainer.style.overflow = 'auto';
-    consoleContainer.style.boxShadow = 'inset 0px 0px 3px rgba(0,0,0,0.75)';
-    container.getElement().append(consoleContainer);
-    
-    // コンソール初期化
-    initializeCascadeConsole(consoleContainer, cadWorkerState);
-  });
-}
-```
-
-### 1.4 Monaco Editor Golden Layout統合
-
-```typescript
-// lib/editor/cascadeMonacoEditor.ts
-import * as monaco from 'monaco-editor';
-
-export function initializeMonacoEditor(
-  container: HTMLElement, 
-  state: any, 
-  cadWorkerState: any
-) {
-  // Monaco設定
-  monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-    allowNonTsExtensions: true,
-    moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-  });
-  monaco.languages.typescript.typescriptDefaults.setEagerModelSync(true);
-
-  // TypeScript Intellisense設定
-  setupIntelliSense();
-
-  // コードチェック（配列形式対応）
-  let codeValue = state.code;
-  if (Array.isArray(state.code)) {
-    codeValue = state.code.join('\n');
-  }
-
-  // エディター作成
-  const editor = monaco.editor.create(container, {
-    value: codeValue,
-    language: 'typescript',
-    theme: 'vs-dark',
-    automaticLayout: true,
-    minimap: { enabled: false }
-  });
-
-  // 関数折りたたみ設定
-  setupFunctionFolding(editor, codeValue);
-
-  // キーバインド設定
-  setupKeyBindings(editor, cadWorkerState);
-
-  // evaluateCode メソッド追加
-  (editor as any).evaluateCode = (saveToURL = false) => {
-    executeCADCode(editor, cadWorkerState, saveToURL);
+      return '/monaco-editor-workers/editor.worker.js';
+    }
   };
-
-  return editor;
-}
-
-function setupIntelliSense() {
-  const extraLibs: any[] = [];
-  
-  // OpenCascade.js定義読み込み
-  fetch('/opencascade/opencascade.d.ts')
-    .then(response => response.text())
-    .then(text => {
-      extraLibs.push({ 
-        content: text, 
-        filePath: 'file:///opencascade.d.ts' 
-      });
-    });
-
-  // CascadeStudio標準ライブラリ定義読み込み  
-  fetch('/types/cad-library.d.ts')
-    .then(response => response.text())
-    .then(text => {
-      extraLibs.push({ 
-        content: text, 
-        filePath: 'file:///cad-library.d.ts' 
-      });
-      monaco.languages.typescript.typescriptDefaults.setExtraLibs(extraLibs);
-    });
-}
-
-function setupFunctionFolding(editor: monaco.editor.IStandaloneCodeEditor, code: string) {
-  const codeLines = code.split(/\r\n|\r|\n/);
-  const collapsed: any[] = [];
-  let curCollapse: any = null;
-  
-  for (let li = 0; li < codeLines.length; li++) {
-    if (codeLines[li].startsWith('function')) {
-      curCollapse = { startLineNumber: li + 1 };
-    } else if (codeLines[li].startsWith('}') && curCollapse !== null) {
-      curCollapse.endLineNumber = li + 1;
-      collapsed.push(curCollapse);
-      curCollapse = null;
-    }
-  }
-
-  const mergedViewState = Object.assign(editor.saveViewState(), {
-    contributionsState: {
-      'editor.contrib.folding': {
-        collapsedRegions: collapsed,
-        lineCount: codeLines.length,
-        provider: 'indent'
-      }
-    }
-  });
-  
-  editor.restoreViewState(mergedViewState);
-}
-
-function setupKeyBindings(editor: monaco.editor.IStandaloneCodeEditor, cadWorkerState: any) {
-  // F5: コード実行
-  editor.addCommand(monaco.KeyCode.F5, () => {
-    (editor as any).evaluateCode(true);
-  });
-
-  // Ctrl+S: プロジェクト保存 + コード実行
-  editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-    saveProject();
-    (editor as any).evaluateCode(true);
-  });
-}
-
-function executeCADCode(
-  editor: monaco.editor.IStandaloneCodeEditor,
-  cadWorkerState: any,
-  saveToURL = false
-) {
-  if (cadWorkerState.isWorking) return;
-
-  const code = editor.getValue();
-  
-  // GUI再初期化
-  initializeTweakpaneGUI();
-  
-  // CADコード実行
-  cadWorkerState.executeCADCode(code);
-  
-  // URL保存
-  if (saveToURL) {
-    saveCodeToURL(code, cadWorkerState.guiState);
-  }
 }
 ```
 
-## 2. フェーズ6: Tweakpane GUI統合詳細実装
+2. **ワーカーファイルの作成**:
+CDNからワーカーファイルを読み込むことで、簡単に問題を解決できます。
 
-### 2.1 Tweakpane統合コンポーネント
+```javascript
+// editor.worker.js
+self.MonacoEnvironment = {
+  baseUrl: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.35.0/min/'
+};
+
+importScripts('https://cdn.jsdelivr.net/npm/monaco-editor@0.35.0/min/vs/base/worker/workerMain.js');
+```
+
+```javascript
+// ts.worker.js
+self.MonacoEnvironment = {
+  baseUrl: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.35.0/min/'
+};
+
+importScripts('https://cdn.jsdelivr.net/npm/monaco-editor@0.35.0/min/vs/language/typescript/tsWorker.js');
+```
+
+## 1. CascadeStudioLayout最新実装
+
+### 1.1 Monaco Editor統合とワーカー設定
 
 ```typescript
-// components/gui/TweakpaneGUI.tsx
-'use client';
-
-import { useEffect, useRef } from 'react';
-
-interface TweakpaneGUIProps {
-  cadWorkerState: ReturnType<typeof useCADWorker>;
-  container?: HTMLElement;
-}
-
-export default function TweakpaneGUI({ 
-  cadWorkerState,
-  container 
-}: TweakpaneGUIProps) {
-  const paneRef = useRef<any>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!window.Tweakpane) {
-      // Tweakpane動的読み込み
-      const script = document.createElement('script');
-      script.src = '/node_modules/tweakpane/dist/tweakpane.min.js';
-      script.onload = initializeTweakpane;
-      document.head.appendChild(script);
-    } else {
-      initializeTweakpane();
-    }
-
-    return () => {
-      if (paneRef.current) {
-        paneRef.current.dispose();
+// components/layout/CascadeStudioLayout.tsx の重要部分
+function createCodeEditorComponent(container: any) {
+  // エディターコンテナ作成
+  const editorContainer = document.createElement('div');
+  editorContainer.style.height = '100%';
+  editorContainer.style.width = '100%';
+  editorContainer.style.backgroundColor = '#1e1e1e';
+  container.element.appendChild(editorContainer);
+  
+  // Monaco Editorのワーカー設定 - 重要！
+  if (typeof window !== 'undefined') {
+    (window as any).MonacoEnvironment = {
+      getWorkerUrl: function(_moduleId: string, label: string) {
+        if (label === 'typescript' || label === 'javascript') {
+          return '/monaco-editor-workers/ts.worker.js';
+        }
+        return '/monaco-editor-workers/editor.worker.js';
       }
     };
-  }, []);
-
-  const initializeTweakpane = () => {
-    const targetContainer = container || containerRef.current;
-    if (!targetContainer) return;
-
-    // 既存のPane破棄
-    if (paneRef.current) {
-      paneRef.current.dispose();
-    }
-
-    // 新しいPane作成
-    paneRef.current = new (window as any).Tweakpane.Pane({
-      title: 'Cascade Control Panel',
-      container: targetContainer
-    });
-
-    // デフォルトGUI要素追加
-    setupDefaultGUIElements();
+  }
+  
+  // モナコエディターを動的にインポートして初期化
+  import('monaco-editor').then(monaco => {
+    // URLから読み込んだコードまたはデフォルトを使用
+    const initialCode = lastSavedCodeRef.current || STARTER_CODE;
     
-    // WebWorkerからのGUI要素追加ハンドラー設定
-    setupGUIHandlers();
-  };
+    // モナコエディター初期化
+    const editor = monaco.editor.create(editorContainer, {
+      value: initialCode,
+      language: 'typescript',
+      theme: 'vs-dark',
+      minimap: { enabled: true },
+      automaticLayout: true,
+      fontSize: 14,
+      fontFamily: 'Consolas, "Courier New", monospace',
+      scrollBeyondLastLine: false,
+    });
+    
+    // エディター参照を保存
+    editorRef.current = editor;
+    
+    // F5キーとCtrl+Sのキーバインド設定
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      // コード評価を実行
+      const code = editor.getValue();
+      evaluateCode(code);
+    });
+    
+    editor.addCommand(monaco.KeyCode.F5, () => {
+      // コード評価を実行
+      const code = editor.getValue();
+      evaluateCode(code);
+    });
+    
+    // ワーカーが準備できたら、初期コードを評価
+    if (isWorkerReady) {
+      setTimeout(() => {
+        appendConsoleMessage('🚀 初期コードを評価します...', 'info');
+        evaluateCode(initialCode);
+      }, 1000);
+    }
+  });
+}
+```
 
-  const setupDefaultGUIElements = () => {
-    if (!paneRef.current) return;
+### 1.2 CADワーカー連携機能
 
-    const guiState = cadWorkerState.guiState;
+```typescript
+// コードを評価する関数を更新
+const evaluateCode = (code: string) => {
+  appendConsoleMessage('🔄 コード評価を開始します...', 'info');
+  
+  // CADワーカーにコードを送信
+  if (isWorkerReady) {
+    executeCADCode(code, guiState)
+      .then(() => {
+        appendConsoleMessage('✅ コード評価を送信しました', 'success');
+        
+        // URLに状態を保存
+        saveStateToURL(code, guiState);
+      })
+      .catch(err => {
+        appendConsoleMessage(`❌ コード評価に失敗: ${err.message}`, 'error');
+      });
+  } else {
+    appendConsoleMessage('❌ CADワーカーが初期化されていません', 'error');
+  }
+};
+```
 
-    // Evaluateボタン
-    paneRef.current.addButton({ 
-      title: 'Evaluate', 
-      label: 'Function' 
+## 2. Tweakpane 4.0.1対応の詳細実装
+
+### 2.1 TweakpaneGUI.tsx
+
+```typescript
+// components/gui/TweakpaneGUI.tsx 内のGUI要素追加部分
+const addBasicGUIElements = useCallback((pane: any) => {
+  try {
+    // Evaluate ボタン
+    pane.addButton({
+      title: 'Evaluate',
+      label: '🔄 Evaluate'
     }).on('click', () => {
-      cadWorkerState.executeCADCode(/* 現在のコード */);
+      console.log('🎯 [TweakpaneGUI] Evaluate button clicked');
+      handleGUIUpdate(guiState);
     });
 
-    // MeshResスライダー
-    if (!('MeshRes' in guiState)) guiState.MeshRes = 0.1;
-    paneRef.current.addInput(guiState, 'MeshRes', {
+    // Mesh Settings フォルダ
+    const meshResFolder = pane.addFolder({
+      title: 'Mesh Settings'
+    });
+
+    // Mesh Resolution スライダー
+    meshResFolder.addBinding(guiState, 'MeshRes', {
       min: 0.01,
-      max: 2,
+      max: 1.0,
       step: 0.01,
-      format: (v: number) => v.toFixed(2)
+      label: 'Resolution'
+    }).on('change', (ev: any) => {
+      updateGUIState('MeshRes', ev.value);
     });
 
-    // Cache?チェックボックス
-    if (!('Cache?' in guiState)) guiState['Cache?'] = true;
-    paneRef.current.addInput(guiState, 'Cache?').on('change', () => {
-      delayReloadEditor();
+    // Cache チェックボックス
+    meshResFolder.addBinding(guiState, 'Cache?', {
+      label: 'Cache'
+    }).on('change', (ev: any) => {
+      updateGUIState('Cache?', ev.value);
     });
-
-    // GroundPlane?チェックボックス
-    if (!('GroundPlane?' in guiState)) guiState['GroundPlane?'] = true;
-    paneRef.current.addInput(guiState, 'GroundPlane?').on('change', () => {
-      delayReloadEditor();
-    });
-
-    // Grid?チェックボックス
-    if (!('Grid?' in guiState)) guiState['Grid?'] = true;
-    paneRef.current.addInput(guiState, 'Grid?').on('change', () => {
-      delayReloadEditor();
-    });
-  };
-
-  const setupGUIHandlers = () => {
-    // addSliderハンドラー
-    cadWorkerState.messageHandlers['addSlider'] = (payload: any) => {
-      const guiState = cadWorkerState.guiState;
-      if (!(payload.name in guiState)) {
-        guiState[payload.name] = payload.default;
-      }
-
-      const params: any = {
-        min: payload.min,
-        max: payload.max,
-        step: payload.step
-      };
-
-      if (payload.dp) {
-        params.format = (v: number) => v.toFixed(payload.dp);
-      }
-
-      const slider = paneRef.current.addInput(guiState, payload.name, params);
-
-      if (payload.realTime) {
-        slider.on('change', (e: any) => {
-          if (e.last) {
-            delayReloadEditor();
-          }
-        });
-      }
-    };
-
-    // addButtonハンドラー
-    cadWorkerState.messageHandlers['addButton'] = (payload: any) => {
-      paneRef.current.addButton({ 
-        title: payload.name, 
-        label: payload.label 
-      }).on('click', payload.callback);
-    };
-
-    // addCheckboxハンドラー
-    cadWorkerState.messageHandlers['addCheckbox'] = (payload: any) => {
-      const guiState = cadWorkerState.guiState;
-      if (!(payload.name in guiState)) {
-        guiState[payload.name] = payload.default || false;
-      }
-      
-      paneRef.current.addInput(guiState, payload.name).on('change', () => {
-        delayReloadEditor();
-      });
-    };
-
-    // addTextboxハンドラー
-    cadWorkerState.messageHandlers['addTextbox'] = (payload: any) => {
-      const guiState = cadWorkerState.guiState;
-      if (!(payload.name in guiState)) {
-        guiState[payload.name] = payload.default || '';
-      }
-      
-      const input = paneRef.current.addInput(guiState, payload.name);
-      if (payload.realTime) {
-        input.on('change', (e: any) => {
-          if (e.last) {
-            delayReloadEditor();
-          }
-        });
-      }
-    };
-
-    // addDropdownハンドラー
-    cadWorkerState.messageHandlers['addDropdown'] = (payload: any) => {
-      const guiState = cadWorkerState.guiState;
-      if (!(payload.name in guiState)) {
-        guiState[payload.name] = payload.default || '';
-      }
-      
-      const options = payload.options || {};
-      const input = paneRef.current.addInput(guiState, payload.name, { options });
-      if (payload.realTime) {
-        input.on('change', (e: any) => {
-          if (e.last) {
-            delayReloadEditor();
-          }
-        });
-      }
-    };
-  };
-
-  const delayReloadEditor = () => {
-    // 遅延実行でエディターリロード
-    setTimeout(() => {
-      cadWorkerState.executeCADCode(/* 現在のコード */);
-    }, 100);
-  };
-
-  if (container) {
-    // コンテナが外部から提供される場合はuseEffectのみで処理
-    return null;
+    
+    // ... 他のGUI要素
+  } catch (error) {
+    console.error('❌ [TweakpaneGUI] Failed to add GUI elements:', error);
   }
+}, [guiState, handleGUIUpdate, updateGUIState]);
+```
 
-  return <div ref={containerRef} className="gui-panel" />;
+### 2.2 CascadeGUIHandlers.ts
+
+```typescript
+// lib/gui/cascadeGUIHandlers.ts 内のSlider追加メソッド
+addSlider(name: string, defaultValue: number, min: number, max: number, step: number = 0.1): number {
+  if (!this.pane || !this.dynamicFolder) {
+    console.warn(`🚨 [CascadeGUIHandlers] Cannot add slider '${name}': Pane not initialized`);
+    return defaultValue;
+  }
+  
+  // 既存のGUI状態を更新
+  this.guiState[name] = defaultValue;
+  
+  try {
+    // Tweakpane入力コントロール追加（v4.0.1ではaddBindingを使用）
+    this.dynamicFolder.addBinding(this.guiState, name, {
+      min,
+      max,
+      step
+    }).on('change', (ev: any) => {
+      this.updateGUIState(name, ev.value);
+    });
+    
+    console.log(`✅ [CascadeGUIHandlers] Added slider: ${name} (${defaultValue}, ${min}-${max})`);
+  } catch (error) {
+    console.error(`❌ [CascadeGUIHandlers] Failed to add slider '${name}':`, error);
+  }
+  
+  return defaultValue;
 }
 ```
 
-### 2.2 フローティングGUIオーバーレイ
+## 3. 3Dビューポート実装
+
+### 3.1 CascadeViewport.tsx
 
 ```typescript
-// components/cad/FloatingGUIOverlay.tsx
+// components/threejs/CascadeViewport.tsx
 'use client';
 
-import { useEffect, useRef } from 'react';
-import TweakpaneGUI from '../gui/TweakpaneGUI';
+import { useRef, useEffect, useState } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
+import { OrbitControls, Grid, Environment, PerspectiveCamera } from '@react-three/drei';
+import { CADShape } from '@/types/worker';
+import * as THREE from 'three';
 
-interface FloatingGUIOverlayProps {
-  cadWorkerState: ReturnType<typeof useCADWorker>;
-  className?: string;
+interface CascadeViewportProps {
+  shapes: CADShape[];
+  viewSettings?: {
+    groundPlane?: boolean;
+    grid?: boolean;
+    axes?: boolean;
+    ambientLight?: boolean;
+    ambientLightIntensity?: number;
+    backgroundColor?: string;
+  };
 }
 
-export default function FloatingGUIOverlay({ 
-  cadWorkerState,
-  className = ''
-}: FloatingGUIOverlayProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+// ... ShapeMesh, SceneSetup コンポーネント
 
-  useEffect(() => {
-    // CSS設定
-    if (containerRef.current) {
-      containerRef.current.style.position = 'absolute';
-      containerRef.current.style.top = '0';
-      containerRef.current.style.right = '0';
-      containerRef.current.style.maxHeight = '100%';
-      containerRef.current.style.overflowY = 'auto';
-      containerRef.current.style.zIndex = '10';
-    }
-  }, []);
-
+export default function CascadeViewport({ 
+  shapes = [], 
+  viewSettings = {
+    groundPlane: true,
+    grid: true,
+    axes: true,
+    ambientLight: true,
+    ambientLightIntensity: 0.5,
+    backgroundColor: '#2d3748'
+  }
+}: CascadeViewportProps) {
   return (
-    <div 
-      ref={containerRef}
-      className={`gui-panel ${className}`}
-    >
-      <TweakpaneGUI 
-        cadWorkerState={cadWorkerState}
-        container={containerRef.current}
-      />
+    <div style={{ width: '100%', height: '100%' }}>
+      <Canvas shadows gl={{ antialias: true }}
+        style={{ background: viewSettings.backgroundColor || '#2d3748' }}
+      >
+        <SceneSetup viewSettings={viewSettings} />
+        
+        {/* CADシェイプを表示 */}
+        {shapes.map((shape, i) => (
+          <ShapeMesh key={i} shape={shape} />
+        ))}
+      </Canvas>
     </div>
   );
 }
 ```
 
-## 3. フェーズ7: CascadeStudio風UI完全一致
+## 4. 次の実装ステップ
 
-### 3.1 CascadeStudio風トップナビゲーション
+### 4.1 トップナビゲーション実装計画（2025年6月9日〜10日）
+
+トップナビゲーションの実装には以下のコンポーネントを作成します：
 
 ```typescript
-// components/layout/CascadeTopNav.tsx
+// components/layout/CascadeStudioNavbar.tsx (計画)
 'use client';
 
-import { useRef } from 'react';
+import { useState } from 'react';
+import Link from 'next/link';
 
-interface CascadeTopNavProps {
-  onSaveProject?: () => void;
-  onLoadProject?: () => void;
-  onSaveSTEP?: () => void;
-  onSaveSTL?: () => void;
-  onSaveOBJ?: () => void;
-  onImportFiles?: (files: FileList) => void;
-  onClearFiles?: () => void;
+interface CascadeStudioNavbarProps {
+  onNewProject: () => void;
+  onSaveProject: () => void;
+  onLoadProject: () => void;
+  onExportSTL: () => void;
+  onExportSTEP: () => void;
 }
 
-export default function CascadeTopNav({
+export default function CascadeStudioNavbar({
+  onNewProject,
   onSaveProject,
   onLoadProject,
-  onSaveSTEP,
-  onSaveSTL,
-  onSaveOBJ,
-  onImportFiles,
-  onClearFiles
-}: CascadeTopNavProps) {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && onImportFiles) {
-      onImportFiles(e.target.files);
-    }
-  };
-
+  onExportSTL,
+  onExportSTEP
+}: CascadeStudioNavbarProps) {
+  const [isFileMenuOpen, setIsFileMenuOpen] = useState(false);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  
   return (
-    <nav className="topnav bg-neutral text-neutral-content">
-      <a href="https://github.com/zalo/CascadeStudio" className="topnav-link">
-        Cascade Studio 0.0.7
-      </a>
+    <nav className="bg-gray-900 text-white h-10 flex items-center px-4">
+      <div className="text-blue-400 font-bold mr-8">CascadeStudio</div>
       
-      <a href="#" className="topnav-link" onClick={onSaveProject}>
-        Save Project
-      </a>
-      
-      <a href="#" className="topnav-link" onClick={onLoadProject}>
-        Load Project
-      </a>
-      
-      <a href="#" className="topnav-link" onClick={onSaveSTEP}>
-        Save STEP
-      </a>
-      
-      <a href="#" className="topnav-link" onClick={onSaveSTL}>
-        Save STL
-      </a>
-      
-      <a href="#" className="topnav-link" onClick={onSaveOBJ}>
-        Save OBJ
-      </a>
-      
-      <label className="topnav-link cursor-pointer" onClick={handleImportClick}>
-        Import STEP/IGES/STL
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".iges,.step,.igs,.stp,.stl"
-          multiple
-          style={{ display: 'none' }}
-          onChange={handleFileChange}
-        />
-      </label>
-      
-      <a href="#" className="topnav-link" onClick={onClearFiles}>
-        Clear Imported Files
-      </a>
-
-      <style jsx>{`
-        .topnav {
-          background-color: #111;
-          overflow: hidden;
-        }
+      {/* ファイルメニュー */}
+      <div className="relative">
+        <button 
+          className="px-3 py-1 hover:bg-gray-700 rounded"
+          onClick={() => setIsFileMenuOpen(!isFileMenuOpen)}
+        >
+          ファイル
+        </button>
         
-        .topnav-link {
-          float: left;
-          color: #f2f2f2;
-          text-align: center;
-          padding: 4px 16px;
-          text-decoration: none;
-          font-size: 14px;
-          font-family: Consolas;
-        }
+        {isFileMenuOpen && (
+          <div className="absolute top-8 left-0 bg-gray-800 rounded shadow-lg w-48 z-50">
+            <button 
+              className="block w-full text-left px-4 py-2 hover:bg-gray-700"
+              onClick={() => {
+                onNewProject();
+                setIsFileMenuOpen(false);
+              }}
+            >
+              新規プロジェクト
+            </button>
+            <button 
+              className="block w-full text-left px-4 py-2 hover:bg-gray-700"
+              onClick={() => {
+                onSaveProject();
+                setIsFileMenuOpen(false);
+              }}
+            >
+              保存
+            </button>
+            <button 
+              className="block w-full text-left px-4 py-2 hover:bg-gray-700"
+              onClick={() => {
+                onLoadProject();
+                setIsFileMenuOpen(false);
+              }}
+            >
+              読み込み
+            </button>
+          </div>
+        )}
+      </div>
+      
+      {/* エクスポートメニュー */}
+      <div className="relative ml-4">
+        <button 
+          className="px-3 py-1 hover:bg-gray-700 rounded"
+          onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
+        >
+          エクスポート
+        </button>
         
-        .topnav-link:hover {
-          background-color: #aaa;
-          color: black;
-        }
-        
-        .topnav-link.active {
-          background-color: #4CAF50;
-          color: white;
-        }
-      `}</style>
+        {isExportMenuOpen && (
+          <div className="absolute top-8 left-0 bg-gray-800 rounded shadow-lg w-48 z-50">
+            <button 
+              className="block w-full text-left px-4 py-2 hover:bg-gray-700"
+              onClick={() => {
+                onExportSTL();
+                setIsExportMenuOpen(false);
+              }}
+            >
+              STLファイル
+            </button>
+            <button 
+              className="block w-full text-left px-4 py-2 hover:bg-gray-700"
+              onClick={() => {
+                onExportSTEP();
+                setIsExportMenuOpen(false);
+              }}
+            >
+              STEPファイル
+            </button>
+          </div>
+        )}
+      </div>
+      
+      {/* ヘルプリンク */}
+      <div className="ml-auto">
+        <Link href="/docs" className="px-3 py-1 hover:bg-gray-700 rounded">
+          ヘルプ
+        </Link>
+      </div>
     </nav>
   );
 }
 ```
 
-### 3.2 CascadeStudio風コンソール
+### 4.2 3Dビューポート機能拡張計画（2025年6月11日〜13日）
 
-```typescript
-// components/layout/CascadeConsole.tsx
-'use client';
+3Dビューポートの機能拡張には以下の機能を追加します：
 
-import { useEffect, useRef } from 'react';
+1. **カメラコントロールの拡張**
+   - フロント、トップ、サイド、アイソメトリック視点の切り替え
+   - カメラリセット機能
+   - フィット機能（モデルにカメラをフィット）
 
-interface CascadeConsoleProps {
-  logs: Array<{ message: string; level: 'log' | 'error'; timestamp: number }>;
-  progress?: { opNumber: number; opType?: string };
-  onClear?: () => void;
-}
+2. **表示モード切り替え**
+   - ソリッド表示
+   - ワイヤーフレーム表示
+   - 半透明表示
 
-export default function CascadeConsole({ 
-  logs, 
-  progress, 
-  onClear 
-}: CascadeConsoleProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+3. **パフォーマンス最適化**
+   - インスタンス化による大量モデル表示の最適化
+   - 視錐台カリング
+   - LOD（Level of Detail）実装
 
-  useEffect(() => {
-    // 自動スクロール
-    if (containerRef.current) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight;
-    }
-  }, [logs]);
+### 4.3 最終機能統合計画（2025年6月14日〜15日）
 
-  const getCircularReplacer = () => {
-    const seen = new WeakSet();
-    return (key: string, value: any) => {
-      if (typeof value === "object" && value !== null) {
-        if (seen.has(value)) { return; }
-        seen.add(value);
-      }
-      return value;
-    };
-  };
+1. **エラーハンドリングの強化**
+   - CADワーカーでのエラー検出と詳細なエラーメッセージ
+   - UI側でのエラー表示改善
+   - リカバリーメカニズム
 
-  const formatMessage = (message: string) => {
-    try {
-      let messageText = JSON.stringify(message, getCircularReplacer());
-      if (messageText.startsWith('"')) {
-        messageText = messageText.slice(1, -1);
-      }
-      return messageText;
-    } catch {
-      return String(message);
-    }
-  };
+2. **パフォーマンス最適化**
+   - レンダリングパイプラインの最適化
+   - キャッシュシステムの改善
+   - 非同期処理の最適化
 
-  return (
-    <div 
-      ref={containerRef}
-      className="console-container"
-      style={{
-        height: '100%',
-        overflow: 'auto',
-        boxShadow: 'inset 0px 0px 3px rgba(0,0,0,0.75)',
-        backgroundColor: '#1e1e1e',
-        padding: '8px'
-      }}
-    >
-      {logs.map((log, index) => (
-        <div
-          key={`${log.timestamp}-${index}`}
-          style={{
-            fontFamily: 'monospace',
-            color: log.level === 'error' ? 'red' : 
-                   index % 2 === 0 ? 'LightGray' : 'white',
-            fontSize: '1.2em',
-            marginBottom: '2px'
-          }}
-        >
-          &gt; {formatMessage(log.message)}
-        </div>
-      ))}
-      
-      {progress && (
-        <div
-          style={{
-            fontFamily: 'monospace',
-            color: 'white',
-            fontSize: '1.2em'
-          }}
-        >
-          &gt; Generating Model{".".repeat(progress.opNumber)}
-          {progress.opType && ` (${progress.opType})`}
-        </div>
-      )}
-      
-      <style jsx>{`
-        .console-container::-webkit-scrollbar {
-          width: 10px;
-          background: #2e2e2e;
-        }
-        
-        .console-container::-webkit-scrollbar-thumb {
-          background: #777;
-        }
-      `}</style>
-    </div>
-  );
-}
-```
+3. **テスト強化**
+   - エンドツーエンドテストの追加
+   - 性能テストの追加
+   - クロスブラウザテスト
 
-## 4. フェーズ8: URL状態管理とプロジェクト互換性
+## 5. 完了予定
 
-### 4.1 URL状態管理システム
+**完全コピー完成予定日**: 2025年6月15日
 
-```typescript
-// lib/url/URLStateManager.ts
-declare global {
-  interface Window {
-    RawDeflate: any;
-  }
-}
-
-export class URLStateManager {
-  private static isRawDeflateLoaded = false;
-
-  static async ensureRawDeflateLoaded(): Promise<void> {
-    if (this.isRawDeflateLoaded || window.RawDeflate) {
-      this.isRawDeflateLoaded = true;
-      return;
-    }
-
-    return new Promise((resolve) => {
-      const script = document.createElement('script');
-      script.src = '/node_modules/rawflate/rawdeflate.js';
-      script.onload = () => {
-        const inflateScript = document.createElement('script');
-        inflateScript.src = '/node_modules/rawflate/rawinflate.js';
-        inflateScript.onload = () => {
-          this.isRawDeflateLoaded = true;
-          resolve();
-        };
-        document.head.appendChild(inflateScript);
-      };
-      document.head.appendChild(script);
-    });
-  }
-
-  static async encode(string: string): Promise<string> {
-    await this.ensureRawDeflateLoaded();
-    return encodeURIComponent(window.btoa(window.RawDeflate.deflate(string)));
-  }
-
-  static async decode(string: string): Promise<string> {
-    await this.ensureRawDeflateLoaded();
-    return window.RawDeflate.inflate(window.atob(decodeURIComponent(string)));
-  }
-
-  static async saveStateToURL(code: string, guiState: Record<string, any>): Promise<void> {
-    try {
-      const encodedCode = await this.encode(code);
-      const encodedGUI = await this.encode(JSON.stringify(guiState));
-      
-      const url = new URL(window.location.href);
-      url.hash = `code=${encodedCode}&gui=${encodedGUI}`;
-      window.history.replaceState({}, 'Cascade Studio', url.href);
-      
-      console.log('Saved to URL!');
-    } catch (error) {
-      console.error('Failed to save state to URL:', error);
-    }
-  }
-
-  static async loadStateFromURL(): Promise<{ code?: string; guiState?: Record<string, any> }> {
-    try {
-      const params = new URLSearchParams(
-        window.location.hash.substr(1) || window.location.search
-      );
-      
-      const result: { code?: string; guiState?: Record<string, any> } = {};
-      
-      if (params.has('code')) {
-        result.code = await this.decode(params.get('code')!);
-      }
-      
-      if (params.has('gui')) {
-        result.guiState = JSON.parse(await this.decode(params.get('gui')!));
-      }
-      
-      return result;
-    } catch (error) {
-      console.error('Failed to load state from URL:', error);
-      return {};
-    }
-  }
-}
-```
-
-### 4.2 Golden Layout プロジェクト管理
-
-```typescript
-// lib/project/GoldenLayoutProjectManager.ts
-export interface ProjectData {
-  layout: any;
-  code: string;
-  guiState: Record<string, any>;
-  version: string;
-  timestamp: string;
-  externalFiles?: Record<string, any>;
-}
-
-export class GoldenLayoutProjectManager {
-  static saveProject(
-    layout: any, 
-    code: string, 
-    guiState: Record<string, any>,
-    externalFiles?: Record<string, any>
-  ): string {
-    const projectData: ProjectData = {
-      layout: layout.toConfig(),
-      code: code.split(/\r\n|\r|\n/), // CascadeStudio互換の配列形式
-      guiState: { ...guiState },
-      version: "0.0.7",
-      timestamp: new Date().toISOString(),
-      externalFiles: externalFiles || {}
-    };
-
-    return JSON.stringify(projectData, null, 2);
-  }
-
-  static loadProject(projectJson: string): ProjectData {
-    try {
-      const project = JSON.parse(projectJson);
-      
-      return {
-        layout: project.layout || project.content, // 後方互換性
-        code: Array.isArray(project.code) ? project.code.join('\n') : project.code,
-        guiState: project.guiState || {},
-        version: project.version || "0.0.7",
-        timestamp: project.timestamp || new Date().toISOString(),
-        externalFiles: project.externalFiles || {}
-      };
-    } catch (error) {
-      throw new Error(`Failed to load project: ${error.message}`);
-    }
-  }
-
-  static async downloadProject(
-    layout: any,
-    code: string,
-    guiState: Record<string, any>,
-    filename = 'cascade-project.json'
-  ): Promise<void> {
-    const projectData = this.saveProject(layout, code, guiState);
-    
-    const blob = new Blob([projectData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    link.click();
-    
-    URL.revokeObjectURL(url);
-  }
-
-  static async loadProjectFromFile(): Promise<ProjectData> {
-    return new Promise((resolve, reject) => {
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.accept = '.json';
-      
-      input.onchange = (e) => {
-        const file = (e.target as HTMLInputElement).files?.[0];
-        if (!file) {
-          reject(new Error('No file selected'));
-          return;
-        }
-        
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          try {
-            const projectData = this.loadProject(e.target?.result as string);
-            resolve(projectData);
-          } catch (error) {
-            reject(error);
-          }
-        };
-        reader.readAsText(file);
-      };
-      
-      input.click();
-    });
-  }
-}
-```
-
-## 5. 統合アプリケーションページ
-
-### 5.1 CascadeStudio完全コピーページ
-
-```typescript
-// app/cascade-studio/page.tsx
-'use client';
-
-import { useState, useEffect } from 'react';
-import dynamic from 'next/dynamic';
-import { useCADWorker } from '../../hooks/useCADWorker';
-import CascadeTopNav from '../../components/layout/CascadeTopNav';
-import { URLStateManager } from '../../lib/url/URLStateManager';
-import { GoldenLayoutProjectManager } from '../../lib/project/GoldenLayoutProjectManager';
-
-// Dynamic imports for CSR-only components
-const GoldenLayoutWrapper = dynamic(
-  () => import('../../components/layout/GoldenLayoutWrapper'),
-  { ssr: false }
-);
-
-export default function CascadeStudioPage() {
-  const cadWorkerState = useCADWorker();
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [layoutInstance, setLayoutInstance] = useState<any>(null);
-
-  useEffect(() => {
-    initializeFromURL();
-  }, []);
-
-  const initializeFromURL = async () => {
-    try {
-      const urlState = await URLStateManager.loadStateFromURL();
-      
-      if (urlState.code) {
-        // URL からコードとGUI状態を復元
-        // この処理はGoldenLayoutWrapper内で実行される
-      }
-      
-      setIsInitialized(true);
-    } catch (error) {
-      console.error('Failed to initialize from URL:', error);
-      setIsInitialized(true);
-    }
-  };
-
-  const handleSaveProject = async () => {
-    if (!layoutInstance) return;
-    
-    try {
-      await GoldenLayoutProjectManager.downloadProject(
-        layoutInstance,
-        getCurrentCode(),
-        cadWorkerState.guiState
-      );
-    } catch (error) {
-      console.error('Failed to save project:', error);
-    }
-  };
-
-  const handleLoadProject = async () => {
-    try {
-      const projectData = await GoldenLayoutProjectManager.loadProjectFromFile();
-      
-      // レイアウトとコードを復元
-      // この処理はGoldenLayoutWrapper を再初期化して実行
-      window.location.reload(); // 簡易実装
-    } catch (error) {
-      console.error('Failed to load project:', error);
-    }
-  };
-
-  const handleSaveSTEP = () => {
-    // STEP保存処理
-    cadWorkerState.saveFile('STEP');
-  };
-
-  const handleSaveSTL = () => {
-    // STL保存処理
-    cadWorkerState.saveFile('STL');
-  };
-
-  const handleSaveOBJ = () => {
-    // OBJ保存処理
-    cadWorkerState.saveFile('OBJ');
-  };
-
-  const handleImportFiles = (files: FileList) => {
-    // ファイルインポート処理
-    Array.from(files).forEach(file => {
-      cadWorkerState.importFile(file);
-    });
-  };
-
-  const handleClearFiles = () => {
-    // インポートファイルクリア
-    cadWorkerState.clearImportedFiles();
-  };
-
-  const getCurrentCode = (): string => {
-    // 現在のエディターからコードを取得
-    // この実装は実際のエディターインスタンスに依存
-    return '';
-  };
-
-  if (!isInitialized) {
-    return (
-      <div className="min-h-screen bg-base-100 flex items-center justify-center">
-        <span className="loading loading-spinner loading-lg"></span>
-        <span className="ml-2">CascadeStudio を初期化中...</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="h-screen flex flex-col" style={{ backgroundColor: 'rgb(34, 34, 34)' }}>
-      {/* CascadeStudio風トップナビゲーション */}
-      <CascadeTopNav
-        onSaveProject={handleSaveProject}
-        onLoadProject={handleLoadProject}
-        onSaveSTEP={handleSaveSTEP}
-        onSaveSTL={handleSaveSTL}
-        onSaveOBJ={handleSaveOBJ}
-        onImportFiles={handleImportFiles}
-        onClearFiles={handleClearFiles}
-      />
-
-      {/* Golden Layout メインコンテンツ */}
-      <div className="flex-1">
-        <GoldenLayoutWrapper
-          cadWorkerState={cadWorkerState}
-          onLayoutReady={setLayoutInstance}
-        />
-      </div>
-    </div>
-  );
-}
-```
-
-この実装計画により、CascadeStudioの機能とUIを100%再現したNext.js CADエディターを構築できます。 
+完成後はNext.js版CascadeStudioとして公開し、元のCascadeStudioからのスムーズな移行パスを提供します。 
