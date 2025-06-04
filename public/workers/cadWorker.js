@@ -730,19 +730,161 @@ messageHandlers["exportFile"] = function(payload) {
     } else if (format === 'obj') {
       console.log("🔄 OBJフォーマットでエクスポート中...");
       try {
-        // TODO: OBJエクスポート実装例（OpenCascade標準APIにOBJ出力がない場合は独自実装が必要）
-        // ここではダミーでSTLと同様の処理を行う（実際はOBJフォーマットで出力する必要あり）
-        // 品質設定や法線出力オプションもpayloadから取得
+        // 品質設定
         const deflection = typeof payload.quality === 'number' ? payload.quality : 0.1;
         const includeNormals = payload.includeNormals !== false; // デフォルトtrue
-        // 一時ファイル名
-        const tempFileName = "export.obj";
-        // TODO: OBJファイル書き込み処理を実装
-        // ここではエラーを投げて未実装を明示
-        throw new Error("OBJエクスポートは未実装です（OpenCascade標準APIにOBJ出力なし）");
-        // exportedData = oc.FS.readFile(tempFileName, { encoding: 'binary' });
-        // oc.FS.unlink(tempFileName);
-        // console.log("✅ OBJエクスポート成功");
+        
+        // OBJファイルの内容を構築
+        let objContent = "# OBJ file exported from CascadeStudio\n";
+        objContent += `# Generated on ${new Date().toISOString()}\n\n`;
+        
+        let vertexOffset = 0;
+        let shapeIndex = 0;
+        
+        // すべての形状を処理
+        const shapesToExport = sceneShapes.length > 0 ? sceneShapes : [exportShape];
+        
+        for (const shape of shapesToExport) {
+          shapeIndex++;
+          objContent += `# Shape ${shapeIndex}\n`;
+          objContent += `g shape_${shapeIndex}\n`;
+          
+          // メッシュ化
+          new oc.BRepMesh_IncrementalMesh_2(shape, deflection, false, 0.5, false);
+          
+          // フェース探索
+          const explorer = new oc.TopExp_Explorer_2(shape, oc.TopAbs_ShapeEnum.TopAbs_FACE, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+          
+          const vertices = [];
+          const normals = [];
+          const faces = [];
+          
+          while (explorer.More()) {
+            const face = oc.TopoDS.Face_1(explorer.Current());
+            
+            try {
+              const location = new oc.TopLoc_Location_1();
+              const triangulation = oc.BRep_Tool.Triangulation(face, location);
+              
+              if (!triangulation.IsNull()) {
+                const nodeCount = triangulation.get().NbNodes();
+                const triangleCount = triangulation.get().NbTriangles();
+                
+                // 頂点の収集
+                const faceVertices = [];
+                for (let i = 1; i <= nodeCount; i++) {
+                  const node = triangulation.get().Node(i);
+                  faceVertices.push([node.X(), node.Y(), node.Z()]);
+                  vertices.push([node.X(), node.Y(), node.Z()]);
+                }
+                
+                // 法線の計算（必要な場合）
+                if (includeNormals) {
+                  // フェースの向きを取得
+                  const orientation = face.Orientation();
+                  const isReversed = orientation === oc.TopAbs_Orientation.TopAbs_REVERSED;
+                  
+                  // 各三角形の法線を計算
+                  for (let i = 1; i <= triangleCount; i++) {
+                    const triangle = triangulation.get().Triangle(i);
+                    const n1 = triangle.Value(1) - 1;
+                    const n2 = triangle.Value(2) - 1;
+                    const n3 = triangle.Value(3) - 1;
+                    
+                    // 三角形の頂点
+                    const v1 = faceVertices[n1];
+                    const v2 = faceVertices[n2];
+                    const v3 = faceVertices[n3];
+                    
+                    // エッジベクトル
+                    const edge1 = [v2[0] - v1[0], v2[1] - v1[1], v2[2] - v1[2]];
+                    const edge2 = [v3[0] - v1[0], v3[1] - v1[1], v3[2] - v1[2]];
+                    
+                    // 外積で法線を計算
+                    let normal = [
+                      edge1[1] * edge2[2] - edge1[2] * edge2[1],
+                      edge1[2] * edge2[0] - edge1[0] * edge2[2],
+                      edge1[0] * edge2[1] - edge1[1] * edge2[0]
+                    ];
+                    
+                    // 正規化
+                    const length = Math.sqrt(normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]);
+                    if (length > 0) {
+                      normal[0] /= length;
+                      normal[1] /= length;
+                      normal[2] /= length;
+                    }
+                    
+                    // フェースの向きに応じて反転
+                    if (isReversed) {
+                      normal[0] = -normal[0];
+                      normal[1] = -normal[1];
+                      normal[2] = -normal[2];
+                    }
+                    
+                    // 各頂点に同じ法線を割り当て（簡略化）
+                    normals.push(normal);
+                    normals.push(normal);
+                    normals.push(normal);
+                  }
+                }
+                
+                // フェース（三角形）の収集
+                const startIndex = vertexOffset;
+                for (let i = 1; i <= triangleCount; i++) {
+                  const triangle = triangulation.get().Triangle(i);
+                  faces.push([
+                    startIndex + triangle.Value(1),
+                    startIndex + triangle.Value(2),
+                    startIndex + triangle.Value(3)
+                  ]);
+                }
+                
+                vertexOffset += nodeCount;
+              }
+            } catch (faceError) {
+              console.log(`⚠️ Error processing face: ${faceError.message}`);
+            }
+            
+            explorer.Next();
+          }
+          
+          // 頂点を出力
+          objContent += "\n# Vertices\n";
+          for (const vertex of vertices) {
+            objContent += `v ${vertex[0]} ${vertex[1]} ${vertex[2]}\n`;
+          }
+          
+          // 法線を出力（必要な場合）
+          if (includeNormals && normals.length > 0) {
+            objContent += "\n# Normals\n";
+            for (const normal of normals) {
+              objContent += `vn ${normal[0]} ${normal[1]} ${normal[2]}\n`;
+            }
+          }
+          
+          // フェースを出力
+          objContent += "\n# Faces\n";
+          for (let i = 0; i < faces.length; i++) {
+            const face = faces[i];
+            if (includeNormals && normals.length > 0) {
+              // 法線インデックス付き
+              const normalBase = i * 3 + 1;
+              objContent += `f ${face[0]}/${face[0]}/${normalBase} ${face[1]}/${face[1]}/${normalBase+1} ${face[2]}/${face[2]}/${normalBase+2}\n`;
+            } else {
+              // 頂点のみ
+              objContent += `f ${face[0]} ${face[1]} ${face[2]}\n`;
+            }
+          }
+          
+          objContent += "\n";
+        }
+        
+        // 文字列をバイト配列に変換
+        const encoder = new TextEncoder();
+        exportedData = encoder.encode(objContent);
+        
+        console.log("✅ OBJエクスポート成功");
       } catch (error) {
         console.error(`❌ OBJエクスポートエラー: ${error.message}`);
         throw error;

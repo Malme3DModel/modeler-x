@@ -4,6 +4,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useCADWorker } from '../../hooks/useCADWorker';
 import { Download, Upload, FileSymlink, AlertTriangle, X, CheckCircle, FolderDown } from 'lucide-react';
 import BatchExportDialog from './BatchExportDialog';
+import FilePreview from './FilePreview';
 
 interface FileIOControlsProps {
   cadWorkerState: ReturnType<typeof useCADWorker>;
@@ -25,6 +26,7 @@ export default function FileIOControls({ cadWorkerState }: FileIOControlsProps) 
   const [exportFormat, setExportFormat] = useState<'step' | 'stl'>('step');
   const [exportQuality, setExportQuality] = useState(0.1);
   const [showBatchExportDialog, setShowBatchExportDialog] = useState(false);
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ファイル検証関数
@@ -187,17 +189,34 @@ export default function FileIOControls({ cadWorkerState }: FileIOControlsProps) 
     
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      handleFileImport(files[0]);
+      setPreviewFile(files[0]);
     }
-  }, [handleFileImport]);
+  }, []);
 
   // ファイル選択処理
   const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      handleFileImport(files[0]);
+      setPreviewFile(files[0]);
     }
-  }, [handleFileImport]);
+  }, []);
+
+  // プレビュー確認後のインポート処理
+  const handlePreviewConfirm = useCallback(() => {
+    if (previewFile) {
+      handleFileImport(previewFile);
+      setPreviewFile(null);
+    }
+  }, [previewFile, handleFileImport]);
+
+  // プレビューキャンセル処理
+  const handlePreviewCancel = useCallback(() => {
+    setPreviewFile(null);
+    // ファイル入力をリセット
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, []);
 
   // ファイルサイズのフォーマット
   const formatFileSize = (bytes: number): string => {
@@ -353,6 +372,7 @@ export default function FileIOControls({ cadWorkerState }: FileIOControlsProps) 
           onClick={() => setShowBatchExportDialog(true)}
           disabled={cadWorkerState.shapes.length === 0}
           title="複数形式で一括エクスポート"
+          data-testid="batch-export-btn"
         >
           <FolderDown className="w-4 h-4" />
           バッチエクスポート
@@ -370,6 +390,13 @@ export default function FileIOControls({ cadWorkerState }: FileIOControlsProps) 
         isOpen={showBatchExportDialog}
         onClose={() => setShowBatchExportDialog(false)}
         defaultFileName={fileInfo?.name?.replace(/\.[^/.]+$/, '') || 'model'}
+      />
+      
+      {/* ファイルプレビューダイアログ */}
+      <FilePreview
+        file={previewFile}
+        onConfirm={handlePreviewConfirm}
+        onCancel={handlePreviewCancel}
       />
     </div>
   );

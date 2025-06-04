@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useBatchExport, ExportItem, ExportFormat } from '@/hooks/useBatchExport';
 import { XMarkIcon, DocumentArrowDownIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
+import ExportSettings, { ExportSettingsValues } from './ExportSettings';
 
 interface BatchExportDialogProps {
   isOpen: boolean;
@@ -30,9 +31,21 @@ export default function BatchExportDialog({
     new Set<ExportFormat>(['step', 'stl'] as ExportFormat[])
   );
   const [baseFileName, setBaseFileName] = useState(defaultFileName);
-  const [quality, setQuality] = useState(0.1);
-  const [binaryStl, setBinaryStl] = useState(true);
-  const [includeNormals, setIncludeNormals] = useState(true);
+  
+  // 各フォーマットごとの設定を管理
+  const [formatSettings, setFormatSettings] = useState<Record<ExportFormat, ExportSettingsValues>>({
+    step: { format: 'step', quality: 0.1, binaryStl: true, includeNormals: true },
+    stl: { format: 'stl', quality: 0.1, binaryStl: true, includeNormals: true },
+    obj: { format: 'obj', quality: 0.1, binaryStl: true, includeNormals: true },
+  });
+
+  // 設定更新ハンドラー
+  const handleSettingsChange = (format: ExportFormat, settings: ExportSettingsValues) => {
+    setFormatSettings(prev => ({
+      ...prev,
+      [format]: settings
+    }));
+  };
 
   // ダイアログが開かれたときにアイテムリストを初期化
   useEffect(() => {
@@ -41,21 +54,22 @@ export default function BatchExportDialog({
       const formats = Array.from(selectedFormats);
       
       formats.forEach((format) => {
+        const settings = formatSettings[format];
         items.push({
           id: `${baseFileName}-${format}`,
           fileName: `${baseFileName}.${format}`,
           format,
           settings: {
-            quality,
-            binaryStl,
-            includeNormals,
+            quality: settings.quality,
+            binaryStl: settings.binaryStl,
+            includeNormals: settings.includeNormals,
           },
         });
       });
       
       setExportItems(items);
     }
-  }, [isOpen, selectedFormats, baseFileName, quality, binaryStl, includeNormals]);
+  }, [isOpen, selectedFormats, baseFileName, formatSettings]);
 
   const handleFormatToggle = (format: ExportFormat) => {
     const newFormats = new Set(selectedFormats);
@@ -163,59 +177,17 @@ export default function BatchExportDialog({
                 </div>
               </div>
 
-              {/* STL/OBJ設定 */}
-              {(selectedFormats.has('stl') || selectedFormats.has('obj')) && (
-                <div className="mb-6 p-4 bg-base-200 rounded-lg">
-                  <h3 className="font-medium mb-3">エクスポート設定</h3>
-                  
-                  <div className="space-y-3">
-                    <div>
-                      <label className="label">
-                        <span className="label-text">品質 (分割精度)</span>
-                      </label>
-                      <select
-                        className="select select-bordered select-sm w-full"
-                        value={quality}
-                        onChange={(e) => setQuality(parseFloat(e.target.value))}
-                        title="エクスポート品質を選択"
-                        aria-label="エクスポート品質"
-                      >
-                        <option value="0.01">高品質 (0.01mm)</option>
-                        <option value="0.05">標準 (0.05mm)</option>
-                        <option value="0.1">低品質 (0.1mm)</option>
-                      </select>
-                    </div>
-
-                    {selectedFormats.has('stl') && (
-                      <div className="form-control">
-                        <label className="label cursor-pointer">
-                          <span className="label-text">バイナリSTL形式</span>
-                          <input
-                            type="checkbox"
-                            className="checkbox checkbox-primary"
-                            checked={binaryStl}
-                            onChange={(e) => setBinaryStl(e.target.checked)}
-                          />
-                        </label>
-                      </div>
-                    )}
-
-                    {selectedFormats.has('obj') && (
-                      <div className="form-control">
-                        <label className="label cursor-pointer">
-                          <span className="label-text">法線情報を含める</span>
-                          <input
-                            type="checkbox"
-                            className="checkbox checkbox-primary"
-                            checked={includeNormals}
-                            onChange={(e) => setIncludeNormals(e.target.checked)}
-                          />
-                        </label>
-                      </div>
-                    )}
-                  </div>
+              {/* 各フォーマットの詳細設定 */}
+              {Array.from(selectedFormats).map((format) => (
+                <div key={format} className="mb-6 p-4 bg-base-200 rounded-lg">
+                  <h3 className="font-medium mb-3">{format.toUpperCase()} エクスポート設定</h3>
+                  <ExportSettings
+                    format={format}
+                    initialValues={formatSettings[format]}
+                    onChange={(settings) => handleSettingsChange(format, settings)}
+                  />
                 </div>
-              )}
+              ))}
 
               {/* エクスポート予定リスト */}
               <div className="mb-6">
