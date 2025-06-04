@@ -1,9 +1,12 @@
 import { useCallback, useRef } from 'react';
-import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
-export function useCameraAnimation() {
-  const { camera, controls } = useThree();
+interface CameraAnimationProps {
+  camera: THREE.Camera;
+  controls: any;
+}
+
+export function useCameraAnimation({ camera, controls }: CameraAnimationProps) {
   const animationRef = useRef<number>();
 
   const fitToObject = useCallback((boundingBox: THREE.Box3) => {
@@ -158,4 +161,4 @@ export function useCameraAnimation() {
     fitToObject,
     animateToPosition
   };
-} 
+}  
