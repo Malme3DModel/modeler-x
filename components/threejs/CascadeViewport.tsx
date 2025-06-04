@@ -5,7 +5,8 @@ import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid, Environment, PerspectiveCamera } from '@react-three/drei';
 import { CADShape } from '@/types/worker';
 import * as THREE from 'three';
-import CameraControls, { CameraControlsUI } from '@/components/cad/CameraControls';
+import { CameraControls } from '../cad/CameraControls';
+import { useCameraAnimation } from '../../hooks/useCameraAnimation';
 import { ViewSettings, defaultViewSettings, useViewSettings } from '@/hooks/useViewSettings';
 
 interface CascadeViewportProps {
@@ -367,6 +368,7 @@ export default function CascadeViewport({
   
   // カメラ制御関数の参照を保持
   const [setViewFn, setSetViewFn] = useState<((viewName: string) => void) | null>(null);
+  const [boundingBox, setBoundingBox] = useState<THREE.Box3 | null>(null);
   
   // Three.jsシーンからカメラ制御関数を受け取るコールバック
   const handleCameraSetup = useCallback((fn: (viewName: string) => void) => {
@@ -437,6 +439,25 @@ export default function CascadeViewport({
     }
   }, [hoveredObject, hoveredFace]);
   
+  // バウンディングボックスの計算
+  useEffect(() => {
+    if (shapes.length > 0) {
+      const box = new THREE.Box3();
+      shapes.forEach(shape => {
+        if (shape.mesh?.vertices) {
+          const geometry = new THREE.BufferGeometry();
+          geometry.setAttribute('position', new THREE.Float32BufferAttribute(shape.mesh.vertices, 3));
+          const positionAttribute = geometry.getAttribute('position') as THREE.BufferAttribute;
+          const tempBox = new THREE.Box3().setFromBufferAttribute(positionAttribute);
+          box.union(tempBox);
+        }
+      });
+      setBoundingBox(box);
+    } else {
+      setBoundingBox(null);
+    }
+  }, [shapes]);
+
   // パフォーマンス最適化のためにCanvasをメモ化
   const canvasContent = useMemo(() => (
     <Canvas 
@@ -482,7 +503,7 @@ export default function CascadeViewport({
       <div className="absolute top-2 right-2 z-10">
         <div className="bg-gray-800 bg-opacity-80 rounded shadow-lg">
           {/* カメラコントロールコンポーネント */}
-          <CameraControlsUI onViewChange={handleViewChange} />
+          <CameraControlsWithFitComponent boundingBox={boundingBox} />
         </div>
       </div>
       
@@ -521,4 +542,22 @@ export default function CascadeViewport({
       {canvasContent}
     </div>
   );
-} 
+}
+
+// CameraControlsWithFitコンポーネントを別途定義
+function CameraControlsWithFitComponent({ boundingBox }: { boundingBox: THREE.Box3 | null }) {
+  const { fitToObject } = useCameraAnimation();
+
+  const handleFitToObject = useCallback(() => {
+    if (boundingBox) {
+      fitToObject(boundingBox);
+    }
+  }, [boundingBox, fitToObject]);
+
+  return (
+    <CameraControls 
+      onFitToObject={handleFitToObject}
+      boundingBox={boundingBox}
+    />
+  );
+}

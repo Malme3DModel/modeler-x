@@ -1,200 +1,167 @@
 'use client';
 
-import { useState } from 'react';
-import { useThree } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { useRef, useCallback } from 'react';
+import { Button } from '../ui/button';
+import { 
+  Eye, 
+  RotateCcw, 
+  Box, 
+  ArrowUp, 
+  ArrowDown, 
+  ArrowLeft, 
+  ArrowRight,
+  Maximize2 
+} from 'lucide-react';
 import * as THREE from 'three';
 
+// 6方向 + ISO視点の定義
+const CAMERA_POSITIONS = {
+  front: { 
+    position: [0, 0, 10] as [number, number, number], 
+    target: [0, 0, 0] as [number, number, number],
+    name: 'Front'
+  },
+  back: { 
+    position: [0, 0, -10] as [number, number, number], 
+    target: [0, 0, 0] as [number, number, number],
+    name: 'Back'
+  },
+  top: { 
+    position: [0, 10, 0] as [number, number, number], 
+    target: [0, 0, 0] as [number, number, number],
+    name: 'Top'
+  },
+  bottom: { 
+    position: [0, -10, 0] as [number, number, number], 
+    target: [0, 0, 0] as [number, number, number],
+    name: 'Bottom'
+  },
+  left: { 
+    position: [-10, 0, 0] as [number, number, number], 
+    target: [0, 0, 0] as [number, number, number],
+    name: 'Left'
+  },
+  right: { 
+    position: [10, 0, 0] as [number, number, number], 
+    target: [0, 0, 0] as [number, number, number],
+    name: 'Right'
+  },
+  iso: { 
+    position: [7, 7, 7] as [number, number, number], 
+    target: [0, 0, 0] as [number, number, number],
+    name: 'ISO'
+  }
+};
+
 interface CameraControlsProps {
-  onSetView?: (viewName: string) => void;
+  onFitToObject?: () => void;
+  boundingBox?: THREE.Box3 | null;
 }
 
-type CameraPreset = {
-  position: THREE.Vector3;
-  target?: THREE.Vector3;
-  up?: THREE.Vector3;
-  name: string;
-  label: string;
-  icon: string;
-};
-
-// OrbitControlsの型を拡張
-type OrbitControlsType = {
-  target: THREE.Vector3;
-  update: () => void;
-  fitToSphere?: (sphere: THREE.Sphere, enableTransition?: boolean) => void;
-};
-
-/**
- * プリセットカメラビュー設定と3Dビューの制御を提供するコンポーネント
- * このコンポーネントはThree.jsシーン内でレンダリングされます
- */
-export default function CameraControls({ onSetView }: CameraControlsProps) {
-  const { camera, controls } = useThree();
-  
-  // カメラプリセットの定義
-  const cameraPresets: CameraPreset[] = [
-    { 
-      name: 'front',
-      label: '正面',
-      position: new THREE.Vector3(0, 0, 100),
-      target: new THREE.Vector3(0, 0, 0),
-      up: new THREE.Vector3(0, 1, 0),
-      icon: '⬆️'
-    },
-    { 
-      name: 'back',
-      label: '背面',
-      position: new THREE.Vector3(0, 0, -100),
-      target: new THREE.Vector3(0, 0, 0),
-      up: new THREE.Vector3(0, 1, 0),
-      icon: '⬇️'
-    },
-    { 
-      name: 'left',
-      label: '左側面',
-      position: new THREE.Vector3(-100, 0, 0),
-      target: new THREE.Vector3(0, 0, 0),
-      up: new THREE.Vector3(0, 1, 0),
-      icon: '⬅️'
-    },
-    { 
-      name: 'right',
-      label: '右側面',
-      position: new THREE.Vector3(100, 0, 0),
-      target: new THREE.Vector3(0, 0, 0),
-      up: new THREE.Vector3(0, 1, 0),
-      icon: '➡️'
-    },
-    { 
-      name: 'top',
-      label: '上面',
-      position: new THREE.Vector3(0, 100, 0),
-      target: new THREE.Vector3(0, 0, 0),
-      up: new THREE.Vector3(0, 0, -1),
-      icon: '⬆️'
-    },
-    { 
-      name: 'bottom',
-      label: '底面',
-      position: new THREE.Vector3(0, -100, 0),
-      target: new THREE.Vector3(0, 0, 0),
-      up: new THREE.Vector3(0, 0, 1),
-      icon: '⬇️'
-    },
-    { 
-      name: 'iso',
-      label: '等角投影',
-      position: new THREE.Vector3(70, 70, 70),
-      target: new THREE.Vector3(0, 0, 0),
-      up: new THREE.Vector3(0, 1, 0),
-      icon: '🔄'
-    },
-  ];
-  
-  // 指定されたビューにカメラを設定
-  const setView = (preset: CameraPreset) => {
-    if (!controls || !camera) return;
-    
-    // OrbitControlsを使用している場合
-    const orbitControls = controls as unknown as OrbitControlsType;
-    if ('target' in orbitControls) {
-      // アニメーションなしでカメラ位置を直接設定
-      camera.position.copy(preset.position);
-      
-      if (preset.target) {
-        orbitControls.target.copy(preset.target);
-      }
-      
-      if (preset.up) {
-        camera.up.copy(preset.up);
-      }
-      
-      camera.lookAt(orbitControls.target);
-      orbitControls.update();
-      
-      // カスタムコールバックがあれば呼び出し
-      if (onSetView) {
-        onSetView(preset.name);
-      }
+export function CameraControls({ onFitToObject, boundingBox }: CameraControlsProps) {
+  // カメラアニメーション関数
+  const animateToView = useCallback((viewName: keyof typeof CAMERA_POSITIONS) => {
+    // グローバル関数経由でカメラ制御を実行
+    if ((window as any).cascadeCameraControls?.animateToView) {
+      (window as any).cascadeCameraControls.animateToView(viewName, boundingBox);
+    } else {
+      console.warn('Camera controls not available');
     }
-  };
-
-  // Three.jsシーン内ではなにもレンダリングしない
-  return null;
-}
-
-/**
- * HTMLとして表示するカメラコントロールUI
- * このコンポーネントはDOM上にレンダリングされます
- */
-export function CameraControlsUI({ onViewChange }: { onViewChange: (viewName: string) => void }) {
-  const [expanded, setExpanded] = useState(false);
-  
-  // カメラプリセットの定義（Three.jsオブジェクトなしでHTML用に再定義）
-  const cameraPresets = [
-    { name: 'front', label: '正面', icon: '⬆️' },
-    { name: 'back', label: '背面', icon: '⬇️' },
-    { name: 'left', label: '左側面', icon: '⬅️' },
-    { name: 'right', label: '右側面', icon: '➡️' },
-    { name: 'top', label: '上面', icon: '⬆️' },
-    { name: 'bottom', label: '底面', icon: '⬇️' },
-    { name: 'iso', label: '等角投影', icon: '🔄' },
-  ];
+  }, [boundingBox]);
 
   return (
-    <div className="absolute top-2 right-2 z-10">
-      <div className="bg-gray-800 bg-opacity-80 rounded shadow-lg">
-        {/* メインコントロールボタン - 折りたたみ/展開 */}
-        <button
-          className="w-10 h-10 flex items-center justify-center text-white hover:bg-gray-700 rounded"
-          onClick={() => setExpanded(!expanded)}
-          title={expanded ? 'ビューコントロールを折りたたむ' : 'ビューコントロールを展開'}
+    <div className="flex flex-col gap-2 p-2 bg-white border rounded-lg shadow-sm">
+      <div className="text-sm font-medium text-gray-700 mb-2">Camera Views</div>
+      
+      {/* 6方向視点ボタン */}
+      <div className="grid grid-cols-3 gap-1">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => animateToView('top')}
+          className="flex items-center gap-1"
+          data-testid="camera-top"
         >
-          {expanded ? '×' : '👁️'}
-        </button>
+          <ArrowUp className="w-3 h-3" />
+          Top
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => animateToView('front')}
+          className="flex items-center gap-1"
+          data-testid="camera-front"
+        >
+          <Eye className="w-3 h-3" />
+          Front
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => animateToView('right')}
+          className="flex items-center gap-1"
+          data-testid="camera-right"
+        >
+          <ArrowRight className="w-3 h-3" />
+          Right
+        </Button>
         
-        {/* 展開されたコントロールパネル */}
-        {expanded && (
-          <div className="p-1 grid grid-cols-2 gap-1">
-            {cameraPresets.map((preset) => (
-              <button
-                key={preset.name}
-                className="px-2 py-1 text-sm text-white hover:bg-gray-700 rounded flex items-center"
-                onClick={() => onViewChange(preset.name)}
-                title={preset.label}
-              >
-                <span className="mr-1">{preset.icon}</span>
-                <span>{preset.label}</span>
-              </button>
-            ))}
-            
-            {/* フィットビューボタン */}
-            <button
-              className="px-2 py-1 text-sm text-white hover:bg-gray-700 rounded col-span-2 flex items-center justify-center"
-              onClick={() => onViewChange('fit')}
-              title="モデルにフィット"
-            >
-              <span className="mr-1">🔍</span>
-              <span>フィット</span>
-            </button>
-          </div>
-        )}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => animateToView('left')}
+          className="flex items-center gap-1"
+          data-testid="camera-left"
+        >
+          <ArrowLeft className="w-3 h-3" />
+          Left
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => animateToView('back')}
+          className="flex items-center gap-1"
+          data-testid="camera-back"
+        >
+          <RotateCcw className="w-3 h-3" />
+          Back
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => animateToView('bottom')}
+          className="flex items-center gap-1"
+          data-testid="camera-bottom"
+        >
+          <ArrowDown className="w-3 h-3" />
+          Bottom
+        </Button>
+      </div>
+      
+      {/* ISO視点とFit to Objectボタン */}
+      <div className="flex gap-1 mt-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => animateToView('iso')}
+          className="flex items-center gap-1 flex-1"
+          data-testid="camera-iso"
+        >
+          <Box className="w-3 h-3" />
+          ISO
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onFitToObject}
+          className="flex items-center gap-1 flex-1"
+          disabled={!boundingBox}
+          data-testid="camera-fit"
+        >
+          <Maximize2 className="w-3 h-3" />
+          Fit
+        </Button>
       </div>
     </div>
   );
-}
-
-/**
- * SceneへのHOCとしてCameraControlsを提供
- */
-export function withCameraControls(WrappedComponent: React.ComponentType<any>) {
-  return function WithCameraControls(props: any) {
-    return (
-      <>
-        <WrappedComponent {...props} />
-        <CameraControls />
-      </>
-    );
-  };
 } 

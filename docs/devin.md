@@ -1,471 +1,625 @@
-# 🎯 CascadeStudio移行作業 - フェーズ1.2実装指示書
+# 🎯 CascadeStudio移行作業 - フェーズ2.2実装指示書
 
 ## 📋 作業概要
 
-**作業名**: フェーズ1.2 - MatCapマテリアルとライティング設定の改善  
+**作業名**: フェーズ2.2 - カメラコントロール高度機能の実装  
 **優先度**: 🔴 高  
 **担当者**: あなた  
 
 ## 🎯 作業目的
 
-ホバーハイライト機能の実装が完了したため、次のステップとして「MatCapマテリアルとライティング設定の改善」を実装してください。現在は標準的なMeshStandardMaterialが使用されていますが、元のCascadeStudioと同等の見た目を実現するためにMatCapマテリアルを実装し、適切なライティング設定を行います。これにより、3Dオブジェクトの視覚的品質が向上し、ユーザー体験が改善されます。
+TransformControls（ギズモ操作）とオブジェクト選択機能の実装が完了したため、次のステップとして「カメラコントロール高度機能」を実装してください。現在は基本的なOrbitControlsのみが動作していますが、元のCascadeStudioと同等の操作感を実現するために、6方向視点切り替え、ISO視点、Fit to Object機能、スムーズなカメラアニメーションを実装します。これにより、3D CADアプリケーションとしての操作性が大幅に向上します。
 
 **重要**: 実装完了後、必ずテストを作成・実行し、全テストがパスしてから完了とします。
 
 ## 📚 必須参考資料
 
 ### 1. 移行計画書
-- **`docs/7_cascadestudio_migration/README.md`** - 全体概要
-- **`docs/7_cascadestudio_migration/feature_comparison.md`** - 機能比較表（3Dビューポート機能部分を確認）
-- **`docs/7_cascadestudio_migration/implementation_tasks.md`** - タスク1.2.1〜1.2.3の詳細
+- **`docs/7_cascadestudio_migration/README.md`** - 全体概要とフェーズ2.2の詳細
+- **`docs/7_cascadestudio_migration/feature_comparison.md`** - カメラ機能の実装状況確認
+- **`docs/7_cascadestudio_migration/migration_plan.md`** - タスク2.2.1〜2.2.3の詳細実装計画
+- **`docs/7_cascadestudio_migration/implementation_tasks.md`** - 具体的なコード例とタスク詳細
 
 ### 2. 元のCascadeStudio実装
-- **`docs/template/js/MainPage/CascadeView.js`** - 元のマテリアル・ライティング実装（200-250行目付近）
-- **`docs/template/textures/dullFrontLitMetal.png`** - 元のMatCapテクスチャ
-- マテリアル設定とライティング設定の詳細を確認してください
+- **`docs/template/js/MainPage/CascadeView.js`** - 元のカメラコントロール実装（視点切り替え機能）
+- **`docs/template/js/MainPage/CascadeMain.js`** - カメラ操作のキーボードショートカット
+- 視点プリセット、フィット機能の詳細を確認してください
 
 ### 3. 現在の実装
-- **`components/threejs/ThreeJSViewport.tsx`** - 修正対象メインファイル
-- **`components/threejs/ThreeJSModel.tsx`** - 3Dモデル表示コンポーネント
-- **`tests/raycasting.spec.ts`** - 既存のレイキャスティングテスト
+- **`components/threejs/ThreeJSViewport.tsx`** - 現在のOrbitControls実装
+- **`components/cad/CameraControls.tsx`** - 既存のカメラコントロールUI（改良対象）
+- **`components/threejs/TransformGizmo.tsx`** - 実装済みTransformControls（参考）
+- **`tests/transform-controls.spec.ts`** - 既存のE2Eテスト（参考）
 
 ## 🔧 具体的な作業内容
 
-### タスク1: MatCapマテリアルの実装
+### タスク2.2.1: 視点プリセット機能の改良
 
-**対象ファイル**: `components/threejs/materials/MatCapMaterial.tsx` (新規作成)
+**対象ファイル**: `components/cad/CameraControls.tsx` (改良)
 
-#### 1.1 MatCapマテリアルコンポーネントの作成
+#### 1.1 カメラ位置定義の実装
 ```typescript
-import { useMemo } from 'react';
-import * as THREE from 'three';
-import { useLoader } from '@react-three/fiber';
+import { useRef, useCallback } from 'react';
+import { useThree } from '@react-three/fiber';
+import { Button } from '../ui/button';
+import { 
+  Eye, 
+  RotateCcw, 
+  Box, 
+  ArrowUp, 
+  ArrowDown, 
+  ArrowLeft, 
+  ArrowRight,
+  Maximize2 
+} from 'lucide-react';
 
-interface MatCapMaterialProps {
-  color?: string;
-  opacity?: number;
-  transparent?: boolean;
-}
-
-export function useMatCapMaterial({ 
-  color = '#f5f5f5', 
-  opacity = 1.0, 
-  transparent = false 
-}: MatCapMaterialProps = {}) {
-  const matcapTexture = useLoader(
-    THREE.TextureLoader, 
-    '/textures/dullFrontLitMetal.png'
-  );
-  
-  return useMemo(() => {
-    const material = new THREE.MeshMatcapMaterial({
-      matcap: matcapTexture,
-      color: color,
-      transparent: transparent,
-      opacity: opacity,
-    });
-    
-    return material;
-  }, [matcapTexture, color, opacity, transparent]);
-}
-```
-
-#### 1.2 テクスチャファイルのコピー
-元のテクスチャファイル `docs/template/textures/dullFrontLitMetal.png` を `public/textures/` ディレクトリにコピーします。
-
-```bash
-# ディレクトリの作成（存在しない場合）
-mkdir -p public/textures
-
-# テクスチャファイルのコピー
-cp docs/template/textures/dullFrontLitMetal.png public/textures/
-```
-
-### タスク2: ThreeJSModelコンポーネントの修正
-
-**対象ファイル**: `components/threejs/ThreeJSModel.tsx`
-
-#### 2.1 MatCapマテリアルの統合
-```typescript
-import { useMatCapMaterial } from './materials/MatCapMaterial';
-
-// 既存のコンポーネント内で
-export default function ThreeJSModel({ geometry, edges, ...props }) {
-  // MatCapマテリアルを使用
-  const matcapMaterial = useMatCapMaterial({ 
-    color: '#f5f5f5',
-    transparent: props.transparent || false,
-    opacity: props.opacity || 1.0
-  });
-  
-  // 既存のマテリアル定義を置き換え
-  // const material = new THREE.MeshStandardMaterial({ ... }); ← 削除
-  
-  return (
-    <group {...props}>
-      <mesh geometry={geometry} material={matcapMaterial}>
-        {/* 既存の子要素 */}
-      </mesh>
-      {edges && (
-        <lineSegments geometry={edges}>
-          <lineBasicMaterial color="#000000" />
-        </lineSegments>
-      )}
-    </group>
-  );
-}
-```
-
-### タスク3: ライティング設定の改善
-
-**対象ファイル**: `components/threejs/ThreeJSViewport.tsx`
-
-#### 3.1 ライティング設定の修正
-```typescript
-// 既存のライティング設定を以下に置き換え
-<Canvas
-  // 既存のprops
->
-  {/* 環境光 */}
-  <ambientLight intensity={0.3} />
-  
-  {/* 半球光 - 元の実装に合わせる */}
-  <hemisphereLight 
-    position={[0, 1, 0]} 
-    args={['#ffffff', '#444444', 1]} 
-  />
-  
-  {/* 平行光源 */}
-  <directionalLight 
-    position={[3, 10, 10]} 
-    intensity={0.8} 
-    castShadow 
-    shadow-mapSize-width={2048} 
-    shadow-mapSize-height={2048} 
-  />
-  
-  {/* その他の既存コンポーネント */}
-</Canvas>
-```
-
-#### 3.2 シャドウ設定の改善
-```typescript
-// Canvasコンポーネントに追加
-<Canvas
-  shadows
-  camera={{ position: [10, 10, 10], fov: 50 }}
-  // 既存のprops
->
-  {/* 既存の内容 */}
-</Canvas>
-
-// 地面コンポーネントにシャドウ設定を追加（存在する場合）
-<mesh 
-  receiveShadow 
-  rotation={[-Math.PI / 2, 0, 0]} 
-  position={[0, -0.5, 0]}
->
-  <planeGeometry args={[100, 100]} />
-  <shadowMaterial opacity={0.2} />
-</mesh>
-```
-
-### タスク4: フォグ機能の実装
-
-**対象ファイル**: `components/threejs/ThreeJSViewport.tsx`
-
-#### 4.1 動的フォグの実装
-```typescript
-// バウンディングボックスに基づくフォグ距離の計算
-const calculateFogDistance = (boundingBox: THREE.Box3) => {
-  if (!boundingBox) return { near: 50, far: 200 };
-  
-  const size = new THREE.Vector3();
-  boundingBox.getSize(size);
-  const maxDim = Math.max(size.x, size.y, size.z);
-  
-  return {
-    near: maxDim * 2,
-    far: maxDim * 5
-  };
+// 6方向 + ISO視点の定義
+const CAMERA_POSITIONS = {
+  front: { 
+    position: [0, 0, 10] as [number, number, number], 
+    target: [0, 0, 0] as [number, number, number],
+    name: 'Front'
+  },
+  back: { 
+    position: [0, 0, -10] as [number, number, number], 
+    target: [0, 0, 0] as [number, number, number],
+    name: 'Back'
+  },
+  top: { 
+    position: [0, 10, 0] as [number, number, number], 
+    target: [0, 0, 0] as [number, number, number],
+    name: 'Top'
+  },
+  bottom: { 
+    position: [0, -10, 0] as [number, number, number], 
+    target: [0, 0, 0] as [number, number, number],
+    name: 'Bottom'
+  },
+  left: { 
+    position: [-10, 0, 0] as [number, number, number], 
+    target: [0, 0, 0] as [number, number, number],
+    name: 'Left'
+  },
+  right: { 
+    position: [10, 0, 0] as [number, number, number], 
+    target: [0, 0, 0] as [number, number, number],
+    name: 'Right'
+  },
+  iso: { 
+    position: [7, 7, 7] as [number, number, number], 
+    target: [0, 0, 0] as [number, number, number],
+    name: 'ISO'
+  }
 };
 
-// コンポーネント内で
-const [fogSettings, setFogSettings] = useState({ near: 50, far: 200 });
+interface CameraControlsProps {
+  onFitToObject?: () => void;
+  boundingBox?: THREE.Box3 | null;
+}
 
-// バウンディングボックスの更新時にフォグ設定を更新
-useEffect(() => {
-  if (boundingBox) {
-    setFogSettings(calculateFogDistance(boundingBox));
-  }
-}, [boundingBox]);
+export function CameraControls({ onFitToObject, boundingBox }: CameraControlsProps) {
+  const { camera, controls } = useThree();
+  const animationRef = useRef<number>();
 
-// Canvasコンポーネント内でフォグを設定
-<Canvas
-  // 既存のprops
->
-  <fog attach="fog" args={['#f0f0f0', fogSettings.near, fogSettings.far]} />
-  
-  {/* 既存の内容 */}
-</Canvas>
+  // スムーズなカメラアニメーション
+  const animateToView = useCallback((viewName: keyof typeof CAMERA_POSITIONS) => {
+    if (!controls || !camera) return;
+
+    const view = CAMERA_POSITIONS[viewName];
+    const startPosition = camera.position.clone();
+    const startTarget = controls.target.clone();
+    const endPosition = new THREE.Vector3(...view.position);
+    const endTarget = new THREE.Vector3(...view.target);
+
+    // バウンディングボックスがある場合は距離を調整
+    if (boundingBox) {
+      const size = new THREE.Vector3();
+      boundingBox.getSize(size);
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const distance = maxDim * 2.5; // 適切な距離に調整
+      
+      endPosition.normalize().multiplyScalar(distance);
+      
+      const center = new THREE.Vector3();
+      boundingBox.getCenter(center);
+      endTarget.copy(center);
+      endPosition.add(center);
+    }
+
+    let progress = 0;
+    const duration = 1000; // 1秒のアニメーション
+    const startTime = Date.now();
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      progress = Math.min(elapsed / duration, 1);
+      
+      // イージング関数（ease-out）
+      const eased = 1 - Math.pow(1 - progress, 3);
+      
+      // 位置の補間
+      camera.position.lerpVectors(startPosition, endPosition, eased);
+      controls.target.lerpVectors(startTarget, endTarget, eased);
+      
+      controls.update();
+      
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+    }
+    
+    animate();
+  }, [camera, controls, boundingBox]);
+
+  return (
+    <div className="flex flex-col gap-2 p-2 bg-white border rounded-lg shadow-sm">
+      <div className="text-sm font-medium text-gray-700 mb-2">Camera Views</div>
+      
+      {/* 6方向視点ボタン */}
+      <div className="grid grid-cols-3 gap-1">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => animateToView('top')}
+          className="flex items-center gap-1"
+        >
+          <ArrowUp className="w-3 h-3" />
+          Top
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => animateToView('front')}
+          className="flex items-center gap-1"
+        >
+          <Eye className="w-3 h-3" />
+          Front
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => animateToView('right')}
+          className="flex items-center gap-1"
+        >
+          <ArrowRight className="w-3 h-3" />
+          Right
+        </Button>
+        
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => animateToView('left')}
+          className="flex items-center gap-1"
+        >
+          <ArrowLeft className="w-3 h-3" />
+          Left
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => animateToView('back')}
+          className="flex items-center gap-1"
+        >
+          <RotateCcw className="w-3 h-3" />
+          Back
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => animateToView('bottom')}
+          className="flex items-center gap-1"
+        >
+          <ArrowDown className="w-3 h-3" />
+          Bottom
+        </Button>
+      </div>
+      
+      {/* ISO視点とFit to Objectボタン */}
+      <div className="flex gap-1 mt-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => animateToView('iso')}
+          className="flex items-center gap-1 flex-1"
+        >
+          <Box className="w-3 h-3" />
+          ISO
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={onFitToObject}
+          className="flex items-center gap-1 flex-1"
+          disabled={!boundingBox}
+        >
+          <Maximize2 className="w-3 h-3" />
+          Fit
+        </Button>
+      </div>
+    </div>
+  );
+}
 ```
 
-### タスク5: 背景色の設定
+### タスク2.2.2: Fit to Object機能の実装
 
-**対象ファイル**: `components/threejs/ThreeJSViewport.tsx`
+**対象ファイル**: `hooks/useCameraAnimation.ts` (新規作成)
 
-#### 5.1 背景色の設定
+#### 2.1 カメラアニメーションフックの作成
 ```typescript
-// Canvasコンポーネントに背景色を設定
-<Canvas
-  gl={{ 
-    antialias: true,
-    outputEncoding: THREE.sRGBEncoding 
-  }}
-  // 既存のprops
->
-  <color attach="background" args={['#222222']} />
-  
-  {/* 既存の内容 */}
-</Canvas>
+import { useCallback, useRef } from 'react';
+import { useThree } from '@react-three/fiber';
+import * as THREE from 'three';
+
+export function useCameraAnimation() {
+  const { camera, controls } = useThree();
+  const animationRef = useRef<number>();
+
+  const fitToObject = useCallback((boundingBox: THREE.Box3) => {
+    if (!controls || !camera || !boundingBox) return;
+
+    // バウンディングボックスの中心とサイズを計算
+    const center = new THREE.Vector3();
+    boundingBox.getCenter(center);
+    
+    const size = new THREE.Vector3();
+    boundingBox.getSize(size);
+    
+    // 最大寸法を取得
+    const maxDim = Math.max(size.x, size.y, size.z);
+    
+    // カメラの視野角に基づいて適切な距離を計算
+    const fov = camera.fov * (Math.PI / 180); // ラジアンに変換
+    const distance = maxDim / (2 * Math.tan(fov / 2)) * 1.5; // 1.5倍のマージン
+    
+    // 現在のカメラ方向を維持して距離を調整
+    const direction = new THREE.Vector3();
+    camera.getWorldDirection(direction);
+    direction.negate(); // カメラから見た方向の逆
+    
+    const targetPosition = center.clone().add(direction.multiplyScalar(distance));
+    
+    // アニメーション開始
+    const startPosition = camera.position.clone();
+    const startTarget = controls.target.clone();
+    
+    let progress = 0;
+    const duration = 1500; // 1.5秒のアニメーション
+    const startTime = Date.now();
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      progress = Math.min(elapsed / duration, 1);
+      
+      // イージング関数（ease-in-out）
+      const eased = progress < 0.5 
+        ? 2 * progress * progress 
+        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+      
+      // 位置とターゲットの補間
+      camera.position.lerpVectors(startPosition, targetPosition, eased);
+      controls.target.lerpVectors(startTarget, center, eased);
+      
+      controls.update();
+      
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+    }
+    
+    animate();
+  }, [camera, controls]);
+
+  const animateToPosition = useCallback((
+    position: THREE.Vector3, 
+    target: THREE.Vector3, 
+    duration: number = 1000
+  ) => {
+    if (!controls || !camera) return;
+
+    const startPosition = camera.position.clone();
+    const startTarget = controls.target.clone();
+    
+    let progress = 0;
+    const startTime = Date.now();
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      progress = Math.min(elapsed / duration, 1);
+      
+      // イージング関数（ease-out）
+      const eased = 1 - Math.pow(1 - progress, 3);
+      
+      camera.position.lerpVectors(startPosition, position, eased);
+      controls.target.lerpVectors(startTarget, target, eased);
+      
+      controls.update();
+      
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+    }
+    
+    animate();
+  }, [camera, controls]);
+
+  return {
+    fitToObject,
+    animateToPosition
+  };
+}
 ```
 
-## 🧪 テスト実装
+### タスク2.2.3: ThreeJSViewportへの統合
 
-### タスク6: マテリアルとライティングのテスト
+**対象ファイル**: `components/threejs/ThreeJSViewport.tsx` (改良)
 
-**新規作成ファイル**: `tests/material-lighting.spec.ts`
+#### 3.1 カメラコントロールの統合
+```typescript
+import { CameraControls } from '../cad/CameraControls';
+import { useCameraAnimation } from '../../hooks/useCameraAnimation';
 
+// 既存のコンポーネント内で
+export default function ThreeJSViewport() {
+  const [boundingBox, setBoundingBox] = useState<THREE.Box3 | null>(null);
+  const { fitToObject } = useCameraAnimation();
+
+  // バウンディングボックスの計算（既存のロジックを活用）
+  const calculateBoundingBox = useCallback((objects: THREE.Object3D[]) => {
+    if (objects.length === 0) return null;
+    
+    const box = new THREE.Box3();
+    objects.forEach(obj => {
+      const objBox = new THREE.Box3().setFromObject(obj);
+      box.union(objBox);
+    });
+    
+    return box;
+  }, []);
+
+  // オブジェクトが更新された時にバウンディングボックスを再計算
+  useEffect(() => {
+    if (meshObjects.length > 0) {
+      const box = calculateBoundingBox(meshObjects);
+      setBoundingBox(box);
+    }
+  }, [meshObjects, calculateBoundingBox]);
+
+  const handleFitToObject = useCallback(() => {
+    if (boundingBox) {
+      fitToObject(boundingBox);
+    }
+  }, [boundingBox, fitToObject]);
+
+  return (
+    <div className="relative w-full h-full">
+      <Canvas
+        // 既存のprops
+      >
+        {/* 既存のコンポーネント */}
+      </Canvas>
+      
+      {/* カメラコントロールUIを追加 */}
+      <div className="absolute top-4 right-4 z-10">
+        <CameraControls 
+          onFitToObject={handleFitToObject}
+          boundingBox={boundingBox}
+        />
+      </div>
+      
+      {/* 既存のTransformControlsUI */}
+      <div className="absolute bottom-4 left-4 z-10">
+        <TransformControlsUI 
+          // 既存のprops
+        />
+      </div>
+    </div>
+  );
+}
+```
+
+### タスク2.2.4: カメラ設定の最適化
+
+**対象ファイル**: `components/threejs/ThreeJSViewport.tsx` (改良)
+
+#### 4.1 OrbitControlsの設定調整
+```typescript
+// OrbitControlsの設定を元のCascadeStudioに合わせて調整
+<OrbitControls
+  ref={controlsRef}
+  enablePan={true}
+  enableZoom={true}
+  enableRotate={true}
+  dampingFactor={0.05}
+  enableDamping={true}
+  minDistance={1}
+  maxDistance={1000}
+  minPolarAngle={0}
+  maxPolarAngle={Math.PI}
+  minAzimuthAngle={-Infinity}
+  maxAzimuthAngle={Infinity}
+  panSpeed={1.0}
+  rotateSpeed={1.0}
+  zoomSpeed={1.0}
+  mouseButtons={{
+    LEFT: THREE.MOUSE.ROTATE,
+    MIDDLE: THREE.MOUSE.DOLLY,
+    RIGHT: THREE.MOUSE.PAN
+  }}
+  touches={{
+    ONE: THREE.TOUCH.ROTATE,
+    TWO: THREE.TOUCH.DOLLY_PAN
+  }}
+/>
+```
+
+### タスク2.2.5: E2Eテストの作成
+
+**対象ファイル**: `tests/camera-controls.spec.ts` (新規作成)
+
+#### 5.1 カメラコントロールのテスト実装
 ```typescript
 import { test, expect } from '@playwright/test';
 
-test.describe('3Dビューポート マテリアルとライティング', () => {
+test.describe('Camera Controls', () => {
   test.beforeEach(async ({ page }) => {
-    // アプリケーションにアクセス
-    await page.goto('http://localhost:3000');
+    await page.goto('/');
+    await page.waitForSelector('[data-testid="3d-viewport"]');
     
-    // ローディングが完了するまで待機
-    await page.waitForSelector('[data-testid="loading-spinner"]', { state: 'hidden', timeout: 60000 });
-    
-    // 3Dビューポートが表示されるまで待機
-    await page.waitForSelector('[data-testid="cascade-3d-viewport"]', { timeout: 10000 });
+    // 基本的なCADオブジェクトを生成
+    await page.click('[data-testid="monaco-editor"]');
+    await page.keyboard.type(`
+      let box = new oc.BRepPrimAPI_MakeBox(10, 10, 10).Shape();
+      cacheShape(box);
+    `);
+    await page.keyboard.press('F5');
+    await page.waitForTimeout(2000); // CAD演算完了待ち
   });
 
-  test('MatCapマテリアルが正しく適用されている', async ({ page }) => {
-    // スクリーンショットを取得して視覚的に確認
-    await page.screenshot({ path: 'test-results/matcap-material.png', fullPage: true });
+  test('視点プリセット切り替えが動作する', async ({ page }) => {
+    // Front視点
+    await page.click('[data-testid="camera-front"]');
+    await page.waitForTimeout(1500); // アニメーション完了待ち
     
-    // マテリアルの種類を確認
-    const materialInfo = await page.evaluate(() => {
-      return (window as any).cascadeTestUtils?.getMaterialInfo();
+    // Top視点
+    await page.click('[data-testid="camera-top"]');
+    await page.waitForTimeout(1500);
+    
+    // ISO視点
+    await page.click('[data-testid="camera-iso"]');
+    await page.waitForTimeout(1500);
+    
+    // エラーが発生していないことを確認
+    const errors = await page.evaluate(() => {
+      return window.console.error.calls || [];
     });
-    
-    // マテリアルがMeshMatcapMaterialであることを確認
-    expect(materialInfo?.type).toBe('MeshMatcapMaterial');
+    expect(errors.length).toBe(0);
   });
 
-  test('ライティング設定が正しく適用されている', async ({ page }) => {
-    // ライトの情報を取得
-    const lightInfo = await page.evaluate(() => {
-      return (window as any).cascadeTestUtils?.getLightingInfo();
-    });
+  test('Fit to Object機能が動作する', async ({ page }) => {
+    // Fit to Objectボタンをクリック
+    await page.click('[data-testid="camera-fit"]');
+    await page.waitForTimeout(1500); // アニメーション完了待ち
     
-    // 必要なライトが存在することを確認
-    expect(lightInfo?.hasHemisphereLight).toBe(true);
-    expect(lightInfo?.hasDirectionalLight).toBe(true);
-    expect(lightInfo?.hasAmbientLight).toBe(true);
+    // カメラがオブジェクトにフィットしていることを確認
+    // （具体的な位置確認は実装に応じて調整）
+    const cameraPosition = await page.evaluate(() => {
+      const canvas = document.querySelector('canvas');
+      return canvas ? 'positioned' : 'not found';
+    });
+    expect(cameraPosition).toBe('positioned');
   });
 
-  test('フォグが正しく設定されている', async ({ page }) => {
-    // フォグの設定を確認
-    const fogInfo = await page.evaluate(() => {
-      return (window as any).cascadeTestUtils?.getFogInfo();
-    });
+  test('カメラアニメーションがスムーズに動作する', async ({ page }) => {
+    // 複数の視点を連続で切り替え
+    await page.click('[data-testid="camera-front"]');
+    await page.waitForTimeout(500);
     
-    expect(fogInfo?.hasFog).toBe(true);
-    expect(fogInfo?.fogColor).toBe('#f0f0f0');
+    await page.click('[data-testid="camera-right"]');
+    await page.waitForTimeout(500);
+    
+    await page.click('[data-testid="camera-top"]');
+    await page.waitForTimeout(1500);
+    
+    // アニメーション中にエラーが発生していないことを確認
+    const consoleErrors = await page.evaluate(() => {
+      return window.console.error.calls || [];
+    });
+    expect(consoleErrors.length).toBe(0);
+  });
+
+  test('既存のTransformControlsとの競合がない', async ({ page }) => {
+    // オブジェクトを選択
+    await page.click('[data-testid="3d-viewport"]');
+    await page.waitForTimeout(500);
+    
+    // TransformControlsが表示されることを確認
+    await expect(page.locator('[data-testid="transform-gizmo"]')).toBeVisible();
+    
+    // カメラ視点を変更
+    await page.click('[data-testid="camera-iso"]');
+    await page.waitForTimeout(1500);
+    
+    // TransformControlsが引き続き動作することを確認
+    await expect(page.locator('[data-testid="transform-gizmo"]')).toBeVisible();
   });
 });
 ```
 
-### タスク7: テスト用ユーティリティの追加
-
-**対象ファイル**: `components/threejs/ThreeJSViewport.tsx`
-
-```typescript
-// テスト用のアクセス機能を追加
-useEffect(() => {
-  // 既存のcascadeTestUtilsに追加
-  (window as any).cascadeTestUtils = {
-    ...(window as any).cascadeTestUtils || {},
-    
-    // マテリアル情報を取得
-    getMaterialInfo: () => {
-      const meshes = scene.children.filter(child => 
-        child.type === 'Mesh' || 
-        (child.type === 'Group' && child.children.some(c => c.type === 'Mesh'))
-      );
-      
-      if (meshes.length === 0) return null;
-      
-      const mesh = meshes[0].type === 'Mesh' ? 
-        meshes[0] : 
-        meshes[0].children.find(c => c.type === 'Mesh');
-      
-      if (!mesh || !mesh.material) return null;
-      
-      return {
-        type: mesh.material.type,
-        color: (mesh.material as THREE.MeshMatcapMaterial).color?.getHexString(),
-        hasMatcap: !!(mesh.material as THREE.MeshMatcapMaterial).matcap
-      };
-    },
-    
-    // ライティング情報を取得
-    getLightingInfo: () => {
-      const lights = scene.children.filter(child => 
-        child.type.includes('Light')
-      );
-      
-      return {
-        lightCount: lights.length,
-        hasHemisphereLight: lights.some(light => light.type === 'HemisphereLight'),
-        hasDirectionalLight: lights.some(light => light.type === 'DirectionalLight'),
-        hasAmbientLight: lights.some(light => light.type === 'AmbientLight')
-      };
-    },
-    
-    // フォグ情報を取得
-    getFogInfo: () => {
-      return {
-        hasFog: !!scene.fog,
-        fogType: scene.fog?.type,
-        fogColor: scene.fog ? `#${(scene.fog as THREE.Fog).color.getHexString()}` : null,
-        fogNear: (scene.fog as THREE.Fog)?.near,
-        fogFar: (scene.fog as THREE.Fog)?.far
-      };
-    }
-  };
-  
-  return () => {
-    // 既存のクリーンアップ処理を保持
-  };
-}, [scene]);
-```
-
-## 🧪 テスト実行
-
-### タスク8: テスト実行とパス確認
-
-#### 8.1 開発サーバーの起動
-```bash
-npm run dev
-```
-
-#### 8.2 テストの実行
-```bash
-# 新しいテストの実行
-npx playwright test tests/material-lighting.spec.ts
-
-# 既存のテストも含めて全テストを実行
-npx playwright test
-```
-
 ## ✅ 完了条件
 
-### 必須条件
-1. **機能実装完了**:
-   - MatCapマテリアルが正しく実装され、テクスチャが表示される
-   - ライティング設定が元のCascadeStudioと同等に設定されている
-   - フォグ機能が正しく動作している
-   - 背景色が適切に設定されている
+### 必須要件
+1. **6方向視点切り替え**: Front/Back/Top/Bottom/Left/Right視点が正常に動作
+2. **ISO視点**: アイソメトリック視点が正常に動作
+3. **スムーズアニメーション**: 視点切り替え時に1-1.5秒のスムーズなアニメーション
+4. **Fit to Object機能**: オブジェクトのバウンディングボックスに基づく自動フィット
+5. **UI統合**: 既存のTransformControlsUIと競合しない配置
+6. **E2Eテスト**: 全ての機能が自動テストでカバーされている
 
-2. **テスト実装完了**:
-   - マテリアルとライティングのテストが作成されている
-   - テスト用のユーティリティ関数が実装されている
-   - 既存のテストが引き続きパスしている
+### 品質要件
+1. **TypeScript型安全性**: 全ての新規コードがstrict modeに準拠
+2. **パフォーマンス**: アニメーション中のフレームレート維持
+3. **エラーハンドリング**: 適切なエラー処理とフォールバック
+4. **既存機能との互換性**: ホバーハイライト、TransformControlsとの競合なし
 
-3. **視覚的確認**:
-   - 3Dオブジェクトが元のCascadeStudioと同等の見た目になっている
-   - ライティングとシャドウが適切に表示されている
-   - フォグ効果が適切に表示されている
+## 🧪 テスト実行手順
 
-### 確認方法
+```bash
+# 開発サーバー起動
+npm run dev
+
+# E2Eテスト実行
+npm run test
+
+# 新規テストのみ実行
+npx playwright test tests/camera-controls.spec.ts
+
+# ヘッド付きテスト（デバッグ用）
+npx playwright test tests/camera-controls.spec.ts --headed
+```
+
+## 📝 実装完了後の確認事項
+
 1. **機能確認**:
-   - アプリケーションを起動して3Dオブジェクトを表示
-   - MatCapマテリアルが適用されていることを視覚的に確認
-   - ライティングとシャドウが適切に表示されていることを確認
-   - フォグ効果が距離に応じて適切に表示されていることを確認
+   - [ ] 6方向視点切り替えが正常動作
+   - [ ] ISO視点が正常動作
+   - [ ] Fit to Object機能が正常動作
+   - [ ] カメラアニメーションがスムーズ
+   - [ ] 既存のTransformControlsとの競合なし
 
 2. **テスト確認**:
-   - `npx playwright test tests/material-lighting.spec.ts` でテストがパス
-   - `npx playwright test` で全テストがパス
-   - テストスクリーンショットで視覚的な確認
+   - [ ] 新規E2Eテストが全てパス
+   - [ ] 既存テストが引き続きパス
+   - [ ] TypeScript型チェックエラーなし
+
+3. **ドキュメント更新**:
+   - [ ] `docs/7_cascadestudio_migration/feature_comparison.md`の更新
+   - [ ] `docs/7_cascadestudio_migration/implementation_tasks.md`の進捗更新
 
 ## 🚨 注意事項
 
-### パフォーマンス
-- テクスチャのサイズと解像度に注意
-- 不要なライトやエフェクトを避ける
-- メモリリークを防ぐためにテクスチャを適切に解放
+1. **OrbitControlsとの競合**: TransformControlsと同様に、カメラアニメーション中はOrbitControlsを適切に制御してください
+2. **パフォーマンス**: アニメーション中のrequestAnimationFrameの適切な管理
+3. **バウンディングボックス**: 空のシーンや無効なオブジェクトに対する適切な処理
+4. **既存機能の保持**: ホバーハイライト、TransformControlsなどの既存機能を破壊しないよう注意
 
-### 互換性
-- React Three Fiberの最新バージョンとの互換性を確認
-- Three.jsのバージョンに対応したAPIを使用
-- SSR（サーバーサイドレンダリング）との互換性に注意
+## 📞 サポート
 
-### テスト環境
-- テクスチャのロードは非同期処理なので適切に待機
-- スクリーンショットテストは環境によって結果が異なる可能性がある
-- OpenCascade.jsの読み込みエラーに対応したエラーハンドリングを実装
+実装中に問題が発生した場合は、以下を参考にしてください：
+- 元のCascadeStudio実装: `docs/template/js/MainPage/CascadeView.js`
+- React Three Fiber公式ドキュメント: https://docs.pmnd.rs/react-three-fiber
+- Three.js OrbitControls: https://threejs.org/docs/#examples/en/controls/OrbitControls
 
-### 既存機能への影響
-- ホバーハイライト機能が引き続き動作することを確認
-- レイキャスティング機能への影響がないことを確認
-- パフォーマンスが低下していないことを確認
-
-## 📁 作業完了時の提出物
-
-1. **新規作成ファイル**:
-   - `components/threejs/materials/MatCapMaterial.tsx`
-   - `public/textures/dullFrontLitMetal.png`
-   - `tests/material-lighting.spec.ts`
-
-2. **修正ファイル**:
-   - `components/threejs/ThreeJSViewport.tsx`
-   - `components/threejs/ThreeJSModel.tsx`
-
-3. **テスト実行結果**:
-   - テスト実行のスクリーンショット
-   - パスしたテストの一覧
-
-4. **視覚的確認結果**:
-   - 実装前後の3Dビューポートのスクリーンショット比較
-   - 異なる角度からの見た目の確認
-
-## 🔄 次のステップ
-
-この実装が完了したら、次は**フェーズ2: 高度な3D機能**の実装に進みます。特に「トランスフォームハンドル（ギズモ）の実装」が最優先項目となります。
-
-## 💬 質問・相談
-
-実装中に不明点があれば：
-1. 元のCascadeView.jsの該当部分を詳細確認
-2. 機能比較表で元の仕様を確認
-3. React Three FiberとThree.jsのドキュメントを参照
-4. MatCapマテリアルのサンプルコードを参考にする
-
-**重要**: 
-- 視覚的な品質は元のCascadeStudioと同等以上を目指してください
-- テストは必ず実装し、全てパスさせてください
-- 既存機能（特にホバーハイライト）を壊さないよう注意してください
-
----
-**作業開始**: 即座に開始可能  
-**完了予定**: 3日以内（テスト含む）  
-**完了条件**: 機能実装 + 全テストパス + 視覚的確認  
-**レビュー**: 完了時に動作確認とテスト結果を確認
-
----
-
-**🚀 CascadeStudio移行プロジェクトの次のマイルストーン達成を目指してください！** 
+この実装により、フェーズ2.2が完了し、元のCascadeStudioと同等のカメラ操作機能が実現されます。 

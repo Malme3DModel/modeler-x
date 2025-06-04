@@ -347,24 +347,30 @@ export default function CascadeStudioLayout({
 
   // CascadeViewportコンポーネントの設定
   function createCascadeViewComponent(container: any) {
-    container.element.innerHTML = '<div class="cascade-view-container"></div>';
-    const viewContainer = container.element.querySelector('.cascade-view-container');
+    // コンテナのHTMLを初期化
+    container.element.innerHTML = '';
+    
+    // ビューポートコンテナを作成
+    const viewContainer = document.createElement('div');
     viewContainer.style.width = '100%';
     viewContainer.style.height = '100%';
-    viewContainer.style.backgroundColor = '#2d2d2d';
-
-    // React 18のcreateRootを使用してReactコンポーネントをマウント
+    container.element.appendChild(viewContainer);
+    
+    // React 18のcreateRootを使用
     const viewRoot = createRoot(viewContainer);
     
-    // CascadeViewportコンポーネントをレンダリング
-    const CascadeViewport = dynamic(() => import('@/components/threejs/CascadeViewport'), {
+    // ThreeJSViewportコンポーネントをレンダリング
+    const ThreeJSViewport = dynamic(() => import('@/components/threejs/ThreeJSViewport'), {
       ssr: false,
-      loading: () => <div className="w-full h-full flex items-center justify-center bg-gray-800">
-        <div className="loading loading-spinner loading-lg text-primary"></div>
-      </div>
+      loading: () => <div style={{ color: '#a0a0a0', fontSize: '12px', padding: '12px' }}>3Dビューポート初期化中...</div>
     });
     
-    viewRoot.render(<CascadeViewport shapes={shapes} />);
+    viewRoot.render(<ThreeJSViewport />);
+    
+    // クリーンアップ関数を設定
+    container.on('destroy', () => {
+      viewRoot.unmount();
+    });
   }
 
   return (

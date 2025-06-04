@@ -9,6 +9,7 @@ interface ThreeJSModelProps {
   position?: [number, number, number];
   transparent?: boolean;
   opacity?: number;
+  onLoad?: (group: Group) => void;
 }
 
 export default function ThreeJSModel({ 
@@ -16,7 +17,8 @@ export default function ThreeJSModel({
   scale = [1, 1, 1], 
   position = [0, 0, 0],
   transparent = false,
-  opacity = 1.0
+  opacity = 1.0,
+  onLoad
 }: ThreeJSModelProps) {
   const groupRef = useRef<Group>(null);
   const [geometry, setGeometry] = useState<BufferGeometry | null>(null);
@@ -72,6 +74,13 @@ export default function ThreeJSModel({
         console.error('JSONデータ読み込みエラー:', error);
       });
   }, [url]);
+
+  // ジオメトリが設定された時にonLoadコールバックを呼び出す
+  useEffect(() => {
+    if (geometry && groupRef.current && onLoad) {
+      onLoad(groupRef.current);
+    }
+  }, [geometry, onLoad]);
 
   // バウンディングボックスの計算と保存
   useFrame(() => {
