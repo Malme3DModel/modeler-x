@@ -34,3 +34,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# SynologyDrive sync exclusions
+.next/
+node_modules/
+*.log
+
+playwright-report/
+test-results/
