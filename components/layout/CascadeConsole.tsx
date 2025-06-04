@@ -106,7 +106,7 @@ export const CascadeConsole = forwardRef<CascadeConsoleRef, CascadeConsoleProps>
           }
           
           messageElement.textContent = `> ${msg.message}`;
-          consoleRef.current.appendChild(messageElement);
+          consoleRef.current?.appendChild(messageElement);
         });
         
         // 自動スクロール
@@ -133,4 +133,4 @@ export const CascadeConsole = forwardRef<CascadeConsoleRef, CascadeConsoleProps>
       />
     );
   }
-); 
+);  

@@ -389,10 +389,10 @@ export function useCADWorker(): UseCADWorkerReturn {
         }
       };
       
-      workerRef.current.addEventListener('message', handleMessage);
+      workerRef.current?.addEventListener('message', handleMessage);
       
       // メッセージ送信
-      workerRef.current.postMessage({
+      workerRef.current?.postMessage({
         type: message.type,
         payload: message.payload,
         id: messageId
@@ -414,4 +414,4 @@ export function useCADWorker(): UseCADWorkerReturn {
     clearError,
     sendToWorker
   };
-} 
+}  
