@@ -546,7 +546,8 @@ export default function CascadeViewport({
 
 // CameraControlsWithFitコンポーネントを別途定義
 function CameraControlsWithFitComponent({ boundingBox }: { boundingBox: THREE.Box3 | null }) {
-  const { fitToObject } = useCameraAnimation();
+  const { camera, controls } = useThree();
+  const { fitToObject } = useCameraAnimation({ camera, controls });
 
   const handleFitToObject = useCallback(() => {
     if (boundingBox) {

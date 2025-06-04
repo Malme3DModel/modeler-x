@@ -50,7 +50,7 @@
 | 基本カメラ操作 | パン・ズーム・回転 | パン・ズーム・回転 | ✅ | `components/threejs/ThreeJSViewport.tsx` | OrbitControls |
 | 視点プリセット | 6方向 + ISO | 6方向 + ISO | ✅ | `components/cad/CameraControls.tsx` | UIとボタン実装済み |
 | Fit to Object | 自動フィット | 自動フィット | ✅ | `components/cad/CameraControls.tsx` | 基本機能動作 |
-| カメラアニメーション | スムーズ移動 | スムーズ移動 | ✅ | `hooks/useCameraAnimation.ts` | 完全実装済み |
+| カメラアニメーション | スムーズ移動 | スムーズ移動 | ✅ | `hooks/useCameraAnimation.ts`, `components/cad/CameraControlsWithAnimation.tsx` | React Three Fiber対応完了 |
 
 ---
 
@@ -192,8 +192,8 @@
 | 開発・保守性 | 7 | 1 | 0 | 8 | **88%** |
 
 ### 全体実装状況
-- **完全実装**: 47機能 (81%)
-- **部分実装**: 8機能 (13%)
+- **完全実装**: 50機能 (85%)
+- **部分実装**: 5機能 (9%)
 - **未実装**: 4機能 (6%)
 - **新機能**: 10機能（元にない改善）
 
@@ -231,4 +231,4 @@
 3. `components/cad/ExportSettings.tsx` - エクスポート品質設定
 4. `hooks/useBatchExport.ts` - バッチエクスポート機能
 
-この機能比較表v2.2により、現在の実装状況が正確に把握でき、今後の開発方針を明確に決定できます。 
+この機能比較表v2.2により、現在の実装状況が正確に把握でき、今後の開発方針を明確に決定できます。  

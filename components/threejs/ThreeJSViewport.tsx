@@ -593,8 +593,8 @@ export default function ThreeJSViewport({
 
 // Canvas内でのカメラアニメーション制御コンポーネント
 function CameraAnimationController({ boundingBox }: { boundingBox: THREE.Box3 | null }) {
-  const { fitToObject, animateToPosition } = useCameraAnimation();
   const { camera, controls } = useThree();
+  const { fitToObject, animateToPosition } = useCameraAnimation({ camera, controls });
   const animationRef = useRef<number>();
 
   // 6方向 + ISO視点の定義
@@ -722,4 +722,4 @@ function CameraAnimationController({ boundingBox }: { boundingBox: THREE.Box3 | 
   }, [boundingBox, handleFitToObject, animateToView]);
 
   return null;
-} 
+}      
