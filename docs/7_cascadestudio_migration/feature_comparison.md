@@ -50,7 +50,7 @@
 | 基本カメラ操作 | パン・ズーム・回転 | パン・ズーム・回転 | ✅ | `components/threejs/ThreeJSViewport.tsx` | OrbitControls |
 | 視点プリセット | 6方向 + ISO | 6方向 + ISO | ✅ | `components/cad/CameraControls.tsx` | UIとボタン実装済み |
 | Fit to Object | 自動フィット | 自動フィット | ✅ | `components/cad/CameraControls.tsx` | 基本機能動作 |
-| カメラアニメーション | スムーズ移動 | スムーズ移動 | 🔄 | `hooks/useCameraAnimation.ts` | 基本実装済み、改良必要 |
+| カメラアニメーション | スムーズ移動 | スムーズ移動 | ✅ | `hooks/useCameraAnimation.ts` | 完全実装済み |
 
 ---
 
@@ -120,19 +120,19 @@
 |------|-------------------|------------|------|--------------|------|
 
 ### 6.1 キーボードショートカット
-| F5リフレッシュ | F5でコード実行 | F5でコード実行 | ✅ | `components/cad/MonacoCodeEditor.tsx` | エディター内のみ |
-| Ctrl+S保存 | プロジェクト保存 | プロジェクト保存 | ❌ | 未実装 | フェーズ3で実装 |
-| グローバルショートカット | 各種ショートカット | 各種ショートカット | ❌ | 未実装 | フェーズ3で実装 |
+| F5リフレッシュ | F5でコード実行 | F5でコード実行 | ✅ | `hooks/useKeyboardShortcuts.ts` | 完全実装済み |
+| Ctrl+S保存 | プロジェクト保存 | プロジェクト保存 | ✅ | `hooks/useKeyboardShortcuts.ts` | 完全実装済み |
+| グローバルショートカット | 各種ショートカット | 各種ショートカット | ✅ | `hooks/useKeyboardShortcuts.ts` | 完全実装済み |
 
 ### 6.2 プログレス・エラー表示
-| 進行状況表示 | コンソール出力 | 基本ログ表示 | 🔄 | `components/layout/CascadeConsole.tsx` | 視覚的改善要 |
-| エラーハンドリング | エラーメッセージ | 基本エラー表示 | 🔄 | 要改善 | フェーズ3で強化 |
-| 操作キャンセル | ❌ | ❌ | ❌ | 未実装 | フェーズ3で実装 |
+| 進行状況表示 | コンソール出力 | 視覚的プログレスバー | ✅ | `components/ui/ProgressIndicator.tsx` | 完全実装済み |
+| エラーハンドリング | エラーメッセージ | 詳細エラー表示 | ✅ | `components/layout/ErrorBoundary.tsx` | 完全実装済み |
+| 操作キャンセル | ❌ | ✅ | 🆕 | `components/ui/ProgressIndicator.tsx` | 新機能として追加 |
 
 ### 6.3 ヘルプ・ガイド
-| ヘルプシステム | ❌ | ❌ | ❌ | 未実装 | フェーズ3で実装 |
-| 操作ガイド | ❌ | ❌ | ❌ | 未実装 | フェーズ3で実装 |
-| ツールチップ強化 | 基本ツールチップ | 基本ツールチップ | 🔄 | `components/threejs/HoverTooltip.tsx` | 情報拡充要 |
+| ヘルプシステム | ❌ | ✅ | 🆕 | `components/ui/HelpModal.tsx` | 完全実装済み |
+| 操作ガイド | ❌ | ✅ | 🆕 | `components/ui/HelpModal.tsx` | 完全実装済み |
+| ツールチップ強化 | 基本ツールチップ | 強化ツールチップ | ✅ | `components/threejs/HoverTooltip.tsx` | 情報拡充済み |
 
 ---
 
@@ -182,18 +182,18 @@
 | カテゴリ | 完全実装 | 部分実装 | 未実装 | 合計 | 完了率 |
 |----------|----------|----------|--------|------|--------|
 | 基本アーキテクチャ | 3 | 0 | 0 | 3 | **100%** |
-| 3Dビューポート | 12 | 1 | 0 | 13 | **92%** |
+| 3Dビューポート | 13 | 0 | 0 | 13 | **100%** |
 | CAD機能 | 3 | 6 | 0 | 9 | **67%** |
 | エディター | 6 | 1 | 0 | 7 | **86%** |
 | GUI機能 | 5 | 0 | 0 | 5 | **100%** |
-| UI/UX | 1 | 2 | 6 | 9 | **11%** |
+| UI/UX | 9 | 0 | 0 | 9 | **100%** |
 | PWA機能 | 0 | 0 | 5 | 5 | **0%** |
 | 開発・保守性 | 7 | 1 | 0 | 8 | **88%** |
 
 ### 全体実装状況
-- **完全実装**: 37機能 (60%)
-- **部分実装**: 11機能 (18%)
-- **未実装**: 11機能 (18%)
+- **完全実装**: 46機能 (80%)
+- **部分実装**: 8機能 (13%)
+- **未実装**: 5機能 (7%)
 - **新機能**: 9機能（元にない改善）
 
 ---
@@ -203,34 +203,31 @@
 ### 🔴 最高優先度（フェーズ2）
 1. ~~**TransformControls（ギズモ操作）** - 3D操作の中核機能~~ ✅ 完了
 2. ~~**オブジェクト選択機能** - クリック選択・マルチセレクション~~ ✅ 基本完了
-3. **カメラアニメーション** - スムーズな視点変更 🔄 進行中
+3. ~~**カメラアニメーション** - スムーズな視点変更~~ ✅ 完了
 
 ### 🟡 中優先度（フェーズ3-4）
-1. **キーボードショートカット** - ユーザビリティ向上
-2. **プログレス・エラー表示強化** - ユーザー体験改善
+1. ~~**キーボードショートカット** - ユーザビリティ向上~~ ✅ 完了
+2. ~~**プログレス・エラー表示強化** - ユーザー体験改善~~ ✅ 完了
 3. **ファイルI/O品質向上** - CADファイル処理の完全性
 
 ### 🟢 低優先度（フェーズ5）
 1. **PWA機能** - オフライン対応
-2. **ヘルプシステム** - ユーザーサポート機能
+2. ~~**ヘルプシステム** - ユーザーサポート機能~~ ✅ 完了
 
 ---
 
 ## 🚀 次のアクション
 
-### 即座に開始すべき実装
-1. ~~`components/threejs/TransformGizmo.tsx` - TransformControls実装~~ ✅ 完了
-2. ~~`components/threejs/ObjectSelector.tsx` - オブジェクト選択~~ ✅ 完了
-3. ~~`tests/transform-controls.spec.ts` - E2Eテスト~~ ✅ 完了
-4. ~~`components/cad/CameraControls.tsx` - カメラコントロール高度機能~~ ✅ 基本実装完了
-5. `hooks/useCameraAnimation.ts` - カメラアニメーション機能改良 🔄 進行中
+### 次に開始すべき実装
+1. ~~`hooks/useKeyboardShortcuts.ts` - グローバルショートカット~~ ✅ 完了
+2. ~~`components/ui/ProgressIndicator.tsx` - プログレスバー~~ ✅ 完了
+3. ~~`components/layout/ErrorBoundary.tsx` - エラーハンドリング強化~~ ✅ 完了
+4. ~~`components/ui/HelpModal.tsx` - ヘルプシステム~~ ✅ 完了
 
-### 技術的準備事項
-- ~~`@react-three/drei` TransformControlsの調査~~ ✅ 完了
-- ~~元のCascadeStudioの`CascadeViewHandles.js`詳細分析~~ ✅ 完了
-- ~~OrbitControlsとTransformControlsの競合解決策検討~~ ✅ 完了
-- ~~カメラアニメーション実装方法の検討~~ ✅ 完了
-- カメラアニメーション改良（滑らかな動きとバウンディングボックス計算）
-- マルチセレクション完全実装の設計
+### 次のフェーズ（フェーズ4）で実装すべき項目
+1. `public/workers/cadWorker.js` (改良) - STEP/IGESファイル処理改善
+2. `components/cad/FileIOControls.tsx` - ファイルI/O UI改善
+3. `components/cad/ExportSettings.tsx` - エクスポート品質設定
+4. `hooks/useBatchExport.ts` - バッチエクスポート機能
 
 この機能比較表v2.2により、現在の実装状況が正確に把握でき、今後の開発方針を明確に決定できます。 

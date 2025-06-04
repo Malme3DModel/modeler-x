@@ -293,7 +293,7 @@ test('Camera Controls basic operations', async ({ page }) => {
 
 ### フェーズ3: UI/UX機能実装（2週間）
 
-**状態**: 🟡 進行中
+**状態**: ✅ 完了
 **優先度**: 🟡 中
 **目標**: ユーザビリティを元と同等以上に向上
 
@@ -379,11 +379,36 @@ export function useKeyboardShortcuts() {
 - ✅ エラー統計情報
 - ✅ ユーザーフレンドリーなUI
 
+#### 📦 マイルストーン 3.3: テスト環境整備（0.5週間）
+
+##### タスク3.3.1: UI/UXコンポーネントテスト
+- **ファイル**: `tests/ui-components.spec.tsx` (新規作成)
+- **期間**: 1日
+- **優先度**: 🟡 中
+- **状態**: ✅ 完了
+
+**実装内容**:
+- ✅ HelpModalのテスト
+- ✅ ProgressIndicatorのテスト
+- ✅ ErrorBoundaryのテスト
+- ✅ キーボードショートカットのテスト
+
+##### タスク3.3.2: テストページ作成
+- **ファイル**: `app/test-ui/page.tsx` (新規作成)
+- **期間**: 1日
+- **優先度**: 🟡 中
+- **状態**: ✅ 完了
+
+**実装内容**:
+- ✅ 各UI/UXコンポーネントの表示
+- ✅ 動作確認用インターフェース
+- ✅ テスト操作の簡易化
+
 ---
 
 ### フェーズ4: ファイルI/O完全実装（2週間）
 
-**状態**: ❌ 未開始  
+**状態**: ⏳ 待機中
 **優先度**: 🟡 中
 **目標**: CADファイル処理を完全に元と同等にする
 
@@ -393,6 +418,7 @@ export function useKeyboardShortcuts() {
 - **ファイル**: `public/workers/cadWorker.js` (改良)
 - **期間**: 4日
 - **優先度**: 🟡 中
+- **状態**: ⏳ 待機中
 
 **実装内容**:
 - エラーハンドリング改善
@@ -403,6 +429,87 @@ export function useKeyboardShortcuts() {
 - **ファイル**: `components/cad/FileIOControls.tsx` (新規作成)
 - **期間**: 3日
 - **優先度**: 🟡 中
+- **状態**: ⏳ 待機中
+
+**計画実装内容**:
+```typescript
+// ファイルI/Oコントロールコンポーネント
+export function FileIOControls() {
+  const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
+
+  const handleFileImport = async (file: File) => {
+    setIsImporting(true);
+    setImportError(null);
+    
+    try {
+      // ファイル形式の検証
+      const validExtensions = ['.step', '.stp', '.iges', '.igs'];
+      const extension = file.name.toLowerCase().match(/\.[^.]+$/)?.[0];
+      
+      if (!extension || !validExtensions.includes(extension)) {
+        throw new Error(`サポートされていないファイル形式です: ${extension || '不明'}`);
+      }
+      
+      // ファイルサイズ検証
+      if (file.size > 50 * 1024 * 1024) { // 50MB上限
+        throw new Error(`ファイルサイズが大きすぎます: ${(file.size / (1024 * 1024)).toFixed(2)}MB`);
+      }
+      
+      // CADワーカーへの送信処理
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const fileData = e.target?.result;
+        if (!fileData) throw new Error('ファイル読み込みエラー');
+        
+        // CADワーカーへのメッセージ送信
+        const result = await sendToCADWorker({
+          type: 'importFile',
+          data: {
+            fileContent: fileData,
+            fileName: file.name,
+            fileType: extension.substring(1) // .を除去
+          }
+        });
+        
+        setFileInfo(result.fileInfo);
+        // 成功ハンドリング
+      };
+      
+      reader.onerror = () => {
+        throw new Error('ファイル読み込み中にエラーが発生しました');
+      };
+      
+      reader.readAsArrayBuffer(file);
+    } catch (error) {
+      setImportError(error.message || '不明なエラー');
+    } finally {
+      setIsImporting(false);
+    }
+  };
+  
+  // 実装予定のUI
+  return (
+    <div className="file-io-controls">
+      {/* インポートUI */}
+      <div className="file-import">
+        {/* ドラッグ&ドロップ + ファイル選択UI */}
+        {/* 進行状況表示 */}
+        {/* エラー表示 */}
+        {/* ファイル情報表示 */}
+      </div>
+      
+      {/* エクスポートUI */}
+      <div className="file-export">
+        {/* 形式選択 */}
+        {/* 品質設定 */}
+        {/* エクスポートボタン */}
+      </div>
+    </div>
+  );
+}
+```
 
 #### 📦 マイルストーン 4.2: エクスポート機能強化（1週間）
 
@@ -532,14 +639,13 @@ useEffect(() => {
 ### 全体進捗
 - **フェーズ1**: ✅ 100%完了
 - **フェーズ2**: ✅ 100%完了
-- **フェーズ3**: 🟡 50%進行中
-- **フェーズ4**: ❌ 0%未開始
-- **フェーズ5**: ❌ 0%未開始
+- **フェーズ3**: ✅ 100%完了
+- **フェーズ4**: ⏳ 0%待機中
+- **フェーズ5**: ⏳ 0%待機中
 
 ### 総予定期間
-**残り期間**: 4週間（フェーズ3の残りから開始）
-- フェーズ3: 1週間
+**残り期間**: 3週間（フェーズ4から開始）
 - フェーズ4: 2週間
 - フェーズ5: 1週間
 
-この実装タスクリストv2.0に従って、フェーズ3のUI/UX機能実装から開始し、元のCascadeStudioを完全に超える高品質なCADアプリケーションを完成させます。
+この実装タスクリストv2.1に従って、フェーズ4のファイルI/O完全実装から開始し、元のCascadeStudioを完全に超える高品質なCADアプリケーションを完成させます。
