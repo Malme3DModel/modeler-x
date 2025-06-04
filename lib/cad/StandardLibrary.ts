@@ -197,6 +197,216 @@ export class CADStandardLibrary implements CADStandardLibraryInterface {
     return shapes.map(shape => shape.Moved(loc, false));
   }
 
+  /**
+   * 形状をミラー（鏡像）
+   * @param plane [a, b, c, d] 平面の方程式 ax + by + cz + d = 0
+   * @param shapes ミラーする形状の配列
+   */
+  Mirror(plane: [number, number, number, number], shapes: any[]): any[] {
+    if (!this.oc || !Array.isArray(plane) || plane.length !== 4) return shapes;
+    
+    const tf = new this.oc.gp_Trsf_1();
+    const mirrorPlane = new this.oc.gp_Pln_3(
+      new this.oc.gp_Pnt_1(0, 0, -plane[3] / plane[2]), // 平面上の点
+      new this.oc.gp_Dir_4(plane[0], plane[1], plane[2]) // 法線ベクトル
+    );
+    tf.SetMirror_2(mirrorPlane);
+    const loc = new this.oc.TopLoc_Location_2(tf);
+    
+    const mirrored = shapes.map(shape => shape.Moved(loc, false));
+    this.sceneShapes.push(...mirrored);
+    return mirrored;
+  }
+
+
+  /**
+   * 2D形状を押し出して3D形状を作成
+   * @param shape 押し出す2D形状（Face、Wire等）
+   * @param distance 押し出し距離
+   * @param direction 押し出し方向（オプション、デフォルト: [0, 0, 1]）
+   */
+  Extrude(shape: any, distance: number, direction: [number, number, number] = [0, 0, 1]): any {
+    if (!this.oc || !shape) throw new Error("Invalid shape for extrusion");
+    
+    try {
+      const extrudeVector = new this.oc.gp_Vec_4(
+        direction[0] * distance,
+        direction[1] * distance, 
+        direction[2] * distance
+      );
+      
+      const extruded = new this.oc.BRepPrimAPI_MakePrism_1(shape, extrudeVector, false, true).Shape();
+      
+      this.sceneShapes.push(extruded);
+      return extruded;
+    } catch (error) {
+      console.error("Extrude operation failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * 2D形状を回転軸周りに回転させて3D形状を作成
+   * @param shape 回転させる2D形状
+   * @param axis 回転軸 [x, y, z]
+   * @param angle 回転角度（度）
+   */
+  Revolve(shape: any, axis: [number, number, number], angle: number): any {
+    if (!this.oc || !shape) throw new Error("Invalid shape for revolution");
+    
+    try {
+      const radians = angle * Math.PI / 180;
+      const rotationAxis = new this.oc.gp_Ax1_2(
+        new this.oc.gp_Pnt_1(0, 0, 0),
+        new this.oc.gp_Dir_4(axis[0], axis[1], axis[2])
+      );
+      
+      let revolved;
+      if (angle >= 360) {
+        revolved = new this.oc.BRepPrimAPI_MakeRevol_1(shape, rotationAxis, false).Shape();
+      } else {
+        revolved = new this.oc.BRepPrimAPI_MakeRevol_2(shape, rotationAxis, radians, false).Shape();
+      }
+      
+      this.sceneShapes.push(revolved);
+      return revolved;
+    } catch (error) {
+      console.error("Revolve operation failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * 複数の断面をロフトして3D形状を作成
+   * @param profiles 断面形状の配列（Wire形状）
+   */
+  Loft(profiles: any[]): any {
+    if (!this.oc || !Array.isArray(profiles) || profiles.length < 2) {
+      throw new Error("Loft requires at least 2 profile shapes");
+    }
+    
+    try {
+      const loftBuilder = new this.oc.BRepOffsetAPI_ThruSections_1(true, false, 1e-6);
+      
+      for (const profile of profiles) {
+        loftBuilder.AddWire(profile);
+      }
+      
+      loftBuilder.Build();
+      const lofted = loftBuilder.Shape();
+      
+      this.sceneShapes.push(lofted);
+      return lofted;
+    } catch (error) {
+      console.error("Loft operation failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * エッジにフィレット（丸み）を適用
+   * @param shape 対象の形状
+   * @param radius フィレット半径
+   * @param edges 対象エッジ（オプション、未指定時は全エッジ）
+   */
+  FilletEdges(shape: any, radius: number, edges?: any[]): any {
+    if (!this.oc || !shape) throw new Error("Invalid shape for filleting");
+    
+    try {
+      const filletBuilder = new this.oc.BRepFilletAPI_MakeFillet_1(shape, this.oc.ChFi3d_FilletShape.ChFi3d_Rational);
+      
+      if (edges && edges.length > 0) {
+        for (const edge of edges) {
+          filletBuilder.Add_2(radius, edge);
+        }
+      } else {
+        const explorer = new this.oc.TopExp_Explorer_2(shape, this.oc.TopAbs_ShapeEnum.TopAbs_EDGE, this.oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+        while (explorer.More()) {
+          const edge = this.oc.TopoDS.Edge_1(explorer.Current());
+          filletBuilder.Add_2(radius, edge);
+          explorer.Next();
+        }
+      }
+      
+      filletBuilder.Build();
+      const filleted = filletBuilder.Shape();
+      
+      this.sceneShapes.push(filleted);
+      return filleted;
+    } catch (error) {
+      console.error("Fillet operation failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * エッジに面取りを適用
+   * @param shape 対象の形状
+   * @param distance 面取り距離
+   * @param edges 対象エッジ（オプション、未指定時は全エッジ）
+   */
+  ChamferEdges(shape: any, distance: number, edges?: any[]): any {
+    if (!this.oc || !shape) throw new Error("Invalid shape for chamfering");
+    
+    try {
+      const chamferBuilder = new this.oc.BRepFilletAPI_MakeChamfer_1(shape);
+      
+      if (edges && edges.length > 0) {
+        for (const edge of edges) {
+          const explorer = new this.oc.TopExp_Explorer_2(shape, this.oc.TopAbs_ShapeEnum.TopAbs_FACE, this.oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+          if (explorer.More()) {
+            const face = this.oc.TopoDS.Face_1(explorer.Current());
+            chamferBuilder.Add_3(distance, edge, face);
+          }
+        }
+      } else {
+        const edgeExplorer = new this.oc.TopExp_Explorer_2(shape, this.oc.TopAbs_ShapeEnum.TopAbs_EDGE, this.oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+        while (edgeExplorer.More()) {
+          const edge = this.oc.TopoDS.Edge_1(edgeExplorer.Current());
+          
+          const faceExplorer = new this.oc.TopExp_Explorer_2(shape, this.oc.TopAbs_ShapeEnum.TopAbs_FACE, this.oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+          if (faceExplorer.More()) {
+            const face = this.oc.TopoDS.Face_1(faceExplorer.Current());
+            chamferBuilder.Add_3(distance, edge, face);
+          }
+          
+          edgeExplorer.Next();
+        }
+      }
+      
+      chamferBuilder.Build();
+      const chamfered = chamferBuilder.Shape();
+      
+      this.sceneShapes.push(chamfered);
+      return chamfered;
+    } catch (error) {
+      console.error("Chamfer operation failed:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * 形状をオフセット
+   * @param shape 対象の形状
+   * @param distance オフセット距離（正の値で外側、負の値で内側）
+   */
+  Offset(shape: any, distance: number): any {
+    if (!this.oc || !shape) throw new Error("Invalid shape for offset");
+    
+    try {
+      const offsetBuilder = new this.oc.BRepOffsetAPI_MakeOffsetShape_1();
+      offsetBuilder.PerformByJoin(shape, distance, 1e-6);
+      
+      const offset = offsetBuilder.Shape();
+      
+      this.sceneShapes.push(offset);
+      return offset;
+    } catch (error) {
+      console.error("Offset operation failed:", error);
+      throw error;
+    }
+  }
+
   // ユーティリティメソッド
 
   /**
@@ -219,4 +429,4 @@ export class CADStandardLibrary implements CADStandardLibraryInterface {
   getOpenCascade(): any {
     return this.oc;
   }
-} 
+}  
