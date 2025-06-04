@@ -326,36 +326,38 @@ export default function ThreeJSViewport({
   enableControls = true 
 }: ThreeJSViewportProps) {
   const { modelUrl, isLoading, error } = useOpenCascade();
-  const [isRaycastingEnabled, setIsRaycastingEnabled] = useState(true);
   const isClient = useIsClient();
-  const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
   const [hoveredObject, setHoveredObject] = useState<THREE.Mesh | null>(null);
   const [hoveredFace, setHoveredFace] = useState<number | null>(null);
-  const [fogSettings, setFogSettings] = useState({ near: 50, far: 200 });
-  const [boundingBox, setBoundingBox] = useState<THREE.Box3 | null>(null);
-  const [meshObjects, setMeshObjects] = useState<THREE.Object3D[]>([]);
-
-  // 🎯 TransformControls状態管理
+  const [isRaycastingEnabled, setIsRaycastingEnabled] = useState(true);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [selectedObject, setSelectedObject] = useState<THREE.Object3D | null>(null);
+  const [boundingBox, setBoundingBox] = useState<THREE.Box3 | null>(null);
   const [transformMode, setTransformMode] = useState<'translate' | 'rotate' | 'scale'>('translate');
-  const [transformSpace, setTransformSpace] = useState<'local' | 'world'>('world');
-  const [isTransformVisible, setIsTransformVisible] = useState<boolean>(true);
+  const [transformSpace, setTransformSpace] = useState<'local' | 'world'>('local');
+  const [isTransformVisible, setIsTransformVisible] = useState(false);
+  const [fogEnabled, setFogEnabled] = useState(false);
+  const [fogSettings, setFogSettings] = useState({ near: 50, far: 200 });
   
-  // 🔧 オブジェクト変更ハンドラー
+  // 🎯 オブジェクト変更ハンドラー
   const handleObjectChange = useCallback((object: THREE.Object3D) => {
     console.log('Object transformed:', {
-      position: object.position.toArray(),
-      rotation: object.rotation.toArray(),
-      scale: object.scale.toArray()
+      position: object.position,
+      rotation: object.rotation,
+      scale: object.scale
     });
-    
-    // TODO: 変更をプロジェクト状態に保存
   }, []);
   
   // 🎯 オブジェクト選択ハンドラー
   const handleSelectObject = useCallback((object: THREE.Object3D | null) => {
+    console.log('オブジェクト選択:', object?.name || 'none');
     setSelectedObject(object);
-    console.log('Object selected:', object?.name || 'None');
+    
+    // 選択オブジェクトのバウンディングボックスを計算
+    if (object) {
+      const box = new THREE.Box3().setFromObject(object);
+      setBoundingBox(box);
+    }
   }, []);
 
   // バウンディングボックスの計算
@@ -373,11 +375,11 @@ export default function ThreeJSViewport({
 
   // オブジェクトが更新された時にバウンディングボックスを再計算
   useEffect(() => {
-    if (meshObjects.length > 0) {
-      const box = calculateBoundingBox(meshObjects);
+    if (selectedObject) {
+      const box = calculateBoundingBox([selectedObject]);
       setBoundingBox(box);
     }
-  }, [meshObjects, calculateBoundingBox]);
+  }, [selectedObject, calculateBoundingBox]);
 
   // ⌨️ キーボードショートカット
   useEffect(() => {
@@ -454,15 +456,6 @@ export default function ThreeJSViewport({
   const handleModelLoaded = useCallback((scene: THREE.Group) => {
     const box = new THREE.Box3().setFromObject(scene);
     setBoundingBox(box);
-    
-    // メッシュオブジェクトを抽出
-    const meshes: THREE.Object3D[] = [];
-    scene.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        meshes.push(child);
-      }
-    });
-    setMeshObjects(meshes);
   }, []);
 
   // コンポーネントがマウントされたことをコンソールに記録
@@ -491,113 +484,43 @@ export default function ThreeJSViewport({
   }
 
   return (
-    <div className="relative w-full h-full">
-      {/* Camera Controls UI */}
-      <div className="absolute top-4 right-4 z-10">
-        <CameraControls 
-          onFitToObject={() => {
-            // Canvas内のカメラ制御機能と連携
-            if ((window as any).cascadeCameraControls?.fitToObject) {
-              (window as any).cascadeCameraControls.fitToObject();
-            }
-          }}
-          boundingBox={boundingBox}
-        />
+    <div className="w-full h-full relative canvas-container" onMouseMove={handleMouseMove} data-testid="threejs-viewport">
+      {/* CameraControlsを画面上部に追加 */}
+      <div className="absolute top-2 right-2 z-50" data-testid="camera-controls-container">
+        <CameraControls boundingBox={boundingBox} />
       </div>
-
-      {/* Transform Controls UI */}
-      {selectedObject && (
-        <div className="absolute top-4 left-4 z-10">
-          <TransformControlsUI
-            mode={transformMode}
-            space={transformSpace}
-            visible={isTransformVisible}
-            enabled={!!selectedObject}
-            onModeChange={setTransformMode}
-            onSpaceChange={setTransformSpace}
-            onVisibilityChange={setIsTransformVisible}
-            selectedObjectName={selectedObject?.name || selectedObject?.type}
-          />
-        </div>
-      )}
       
+      {/* TransformControls UI */}
+      <TransformControlsUI 
+        onModeChange={setTransformMode} 
+        onSpaceChange={setTransformSpace}
+        onVisibilityChange={setIsTransformVisible}
+        visible={isTransformVisible}
+        mode={transformMode}
+        space={transformSpace}
+        enabled={!!selectedObject}
+        selectedObjectName={selectedObject?.name || selectedObject?.type}
+      />
+
+      {/* Canvas */}
       <Canvas
-        camera={{ 
-          position: cameraPosition, 
-          fov: 50 
-        }}
-        shadows
-        gl={{ 
-          antialias: true
-        }}
-        data-testid="cascade-3d-viewport"
-        onMouseMove={handleMouseMove}
-        onCreated={({ scene }) => {
-          // シーンをグローバルに保存（テスト用）
-          (window as any).cascadeScene = scene;
-        }}
+        gl={{ antialias: true }}
+        camera={{ position: cameraPosition, fov: 45 }}
+        style={{ background: 'linear-gradient(to bottom, #1e293b, #334155)' }}
       >
-        {/* 背景色の設定 */}
-        <color attach="background" args={['#222222']} />
+        <ambientLight intensity={0.5} />
+        <directionalLight position={[10, 10, 5]} intensity={0.8} castShadow />
+        <directionalLight position={[-10, -10, -5]} intensity={0.4} />
         
-        {/* フォグの設定 */}
-        <fog attach="fog" args={['#f0f0f0', fogSettings.near, fogSettings.far]} />
-        
-        {/* ライティング設定 */}
-        <ambientLight intensity={0.3} />
-        
-        {/* 半球光 - 元の実装に合わせる */}
-        <hemisphereLight 
-          position={[0, 1, 0]} 
-          args={['#ffffff', '#444444', 1]} 
-        />
-        
-        {/* 平行光源 */}
-        <directionalLight 
-          position={[3, 10, 10]} 
-          intensity={0.8} 
-          castShadow 
-          shadow-mapSize-width={2048} 
-          shadow-mapSize-height={2048} 
-        />
-        
-        {/* 地面 */}
-        <mesh 
-          receiveShadow 
-          rotation={[-Math.PI / 2, 0, 0]} 
-          position={[0, -0.5, 0]}
-        >
-          <planeGeometry args={[100, 100]} />
-          <shadowMaterial opacity={0.2} />
-        </mesh>
-        
-        {/* 3Dモデル表示 */}
-        <Suspense fallback={null}>
-          {modelUrl && (
-            <ThreeJSModel 
-              url={modelUrl} 
-              onLoad={handleModelLoaded}
-            />
-          )}
-        </Suspense>
-        
-        {/* カメラコントロール */}
         {enableControls && (
-          <OrbitControls 
-            enablePan={true}
-            enableZoom={true}
-            enableRotate={true}
+          <OrbitControls
+            enableDamping
             dampingFactor={0.05}
-            enableDamping={true}
-            minDistance={1}
+            rotateSpeed={0.5}
+            minDistance={0.1}
             maxDistance={1000}
-            minPolarAngle={0}
-            maxPolarAngle={Math.PI}
-            minAzimuthAngle={-Infinity}
-            maxAzimuthAngle={Infinity}
-            panSpeed={1.0}
-            rotateSpeed={1.0}
-            zoomSpeed={1.0}
+            target={[0, 0, 0]}
+            makeDefault
             mouseButtons={{
               LEFT: THREE.MOUSE.ROTATE,
               MIDDLE: THREE.MOUSE.DOLLY,
@@ -715,8 +638,12 @@ function CameraAnimationController({ boundingBox }: { boundingBox: THREE.Box3 | 
 
   // カメラビューアニメーション関数
   const animateToView = useCallback((viewName: keyof typeof CAMERA_POSITIONS, bbox?: THREE.Box3 | null) => {
-    if (!controls || !camera) return;
+    if (!controls || !camera) {
+      console.warn('カメラまたはコントロールが見つかりません');
+      return;
+    }
 
+    console.log(`カメラビュー切替: ${viewName}`);
     const view = CAMERA_POSITIONS[viewName];
     const endPosition = new THREE.Vector3(...view.position);
     const endTarget = new THREE.Vector3(...view.target);
@@ -729,8 +656,10 @@ function CameraAnimationController({ boundingBox }: { boundingBox: THREE.Box3 | 
       const maxDim = Math.max(size.x, size.y, size.z);
       const distance = maxDim * 2.5; // 適切な距離に調整
       
+      // ビュー方向を維持しつつ距離を調整
       endPosition.normalize().multiplyScalar(distance);
       
+      // バウンディングボックスの中心を対象とする
       const center = new THREE.Vector3();
       currentBoundingBox.getCenter(center);
       endTarget.copy(center);
@@ -738,24 +667,59 @@ function CameraAnimationController({ boundingBox }: { boundingBox: THREE.Box3 | 
     }
 
     // useCameraAnimationのanimateToPositionを使用
-    animateToPosition(endPosition, endTarget, 1000);
+    try {
+      // アニメーション実行前にキャンセル
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      
+      // 1秒かけてアニメーション
+      animateToPosition(endPosition, endTarget, 1000);
+      console.log('カメラアニメーション開始:', {
+        start: camera.position.toArray(),
+        end: endPosition.toArray(),
+        target: endTarget.toArray()
+      });
+    } catch (error) {
+      console.error('カメラアニメーション実行エラー:', error);
+    }
   }, [camera, controls, boundingBox, animateToPosition]);
+
+  // オブジェクトにフィットさせる関数
+  const handleFitToObject = useCallback(() => {
+    if (!boundingBox) {
+      console.warn('フィット対象のバウンディングボックスがありません');
+      return;
+    }
+    
+    try {
+      console.log('Fit to Objectを実行:', boundingBox);
+      
+      // アニメーション実行前にキャンセル
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      
+      // バウンディングボックスにフィット
+      fitToObject(boundingBox);
+    } catch (error) {
+      console.error('Fit to Object実行エラー:', error);
+    }
+  }, [boundingBox, fitToObject]);
 
   useEffect(() => {
     // グローバル関数として公開
     (window as any).cascadeCameraControls = {
-      fitToObject: () => {
-        if (boundingBox) {
-          fitToObject(boundingBox);
-        }
-      },
+      fitToObject: handleFitToObject,
       animateToView: animateToView
     };
+
+    console.log('✅ カメラコントロールをグローバル関数として登録');
 
     return () => {
       delete (window as any).cascadeCameraControls;
     };
-  }, [boundingBox, fitToObject, animateToView]);
+  }, [boundingBox, handleFitToObject, animateToView]);
 
   return null;
 } 

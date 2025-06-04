@@ -550,7 +550,17 @@ function CameraControlsWithFitComponent({ boundingBox }: { boundingBox: THREE.Bo
 
   const handleFitToObject = useCallback(() => {
     if (boundingBox) {
-      fitToObject(boundingBox);
+      console.log('CascadeViewport: Fit to Object実行', boundingBox);
+      
+      // グローバル関数が利用可能な場合はそちらを優先
+      if ((window as any).cascadeCameraControls?.fitToObject) {
+        (window as any).cascadeCameraControls.fitToObject();
+      } else {
+        // 直接フックの機能を使用
+        fitToObject(boundingBox);
+      }
+    } else {
+      console.warn('CascadeViewport: フィット対象のバウンディングボックスがありません');
     }
   }, [boundingBox, fitToObject]);
 

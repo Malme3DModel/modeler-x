@@ -354,6 +354,9 @@ export default function CascadeStudioLayout({
     const viewContainer = document.createElement('div');
     viewContainer.style.width = '100%';
     viewContainer.style.height = '100%';
+    viewContainer.style.position = 'relative'; // カメラコントロール配置のために追加
+    viewContainer.className = 'canvas-container'; // テスト用のクラス名を追加
+    viewContainer.setAttribute('data-testid', 'cascade-viewport-container'); // テスト用のID追加
     container.element.appendChild(viewContainer);
     
     // React 18のcreateRootを使用
@@ -365,11 +368,21 @@ export default function CascadeStudioLayout({
       loading: () => <div style={{ color: '#a0a0a0', fontSize: '12px', padding: '12px' }}>3Dビューポート初期化中...</div>
     });
     
-    viewRoot.render(<ThreeJSViewport />);
+    // メインビューポートをレンダリング
+    viewRoot.render(
+      <ThreeJSViewport 
+        cameraPosition={[50, 50, 50]} 
+        enableControls={true} 
+      />
+    );
     
     // クリーンアップ関数を設定
     container.on('destroy', () => {
-      viewRoot.unmount();
+      try {
+        viewRoot.unmount();
+      } catch (error) {
+        console.error('View unmount error:', error);
+      }
     });
   }
 

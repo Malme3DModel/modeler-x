@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { 
   Eye, 
@@ -13,6 +13,7 @@ import {
   Maximize2 
 } from 'lucide-react';
 import * as THREE from 'three';
+import { useCameraAnimation } from '@/hooks/useCameraAnimation';
 
 // 6方向 + ISO視点の定義
 const CAMERA_POSITIONS = {
@@ -54,112 +55,128 @@ const CAMERA_POSITIONS = {
 };
 
 interface CameraControlsProps {
-  onFitToObject?: () => void;
   boundingBox?: THREE.Box3 | null;
+  onFitToObject?: () => void;
 }
 
-export function CameraControls({ onFitToObject, boundingBox }: CameraControlsProps) {
-  // カメラアニメーション関数
-  const animateToView = useCallback((viewName: keyof typeof CAMERA_POSITIONS) => {
-    // グローバル関数経由でカメラ制御を実行
+export function CameraControls({ boundingBox, onFitToObject }: CameraControlsProps) {
+  const { fitToObject, animateToPosition } = useCameraAnimation();
+  const animationRef = useRef<number>();
+
+  // カメラビューアニメーション関数
+  const animateToView = useCallback((viewName: keyof typeof CAMERA_POSITIONS, bbox?: THREE.Box3 | null) => {
+    // グローバル関数として公開されている場合はそれを使用
     if ((window as any).cascadeCameraControls?.animateToView) {
-      (window as any).cascadeCameraControls.animateToView(viewName, boundingBox);
-    } else {
-      console.warn('Camera controls not available');
+      console.log(`CameraControls: グローバル関数経由でカメラビュー切替: ${viewName}`);
+      (window as any).cascadeCameraControls.animateToView(viewName, bbox || boundingBox);
+      return;
     }
+
+    console.log(`直接アニメーションに失敗: グローバル関数が見つかりません`);
   }, [boundingBox]);
 
+  // オブジェクトにフィットさせる関数
+  const handleFitToObject = useCallback(() => {
+    // カスタムハンドラがあればそれを使用
+    if (onFitToObject) {
+      onFitToObject();
+      return;
+    }
+    
+    // グローバル関数経由で実行
+    if ((window as any).cascadeCameraControls?.fitToObject) {
+      console.log('CameraControls: グローバル関数経由でFit to Object実行');
+      (window as any).cascadeCameraControls.fitToObject();
+      return;
+    }
+    
+    // 直接実行
+    if (boundingBox) {
+      console.log('CameraControls: 直接Fit to Object実行', boundingBox);
+      fitToObject(boundingBox);
+    } else {
+      console.warn('CameraControls: フィット対象のバウンディングボックスがありません');
+    }
+  }, [boundingBox, fitToObject, onFitToObject]);
+
   return (
-    <div className="flex flex-col gap-2 p-2 bg-white border rounded-lg shadow-sm">
-      <div className="text-sm font-medium text-gray-700 mb-2">Camera Views</div>
-      
-      {/* 6方向視点ボタン */}
+    <div 
+      className="bg-gray-800 bg-opacity-80 p-2 rounded-md shadow-lg text-white"
+      data-testid="camera-controls-panel"
+    >
+      <div className="text-sm font-medium mb-2">Camera Views</div>
       <div className="grid grid-cols-3 gap-1">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => animateToView('top')}
-          className="flex items-center gap-1"
-          data-testid="camera-top"
-        >
-          <ArrowUp className="w-3 h-3" />
-          Top
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 w-8" 
           onClick={() => animateToView('front')}
-          className="flex items-center gap-1"
           data-testid="camera-front"
         >
-          <Eye className="w-3 h-3" />
-          Front
+          <ArrowRight className="h-4 w-4" />
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 w-8" 
+          onClick={() => animateToView('top')}
+          data-testid="camera-top"
+        >
+          <ArrowUp className="h-4 w-4" />
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 w-8" 
           onClick={() => animateToView('right')}
-          className="flex items-center gap-1"
           data-testid="camera-right"
         >
-          <ArrowRight className="w-3 h-3" />
-          Right
+          <ArrowLeft className="h-4 w-4" />
         </Button>
-        
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => animateToView('left')}
-          className="flex items-center gap-1"
-          data-testid="camera-left"
-        >
-          <ArrowLeft className="w-3 h-3" />
-          Left
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 w-8" 
           onClick={() => animateToView('back')}
-          className="flex items-center gap-1"
           data-testid="camera-back"
         >
-          <RotateCcw className="w-3 h-3" />
-          Back
+          <ArrowLeft className="h-4 w-4" />
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 w-8" 
           onClick={() => animateToView('bottom')}
-          className="flex items-center gap-1"
           data-testid="camera-bottom"
         >
-          <ArrowDown className="w-3 h-3" />
-          Bottom
+          <ArrowDown className="h-4 w-4" />
         </Button>
-      </div>
-      
-      {/* ISO視点とFit to Objectボタン */}
-      <div className="flex gap-1 mt-2">
-        <Button
-          variant="outline"
-          size="sm"
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 w-8" 
+          onClick={() => animateToView('left')}
+          data-testid="camera-left"
+        >
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 w-8" 
           onClick={() => animateToView('iso')}
-          className="flex items-center gap-1 flex-1"
           data-testid="camera-iso"
         >
-          <Box className="w-3 h-3" />
-          ISO
+          <Eye className="h-4 w-4" />
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onFitToObject}
-          className="flex items-center gap-1 flex-1"
-          disabled={!boundingBox}
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="h-8 w-8" 
+          onClick={handleFitToObject}
           data-testid="camera-fit"
         >
-          <Maximize2 className="w-3 h-3" />
-          Fit
+          <Maximize2 className="h-4 w-4" />
         </Button>
       </div>
     </div>
