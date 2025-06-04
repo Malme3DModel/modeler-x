@@ -42,6 +42,34 @@ console.error = function (err, url, line, colno, errorObj) {
 console.log(`🔧 Worker environment: ${typeof importScripts !== 'undefined' ? 'OK' : 'NG'}`);
 console.log(`🔧 Worker self: ${typeof self !== 'undefined' ? 'OK' : 'NG'}`);
 
+// 🔥 OpenCascade.js v1.1.1 用の安全なポイント作成ヘルパー関数
+function createPoint(x = 0, y = 0, z = 0) {
+  try {
+    // まずパラメータなしでインスタンス化
+    const point = new oc.gp_Pnt_1();
+    // 次に座標を設定
+    point.SetX(x);
+    point.SetY(y);
+    point.SetZ(z);
+    return point;
+  } catch (error) {
+    console.error("❌ Point creation failed:", error);
+    throw error;
+  }
+}
+
+// 🔥 OpenCascade.js v1.1.1 用の安全な方向ベクトル作成ヘルパー関数
+function createDirection(x = 0, y = 0, z = 1) {
+  try {
+    // まずパラメータなしでインスタンス化
+    const dir = new oc.gp_Dir_4(x, y, z);
+    return dir;
+  } catch (error) {
+    console.error("❌ Direction creation failed:", error);
+    throw error;
+  }
+}
+
 // OpenCascade.js読み込み（デバッグ強化版）
 let ocInitialized = false;
 var messageHandlers = {};
@@ -263,18 +291,34 @@ function Translate(offset, shapes) {
 function Rotate(axis, degrees, shapes) {
   if (!oc || !Array.isArray(axis) || axis.length !== 3) return shapes;
   
-  const tf = new oc.gp_Trsf_1();
-  const radians = degrees * Math.PI / 180;
-  tf.SetRotation_1(
-    new oc.gp_Ax1_2(
-      new oc.gp_Pnt_1(0, 0, 0), 
-      new oc.gp_Dir_4(axis[0], axis[1], axis[2])
-    ), 
-    radians
-  );
-  const loc = new oc.TopLoc_Location_2(tf);
-  
-  return shapes.map(shape => shape.Moved(loc));
+  try {
+    const tf = new oc.gp_Trsf_1();
+    const radians = degrees * Math.PI / 180;
+    
+    // 修正：安全なポイント作成関数
+    let pnt, dir, ax1;
+    
+    try {
+      // パラメータなしでインスタンス化
+      pnt = new oc.gp_Pnt_1();
+      // 原点なので設定不要
+      // pnt.SetX(0); pnt.SetY(0); pnt.SetZ(0);
+      
+      dir = new oc.gp_Dir_4(axis[0], axis[1], axis[2]);
+      ax1 = new oc.gp_Ax1_2(pnt, dir);
+    } catch (initError) {
+      console.error("❌ Point/Direction creation failed:", initError);
+      return shapes;
+    }
+    
+    tf.SetRotation_1(ax1, radians);
+    const loc = new oc.TopLoc_Location_2(tf);
+    
+    return shapes.map(shape => shape.Moved(loc));
+  } catch (error) {
+    console.error("❌ Rotation failed:", error);
+    return shapes; // エラー時は元の形状を返す
+  }
 }
 
 // 基本的な形状→メッシュ変換（v1.1.1対応版）
@@ -375,7 +419,7 @@ function ShapeToMesh(shape, deflection = 0.1) {
     };
   } catch (error) {
     console.log(`❌ Error in ShapeToMesh: ${error.message}`);
-    console.log(`❌ Error stack: ${error.stack}`);
+    console.log(error.stack);
     return null;
   }
 }
@@ -434,44 +478,440 @@ messageHandlers["Evaluate"] = function(payload) {
   }
 };
 
-messageHandlers["combineAndRenderShapes"] = function(payload) {
+// メッセージハンドラーを登録
+messageHandlers["resetCache"] = function() {
+  sceneShapes = [];
+  return "";
+};
+
+messageHandlers["getGUIState"] = function() {
+  return GUIState;
+};
+
+messageHandlers["evaluateCode"] = function(payload) {
+  // 受け取ったコードを評価
   try {
-    if (sceneShapes.length === 0) {
-      console.warn("No scene shapes to render");
-      return null;
-    }
+    sceneShapes = [];
+    GUIState = payload.guiState || {};
     
-    postMessage({ type: "log", payload: `Combining ${sceneShapes.length} shapes...` });
+    // グローバル変数としてUI関数を定義
+    self.GUIState = GUIState;
     
-    // 複合形状の作成
-    currentShape = new oc.TopoDS_Compound();
-    let sceneBuilder = new oc.BRep_Builder();
-    sceneBuilder.MakeCompound(currentShape);
+    console.log(`📝 Evaluating code: ${payload.code.substring(0, 50)}...`);
+    eval(payload.code);
+    console.log(`✅ Code evaluation successful, found ${sceneShapes.length} shapes`);
     
-    for (let shape of sceneShapes) {
-      if (shape && !shape.IsNull()) {
-        sceneBuilder.Add(currentShape, shape);
+    // 生成された形状をJSONとして送信できる形式に変換
+    const meshes = sceneShapes.map(shape => ShapeToMesh(shape));
+    console.log(`🔷 Converted ${meshes.length} shapes to meshes`);
+    
+    return {
+      meshes: meshes,
+      guiState: GUIState
+    };
+  } catch (error) {
+    console.error(`❌ Evaluation error:`, error);
+    postMessage({ 
+      type: "error", 
+      payload: { message: `Evaluation error: ${error.message}` } 
+    });
+    return { meshes: [], guiState: GUIState };
+  }
+};
+
+// ファイル読み込み関連のメッセージハンドラー
+messageHandlers["importFile"] = function(payload) {
+  try {
+    console.log(`📂 ファイルインポート開始: ${payload.fileName}`);
+    
+    // ファイル形式を拡張子から判定
+    const extension = payload.fileType.toLowerCase();
+    const fileContent = new Uint8Array(payload.fileContent);
+    let shape = null;
+    
+    // ファイル形式に応じた読み込み処理
+    if (extension === 'step' || extension === 'stp') {
+      console.log(`🔄 STEPファイル読み込み中... (${fileContent.length} bytes)`);
+      
+      try {
+        // STEPファイル読み込み
+        const stepReader = new oc.STEPControl_Reader_1();
+        
+        // ファイルデータを一時ファイルに書き込み
+        const tempFileName = "temp.stp";
+        oc.FS.writeFile(tempFileName, fileContent);
+        
+        // ファイルを読み込み
+        if (stepReader.ReadFile(tempFileName) !== oc.IFSelect_ReturnStatus.IFSelect_RetDone) {
+          throw new Error("STEPファイルの読み込みに失敗しました");
+        }
+        
+        // ファイルからルートを読み込み
+        const rootCount = stepReader.NbRootsForTransfer();
+        console.log(`📊 STEPファイル内のルート数: ${rootCount}`);
+        
+        if (rootCount <= 0) {
+          throw new Error("STEPファイルに有効なデータがありません");
+        }
+        
+        // すべてのルートを変換
+        stepReader.TransferRoots();
+        
+        // 形状を取得
+        shape = stepReader.OneShape();
+        
+        // 一時ファイルを削除
+        oc.FS.unlink(tempFileName);
+        
+        console.log("✅ STEPファイル読み込み成功");
+      } catch (error) {
+        console.error(`❌ STEPファイル読み込みエラー: ${error.message}`);
+        throw error;
       }
+    } else if (extension === 'iges' || extension === 'igs') {
+      console.log(`🔄 IGESファイル読み込み中... (${fileContent.length} bytes)`);
+      
+      try {
+        // IGESファイル読み込み
+        const igesReader = new oc.IGESControl_Reader_1();
+        
+        // ファイルデータを一時ファイルに書き込み
+        const tempFileName = "temp.igs";
+        oc.FS.writeFile(tempFileName, fileContent);
+        
+        // ファイルを読み込み
+        if (igesReader.ReadFile(tempFileName) !== oc.IFSelect_ReturnStatus.IFSelect_RetDone) {
+          throw new Error("IGESファイルの読み込みに失敗しました");
+        }
+        
+        // ファイルからルートを読み込み
+        const rootCount = igesReader.NbRootsForTransfer();
+        console.log(`📊 IGESファイル内のルート数: ${rootCount}`);
+        
+        if (rootCount <= 0) {
+          throw new Error("IGESファイルに有効なデータがありません");
+        }
+        
+        // すべてのルートを変換
+        igesReader.TransferRoots();
+        
+        // 形状を取得
+        shape = igesReader.OneShape();
+        
+        // 一時ファイルを削除
+        oc.FS.unlink(tempFileName);
+        
+        console.log("✅ IGESファイル読み込み成功");
+      } catch (error) {
+        console.error(`❌ IGESファイル読み込みエラー: ${error.message}`);
+        throw error;
+      }
+    } else {
+      throw new Error(`サポートされていないファイル形式です: ${extension}`);
     }
     
-    postMessage({ type: "log", payload: "Converting to mesh..." });
+    // 有効な形状があれば追加
+    if (shape) {
+      // 形状情報取得
+      const shapeInfo = {
+        type: 'imported',
+        source: payload.fileName,
+        format: extension.toUpperCase()
+      };
+      
+      // 形状をシーンに追加
+      sceneShapes.push(shape);
+      
+      // メッシュ変換
+      const mesh = ShapeToMesh(shape);
+      
+      console.log("🎯 インポート完了");
+      
+      return {
+        success: true,
+        shapeInfo: shapeInfo,
+        mesh: mesh
+      };
+    } else {
+      throw new Error("有効な形状が見つかりませんでした");
+    }
+  } catch (error) {
+    console.error(`❌ ファイルインポートエラー: ${error.message}`);
+    postMessage({ 
+      type: "error", 
+      payload: { message: `ファイルインポートエラー: ${error.message}` } 
+    });
+    return { success: false, error: error.message };
+  }
+};
+
+// エクスポート関連のメッセージハンドラー
+messageHandlers["exportFile"] = function(payload) {
+  try {
+    console.log(`📤 ファイルエクスポート開始: ${payload.format}`);
     
-    // メッシュ化
-    const meshData = ShapeToMesh(currentShape, payload.maxDeviation || 0.1);
+    // 形式を確認
+    const format = payload.format.toLowerCase();
+    let exportedData = null;
     
-    if (meshData) {
-      postMessage({ type: "log", payload: `Mesh generated: ${meshData.vertices.length / 3} vertices, ${meshData.indices.length / 3} triangles` });
+    // エクスポート対象がない場合
+    if (sceneShapes.length === 0) {
+      throw new Error("エクスポートする形状がありません");
     }
     
-    sceneShapes = []; // レンダリング後にクリア
+    // 複数の形状を結合（必要に応じて）
+    let exportShape = sceneShapes[0];
+    if (sceneShapes.length > 1) {
+      // 複合形状を作成
+      const compound = new oc.TopoDS_Compound();
+      const builder = new oc.BRep_Builder();
+      builder.MakeCompound(compound);
+      
+      // すべての形状を追加
+      for (const shape of sceneShapes) {
+        builder.Add(compound, shape);
+      }
+      
+      exportShape = compound;
+    }
     
-    return [
-      { faces: meshData, edges: null },
-      payload.sceneOptions || {}
-    ];
-  } catch (e) {
-    console.error("Combine and render error:", e);
-    return null;
+    // 形式に応じたエクスポート処理
+    if (format === 'step') {
+      console.log("🔄 STEPフォーマットでエクスポート中...");
+      
+      try {
+        // STEPエクスポート
+        const stepWriter = new oc.STEPControl_Writer_1();
+        
+        // 初期化と形状の転送
+        stepWriter.Transfer(exportShape, oc.STEPControl_StepModelType.STEPControl_AsIs);
+        
+        // 一時ファイル名
+        const tempFileName = "export.step";
+        
+        // ファイルに書き込み
+        if (stepWriter.Write(tempFileName) !== oc.IFSelect_ReturnStatus.IFSelect_RetDone) {
+          throw new Error("STEPファイルの書き込みに失敗しました");
+        }
+        
+        // ファイルからデータを読み込み
+        exportedData = oc.FS.readFile(tempFileName, { encoding: 'binary' });
+        
+        // 一時ファイルを削除
+        oc.FS.unlink(tempFileName);
+        
+        console.log("✅ STEPエクスポート成功");
+      } catch (error) {
+        console.error(`❌ STEPエクスポートエラー: ${error.message}`);
+        throw error;
+      }
+    } else if (format === 'stl') {
+      console.log("🔄 STLフォーマットでエクスポート中...");
+      try {
+        const stlWriter = new oc.StlAPI_Writer();
+        // 品質設定（分割精度）
+        const deflection = typeof payload.quality === 'number' ? payload.quality : 0.1;
+        // バイナリ/アスキー切り替え
+        stlWriter.SetASCIIMode(payload.binaryStl === false); // false:バイナリ, true:アスキー
+        // メッシュ分割精度をShapeToMesh等で利用する場合はここで適用（現状はSTL出力APIに直接渡せないため、将来的に拡張）
+        // 一時ファイル名
+        const tempFileName = "export.stl";
+        // ファイルに書き込み
+        if (!stlWriter.Write(exportShape, tempFileName)) {
+          throw new Error("STLファイルの書き込みに失敗しました");
+        }
+        exportedData = oc.FS.readFile(tempFileName, { encoding: 'binary' });
+        oc.FS.unlink(tempFileName);
+        console.log("✅ STLエクスポート成功");
+      } catch (error) {
+        console.error(`❌ STLエクスポートエラー: ${error.message}`);
+        throw error;
+      }
+    } else if (format === 'obj') {
+      console.log("🔄 OBJフォーマットでエクスポート中...");
+      try {
+        // 品質設定
+        const deflection = typeof payload.quality === 'number' ? payload.quality : 0.1;
+        const includeNormals = payload.includeNormals !== false; // デフォルトtrue
+        
+        // OBJファイルの内容を構築
+        let objContent = "# OBJ file exported from CascadeStudio\n";
+        objContent += `# Generated on ${new Date().toISOString()}\n\n`;
+        
+        let vertexOffset = 0;
+        let shapeIndex = 0;
+        
+        // すべての形状を処理
+        const shapesToExport = sceneShapes.length > 0 ? sceneShapes : [exportShape];
+        
+        for (const shape of shapesToExport) {
+          shapeIndex++;
+          objContent += `# Shape ${shapeIndex}\n`;
+          objContent += `g shape_${shapeIndex}\n`;
+          
+          // メッシュ化
+          new oc.BRepMesh_IncrementalMesh_2(shape, deflection, false, 0.5, false);
+          
+          // フェース探索
+          const explorer = new oc.TopExp_Explorer_2(shape, oc.TopAbs_ShapeEnum.TopAbs_FACE, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+          
+          const vertices = [];
+          const normals = [];
+          const faces = [];
+          
+          while (explorer.More()) {
+            const face = oc.TopoDS.Face_1(explorer.Current());
+            
+            try {
+              const location = new oc.TopLoc_Location_1();
+              const triangulation = oc.BRep_Tool.Triangulation(face, location);
+              
+              if (!triangulation.IsNull()) {
+                const nodeCount = triangulation.get().NbNodes();
+                const triangleCount = triangulation.get().NbTriangles();
+                
+                // 頂点の収集
+                const faceVertices = [];
+                for (let i = 1; i <= nodeCount; i++) {
+                  const node = triangulation.get().Node(i);
+                  faceVertices.push([node.X(), node.Y(), node.Z()]);
+                  vertices.push([node.X(), node.Y(), node.Z()]);
+                }
+                
+                // 法線の計算（必要な場合）
+                if (includeNormals) {
+                  // フェースの向きを取得
+                  const orientation = face.Orientation();
+                  const isReversed = orientation === oc.TopAbs_Orientation.TopAbs_REVERSED;
+                  
+                  // 各三角形の法線を計算
+                  for (let i = 1; i <= triangleCount; i++) {
+                    const triangle = triangulation.get().Triangle(i);
+                    const n1 = triangle.Value(1) - 1;
+                    const n2 = triangle.Value(2) - 1;
+                    const n3 = triangle.Value(3) - 1;
+                    
+                    // 三角形の頂点
+                    const v1 = faceVertices[n1];
+                    const v2 = faceVertices[n2];
+                    const v3 = faceVertices[n3];
+                    
+                    // エッジベクトル
+                    const edge1 = [v2[0] - v1[0], v2[1] - v1[1], v2[2] - v1[2]];
+                    const edge2 = [v3[0] - v1[0], v3[1] - v1[1], v3[2] - v1[2]];
+                    
+                    // 外積で法線を計算
+                    let normal = [
+                      edge1[1] * edge2[2] - edge1[2] * edge2[1],
+                      edge1[2] * edge2[0] - edge1[0] * edge2[2],
+                      edge1[0] * edge2[1] - edge1[1] * edge2[0]
+                    ];
+                    
+                    // 正規化
+                    const length = Math.sqrt(normal[0] * normal[0] + normal[1] * normal[1] + normal[2] * normal[2]);
+                    if (length > 0) {
+                      normal[0] /= length;
+                      normal[1] /= length;
+                      normal[2] /= length;
+                    }
+                    
+                    // フェースの向きに応じて反転
+                    if (isReversed) {
+                      normal[0] = -normal[0];
+                      normal[1] = -normal[1];
+                      normal[2] = -normal[2];
+                    }
+                    
+                    // 各頂点に同じ法線を割り当て（簡略化）
+                    normals.push(normal);
+                    normals.push(normal);
+                    normals.push(normal);
+                  }
+                }
+                
+                // フェース（三角形）の収集
+                const startIndex = vertexOffset;
+                for (let i = 1; i <= triangleCount; i++) {
+                  const triangle = triangulation.get().Triangle(i);
+                  faces.push([
+                    startIndex + triangle.Value(1),
+                    startIndex + triangle.Value(2),
+                    startIndex + triangle.Value(3)
+                  ]);
+                }
+                
+                vertexOffset += nodeCount;
+              }
+            } catch (faceError) {
+              console.log(`⚠️ Error processing face: ${faceError.message}`);
+            }
+            
+            explorer.Next();
+          }
+          
+          // 頂点を出力
+          objContent += "\n# Vertices\n";
+          for (const vertex of vertices) {
+            objContent += `v ${vertex[0]} ${vertex[1]} ${vertex[2]}\n`;
+          }
+          
+          // 法線を出力（必要な場合）
+          if (includeNormals && normals.length > 0) {
+            objContent += "\n# Normals\n";
+            for (const normal of normals) {
+              objContent += `vn ${normal[0]} ${normal[1]} ${normal[2]}\n`;
+            }
+          }
+          
+          // フェースを出力
+          objContent += "\n# Faces\n";
+          for (let i = 0; i < faces.length; i++) {
+            const face = faces[i];
+            if (includeNormals && normals.length > 0) {
+              // 法線インデックス付き
+              const normalBase = i * 3 + 1;
+              objContent += `f ${face[0]}/${face[0]}/${normalBase} ${face[1]}/${face[1]}/${normalBase+1} ${face[2]}/${face[2]}/${normalBase+2}\n`;
+            } else {
+              // 頂点のみ
+              objContent += `f ${face[0]} ${face[1]} ${face[2]}\n`;
+            }
+          }
+          
+          objContent += "\n";
+        }
+        
+        // 文字列をバイト配列に変換
+        const encoder = new TextEncoder();
+        exportedData = encoder.encode(objContent);
+        
+        console.log("✅ OBJエクスポート成功");
+      } catch (error) {
+        console.error(`❌ OBJエクスポートエラー: ${error.message}`);
+        throw error;
+      }
+    } else {
+      throw new Error(`サポートされていないエクスポート形式です: ${format}`);
+    }
+    
+    if (exportedData) {
+      console.log(`📊 エクスポートデータサイズ: ${exportedData.length} bytes`);
+      
+      return {
+        success: true,
+        format: format,
+        fileName: payload.fileName || `export.${format}`,
+        data: Array.from(new Uint8Array(exportedData))
+      };
+    } else {
+      throw new Error("エクスポートデータの生成に失敗しました");
+    }
+  } catch (error) {
+    console.error(`❌ ファイルエクスポートエラー: ${error.message}`);
+    postMessage({ 
+      type: "error", 
+      payload: { message: `ファイルエクスポートエラー: ${error.message}` } 
+    });
+    return { success: false, error: error.message };
   }
 };
 
@@ -484,3 +924,71 @@ self.Difference = Difference;
 self.Intersection = Intersection;
 self.Translate = Translate;
 self.Rotate = Rotate;
+
+// UI関連の関数を追加
+function Slider(name, defaultValue, min, max, step = 1) {
+  if (GUIState && name in GUIState) {
+    return GUIState[name];
+  }
+  GUIState[name] = defaultValue;
+  return defaultValue;
+}
+
+function Checkbox(name, defaultValue) {
+  if (GUIState && name in GUIState) {
+    return GUIState[name];
+  }
+  GUIState[name] = defaultValue;
+  return defaultValue;
+}
+
+function TextInput(name, defaultValue) {
+  if (GUIState && name in GUIState) {
+    return GUIState[name];
+  }
+  GUIState[name] = defaultValue;
+  return defaultValue;
+}
+
+function Dropdown(name, options, defaultIndex) {
+  if (GUIState && name in GUIState) {
+    return GUIState[name];
+  }
+  
+  const defaultValue = options[defaultIndex] || options[0];
+  GUIState[name] = defaultValue;
+  return defaultValue;
+}
+
+function Button(name) {
+  return GUIState && name in GUIState ? GUIState[name] : false;
+}
+
+function Text3D(text, size, height, fontName = 'Arial') {
+  // 簡易版のテキスト3D実装（OpenCascade v1.1.1互換）
+  try {
+    // v1.1.1対応: gp_Pnt_1コンストラクタに問題があるので、使用を避ける
+    const textLength = text.length;
+    const textWidth = textLength * size * 0.6;
+    
+    console.log(`Creating simple text box for "${text}" (size: ${size}, height: ${height})`);
+    
+    // 単純なボックスの作成（Text3Dの代替として）
+    const box = new oc.BRepPrimAPI_MakeBox_1(textWidth, size, height).Shape();
+    sceneShapes.push(box);
+    
+    return box;
+  } catch (error) {
+    console.error("Text3D error:", error);
+    // エラー時はフォールバックとして小さなボックスを返す
+    return Box(5, 5, 5);
+  }
+}
+
+// グローバル関数としてUIライブラリ関数を定義
+self.Slider = Slider;
+self.Checkbox = Checkbox;
+self.TextInput = TextInput;
+self.Dropdown = Dropdown;
+self.Button = Button;
+self.Text3D = Text3D;

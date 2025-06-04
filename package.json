@@ -15,6 +15,7 @@
     "test:debug": "playwright test --debug"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@monaco-editor/react": "^4.7.0",
     "@react-three/drei": "^9.92.7",
     "@react-three/fiber": "^8.15.12",
@@ -22,7 +23,7 @@
     "fflate": "^0.8.2",
     "golden-layout": "^2.6.0",
     "jwt-decode": "^4.0.0",
-    "monaco-editor": "^0.52.2",
+    "lucide-react": "^0.511.0",
     "next": "^14.2.5",
     "opencascade.js": "1.1.1",
     "react": "^18.3.1",
@@ -33,6 +34,9 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "@types/jest": "^29.5.14",
     "@types/node": "^20.17.57",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
-import { editor as monacoEditor } from 'monaco-editor';
+import { useRef, forwardRef, useImperativeHandle, useCallback } from 'react';
+import { Editor as MonacoEditor } from '@monaco-editor/react';
+import type { editor as monacoEditor } from 'monaco-editor';
 
 export interface MonacoCodeEditorProps {
   initialCode?: string;
@@ -20,127 +21,21 @@ export interface MonacoCodeEditorRef {
   formatCode: () => void;
 }
 
-export const MonacoCodeEditor = forwardRef<MonacoCodeEditorRef, MonacoCodeEditorProps>(
-  function MonacoCodeEditor(
-    {
-      initialCode = '',
-      language = 'javascript',
-      theme = 'vs-dark',
-      onCodeChange,
-      onEvaluate,
-      className = '',
-      style = {}
-    },
-    ref
-  ) {
-    const containerRef = useRef<HTMLDivElement>(null);
+const MonacoCodeEditor = forwardRef<MonacoCodeEditorRef, MonacoCodeEditorProps>(
+  ({ 
+    initialCode = '', 
+    language = 'typescript', 
+    theme = 'vs-dark', 
+    onCodeChange, 
+    onEvaluate,
+    className,
+    style 
+  }, ref) => {
     const editorRef = useRef<monacoEditor.IStandaloneCodeEditor | null>(null);
-    
-    // エディターの初期化
-    useEffect(() => {
-      if (!containerRef.current) return;
-      
-      const initMonaco = async () => {
-        try {
-          // Monaco Editorの動的インポート
-          const monaco = await import('monaco-editor');
-          
-          // ワーカーURLの設定
-          if (monaco.languages.typescript) {
-            monaco.languages.typescript.javascriptDefaults.setEagerModelSync(true);
-            monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
-              noSemanticValidation: true,
-              noSyntaxValidation: false
-            });
-            
-            // ライブラリ定義の追加
-            monaco.languages.typescript.javascriptDefaults.addExtraLib(`
-              // CAD標準ライブラリ関数
-              declare function Box(x: number, y: number, z: number, centered?: boolean): any;
-              declare function Sphere(radius: number): any;
-              declare function Cylinder(radius: number, height: number, centered?: boolean): any;
-              declare function Union(shapes: any[]): any;
-              declare function Difference(mainShape: any, subtractShapes: any[]): any;
-              declare function Translate(offset: [number, number, number], shapes: any[]): any[];
-              declare function Rotate(axis: [number, number, number], degrees: number, shapes: any[]): any[];
-              
-              // ワーカーGUI状態
-              declare var GUIState: Record<string, any>;
-            `, 'ts:cascade-studio-types');
-          }
 
-          // containerRef.currentが存在することを確認
-          if (containerRef.current) {
-            // エディターのインスタンス作成
-            editorRef.current = monaco.editor.create(containerRef.current, {
-              value: initialCode,
-              language,
-              theme,
-              automaticLayout: true,
-              minimap: { enabled: false },
-              lineNumbers: 'on',
-              roundedSelection: true,
-              scrollBeyondLastLine: false,
-              readOnly: false,
-              fontSize: 14,
-              wordWrap: 'on'
-            });
-
-            // コード変更イベントの設定
-            if (onCodeChange) {
-              editorRef.current.onDidChangeModelContent(() => {
-                if (editorRef.current) {
-                  onCodeChange(editorRef.current.getValue());
-                }
-              });
-            }
-
-            // キーバインディングの設定
-            editorRef.current.addCommand(
-              monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS,
-              () => {
-                if (editorRef.current && onEvaluate) {
-                  onEvaluate(editorRef.current.getValue());
-                }
-              }
-            );
-
-            // Ctrl+Enter でコード評価
-            editorRef.current.addCommand(
-              monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter,
-              () => {
-                if (editorRef.current && onEvaluate) {
-                  onEvaluate(editorRef.current.getValue());
-                }
-              }
-            );
-          }
-        } catch (error) {
-          console.error('Monaco Editor initialization failed:', error);
-        }
-      };
-
-      initMonaco();
-
-      // クリーンアップ
-      return () => {
-        if (editorRef.current) {
-          editorRef.current.dispose();
-          editorRef.current = null;
-        }
-      };
-    }, [initialCode, language, theme, onCodeChange, onEvaluate]);
-
-    // 外部からのアクセス用メソッド
     useImperativeHandle(ref, () => ({
-      getValue: () => {
-        return editorRef.current ? editorRef.current.getValue() : '';
-      },
-      setValue: (code: string) => {
-        if (editorRef.current) {
-          editorRef.current.setValue(code);
-        }
-      },
+      getValue: () => editorRef.current?.getValue() ?? '',
+      setValue: (code: string) => editorRef.current?.setValue(code),
       getEditor: () => editorRef.current,
       formatCode: () => {
         if (editorRef.current) {
@@ -149,16 +44,88 @@ export const MonacoCodeEditor = forwardRef<MonacoCodeEditorRef, MonacoCodeEditor
       }
     }));
 
+    const handleEditorDidMount = useCallback((editor: monacoEditor.IStandaloneCodeEditor, monaco: any) => {
+      editorRef.current = editor;
+
+      // Ctrl+Enter での評価実行
+      if (onEvaluate) {
+        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+          onEvaluate(editor.getValue());
+        });
+        
+        // F5キーでの評価実行（元のCascadeStudioと同様）
+        editor.addCommand(monaco.KeyCode.F5, () => {
+          onEvaluate(editor.getValue());
+        });
+      }
+
+      // TypeScript設定の最適化
+      monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
+        allowNonTsExtensions: true,
+        moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+        target: monaco.languages.typescript.ScriptTarget.Latest,
+        allowJs: true,
+        typeRoots: ['node_modules/@types']
+      });
+
+      monaco.languages.typescript.typescriptDefaults.setEagerModelSync(true);
+
+      console.log('✅ [MonacoCodeEditor] @monaco-editor/react initialized successfully');
+    }, [onEvaluate]);
+
+    const handleEditorChange = useCallback((value: string | undefined) => {
+      if (onCodeChange && value !== undefined) {
+        onCodeChange(value);
+      }
+    }, [onCodeChange]);
+
     return (
-      <div
-        ref={containerRef}
-        className={`monaco-editor-container ${className}`}
+      <div 
+        className={className}
         style={{ 
           width: '100%', 
-          height: '100%',
+          height: '100%', 
           ...style 
         }}
-      />
+      >
+        <MonacoEditor
+          height="100%"
+          language={language}
+          theme={theme}
+          value={initialCode}
+          onChange={handleEditorChange}
+          onMount={handleEditorDidMount}
+          options={{
+            automaticLayout: true,
+            minimap: { enabled: false },
+            fontSize: 14,
+            lineNumbers: 'on',
+            wordWrap: 'on',
+            scrollBeyondLastLine: false,
+            contextmenu: true,
+            quickSuggestions: true,
+            parameterHints: { enabled: true },
+            suggest: {
+              showMethods: true,
+              showFunctions: true,
+              showConstructors: true,
+              showFields: true,
+              showVariables: true,
+              showClasses: true,
+              showModules: true,
+              showProperties: true,
+              showKeywords: true,
+              showSnippets: true,
+            }
+          }}
+        />
+      </div>
     );
   }
-); 
+);
+
+MonacoCodeEditor.displayName = 'MonacoCodeEditor';
+
+// 名前付きエクスポートとデフォルトエクスポートの両方を提供
+export { MonacoCodeEditor };
+export default MonacoCodeEditor; 

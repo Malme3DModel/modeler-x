@@ -33,10 +33,9 @@ export function useOpenCascade(): UseOpenCascadeReturn {
 
             const cut = new ocInstance.BRepAlgoAPI_Cut_3(
               shape, 
-              sphere.Shape().Moved(loc, false), 
-              new ocInstance.Message_ProgressRange_1()
+              sphere.Shape().Moved(loc)
             );
-            cut.Build(new ocInstance.Message_ProgressRange_1());
+            cut.Build();
 
             return cut.Shape();
           };
@@ -64,11 +63,10 @@ export function useOpenCascade(): UseOpenCascadeReturn {
           // Combine the result
           const fuse = new ocInstance.BRepAlgoAPI_Fuse_3(
             cut4, 
-            cut4.Moved(makeRotation(Math.PI), false), 
-            new ocInstance.Message_ProgressRange_1()
+            cut4.Moved(makeRotation(Math.PI))
           );
-          fuse.Build(new ocInstance.Message_ProgressRange_1());
-          const result = fuse.Shape().Moved(makeRotation(-30 * Math.PI / 180), false);
+          fuse.Build();
+          const result = fuse.Shape().Moved(makeRotation(-30 * Math.PI / 180));
 
           setModelUrl(shapeToUrl(ocInstance, result));
           setIsLoading(false);

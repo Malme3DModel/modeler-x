@@ -11,7 +11,7 @@ export default function TweakpaneGUI({
   cadWorkerReady = false
 }: TweakpaneProps) {
   const paneRef = useRef<HTMLDivElement>(null);
-  const [pane, setPane] = useState<any>(null);
+  const paneInstanceRef = useRef<any>(null);
   const [guiState, setGuiState] = useState<GUIState>(() => {
     // URLから読み込んだ状態とマージした初期状態を使用
     const defaultState: GUIState = {
@@ -40,6 +40,7 @@ export default function TweakpaneGUI({
   // Tweakpane動的インポート
   useEffect(() => {
     if (!paneRef.current) return;
+    let isComponentMounted = true;
 
     const initializeTweakpane = async () => {
       try {
@@ -47,22 +48,32 @@ export default function TweakpaneGUI({
         const tweakpane = await import('tweakpane');
         const { Pane } = tweakpane;
         
+        // コンポーネントがアンマウントされていたら処理を中止
+        if (!isComponentMounted || !paneRef.current) return;
+        
         // 既存のパネルを破棄
-        if (pane) {
-          pane.dispose();
+        if (paneInstanceRef.current) {
+          try {
+            paneInstanceRef.current.dispose();
+          } catch (disposeError) {
+            console.warn('⚠️ [TweakpaneGUI] Error during pane disposal:', disposeError);
+          }
+          paneInstanceRef.current = null;
         }
 
         // 新しいパネル作成
         const newPane = new Pane({
           title: 'Cascade Control Panel',
-          container: paneRef.current!,
+          container: paneRef.current,
           expanded: true
         });
+
+        // 参照を保存
+        paneInstanceRef.current = newPane;
 
         // CascadeStudio基本GUI要素を追加
         addBasicGUIElements(newPane);
         
-        setPane(newPane);
         console.log('✅ [TweakpaneGUI] Tweakpane initialized successfully');
 
         // CascadeGUIHandlersの初期化
@@ -78,8 +89,10 @@ export default function TweakpaneGUI({
           console.log('✅ [TweakpaneGUI] CAD Worker ready, will evaluate code soon...');
           setTimeout(() => {
             // Evaluateボタンをクリックしてコードを実行
-            console.log('🔄 [TweakpaneGUI] Auto-triggering Evaluate');
-            onGUIUpdate?.(guiState);
+            if (isComponentMounted) {
+              console.log('🔄 [TweakpaneGUI] Auto-triggering Evaluate');
+              onGUIUpdate?.(guiState);
+            }
           }, 1000);
         }
 
@@ -92,11 +105,22 @@ export default function TweakpaneGUI({
 
     // クリーンアップ
     return () => {
+      isComponentMounted = false;
       if (guiHandlersRef.current) {
-        guiHandlersRef.current.unregisterGlobalHandlers();
+        try {
+          guiHandlersRef.current.unregisterGlobalHandlers();
+        } catch (error) {
+          console.warn('⚠️ [TweakpaneGUI] Error unregistering global handlers:', error);
+        }
       }
-      if (pane) {
-        pane.dispose();
+      
+      if (paneInstanceRef.current) {
+        try {
+          paneInstanceRef.current.dispose();
+          paneInstanceRef.current = null;
+        } catch (error) {
+          console.warn('⚠️ [TweakpaneGUI] Error disposing pane on cleanup:', error);
+        }
       }
     };
   }, [cadWorkerReady]);
@@ -118,6 +142,8 @@ export default function TweakpaneGUI({
 
   // 基本GUI要素の追加
   const addBasicGUIElements = useCallback((pane: any) => {
+    if (!pane) return;
+    
     try {
       // Evaluate ボタン
       pane.addButton({
@@ -235,7 +261,7 @@ export default function TweakpaneGUI({
       }}
     >
       <div ref={paneRef} />
-      {!pane && (
+      {!paneInstanceRef.current && (
         <div style={{ color: '#a0a0a0', fontSize: '12px', textAlign: 'center', padding: '12px' }}>
           Tweakpane初期化中...
         </div>

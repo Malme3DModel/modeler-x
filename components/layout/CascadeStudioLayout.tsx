@@ -10,11 +10,17 @@ import { URLStateManager } from '@/lib/layout/urlStateManager';
 import { GUIState } from '@/types/gui';
 import { useCADWorker } from '@/hooks/useCADWorker';
 import { CascadeConsole, CascadeConsoleRef } from '@/components/layout/CascadeConsole';
-import { MonacoCodeEditor, MonacoCodeEditorRef } from '@/components/cad/MonacoCodeEditor';
+import type { MonacoCodeEditorRef } from '@/components/cad/MonacoCodeEditor';
 
 // Golden Layout CSS
 import 'golden-layout/dist/css/goldenlayout-base.css';
 import 'golden-layout/dist/css/themes/goldenlayout-dark-theme.css';
+
+// MonacoCodeEditorを動的インポート
+const MonacoCodeEditor = dynamic(
+  () => import('@/components/cad/MonacoCodeEditor'),
+  { ssr: false }
+);
 
 // TweakpaneGUIを動的インポート
 const TweakpaneGUI = dynamic(() => import('@/components/gui/TweakpaneGUI'), {
@@ -341,24 +347,43 @@ export default function CascadeStudioLayout({
 
   // CascadeViewportコンポーネントの設定
   function createCascadeViewComponent(container: any) {
-    container.element.innerHTML = '<div class="cascade-view-container"></div>';
-    const viewContainer = container.element.querySelector('.cascade-view-container');
+    // コンテナのHTMLを初期化
+    container.element.innerHTML = '';
+    
+    // ビューポートコンテナを作成
+    const viewContainer = document.createElement('div');
     viewContainer.style.width = '100%';
     viewContainer.style.height = '100%';
-    viewContainer.style.backgroundColor = '#2d2d2d';
-
-    // React 18のcreateRootを使用してReactコンポーネントをマウント
+    viewContainer.style.position = 'relative'; // カメラコントロール配置のために追加
+    viewContainer.className = 'canvas-container'; // テスト用のクラス名を追加
+    viewContainer.setAttribute('data-testid', 'cascade-viewport-container'); // テスト用のID追加
+    container.element.appendChild(viewContainer);
+    
+    // React 18のcreateRootを使用
     const viewRoot = createRoot(viewContainer);
     
-    // CascadeViewportコンポーネントをレンダリング
-    const CascadeViewport = dynamic(() => import('@/components/threejs/CascadeViewport'), {
+    // ThreeJSViewportコンポーネントをレンダリング
+    const ThreeJSViewport = dynamic(() => import('@/components/threejs/ThreeJSViewport'), {
       ssr: false,
-      loading: () => <div className="w-full h-full flex items-center justify-center bg-gray-800">
-        <div className="loading loading-spinner loading-lg text-primary"></div>
-      </div>
+      loading: () => <div style={{ color: '#a0a0a0', fontSize: '12px', padding: '12px' }}>3Dビューポート初期化中...</div>
     });
     
-    viewRoot.render(<CascadeViewport shapes={shapes} />);
+    // メインビューポートをレンダリング
+    viewRoot.render(
+      <ThreeJSViewport 
+        cameraPosition={[50, 50, 50]} 
+        enableControls={true} 
+      />
+    );
+    
+    // クリーンアップ関数を設定
+    container.on('destroy', () => {
+      try {
+        viewRoot.unmount();
+      } catch (error) {
+        console.error('View unmount error:', error);
+      }
+    });
   }
 
   return (

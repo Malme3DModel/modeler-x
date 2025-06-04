@@ -22,6 +22,7 @@ interface UseCADWorkerReturn {
   combineAndRender: (options?: CombineAndRenderPayload) => Promise<void>;
   clearLogs: () => void;
   clearError: () => void;
+  sendToWorker: (message: { type: string; payload: any }) => Promise<any>;
 }
 
 /**
@@ -367,6 +368,38 @@ export function useCADWorker(): UseCADWorkerReturn {
     setError(null);
   }, []);
 
+  // ワーカーへのメッセージ送信
+  const sendToWorker = useCallback(async (message: { type: string; payload: any }) => {
+    if (!workerRef.current) {
+      console.error('CADワーカーが初期化されていません');
+      return { success: false, error: 'CADワーカーが初期化されていません' };
+    }
+    
+    return new Promise((resolve) => {
+      const messageId = Date.now().toString();
+      
+      // 応答待ちリスナーを設定
+      const handleMessage = (e: MessageEvent) => {
+        if (e.data.type === message.type) {
+          // nullチェック後に呼び出し
+          if (workerRef.current) {
+            workerRef.current.removeEventListener('message', handleMessage);
+          }
+          resolve(e.data.payload);
+        }
+      };
+      
+      workerRef.current.addEventListener('message', handleMessage);
+      
+      // メッセージ送信
+      workerRef.current.postMessage({
+        type: message.type,
+        payload: message.payload,
+        id: messageId
+      });
+    });
+  }, []);
+
   return {
     worker: workerRef.current,
     isWorkerReady,
@@ -378,6 +411,7 @@ export function useCADWorker(): UseCADWorkerReturn {
     executeCADCode,
     combineAndRender,
     clearLogs,
-    clearError
+    clearError,
+    sendToWorker
   };
 } 

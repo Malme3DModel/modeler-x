@@ -2,10 +2,12 @@
 
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, Plane } from '@react-three/drei';
-import { Suspense, useMemo, useEffect } from 'react';
+import { Suspense, useMemo, useEffect, useCallback } from 'react';
 import { useCADWorker } from '@/hooks/useCADWorker';
 import * as THREE from 'three';
 import type { CADShape } from '@/types/worker';
+import FileIOControls from './FileIOControls';
+import { CameraControls } from './CameraControls';
 
 // CAD形状を表示するコンポーネント
 function CADShape({ shape }: { shape: CADShape }) {
@@ -224,6 +226,18 @@ export default function CADViewport({
             <div>Triangles: {shapes[0].mesh.indices ? Math.floor(shapes[0].mesh.indices.length / 3) : 'N/A'}</div>
           </div>
         )}
+      </div>
+      
+      {/* サイドパネル */}
+      <div className="absolute top-2 right-2 w-64 space-y-2 z-10">
+        {/* ファイルI/Oコントロール */}
+        <FileIOControls cadWorkerState={cadWorkerState} />
+        
+        {/* カメラコントロール */}
+        <CameraControls 
+          boundingBox={null}
+          onFitToObject={() => console.log('フィットオブジェクト')}
+        />
       </div>
       
       {/* 3Dビューポート */}
