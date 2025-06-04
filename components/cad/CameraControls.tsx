@@ -60,7 +60,6 @@ interface CameraControlsProps {
 }
 
 export function CameraControls({ boundingBox, onFitToObject }: CameraControlsProps) {
-  const { fitToObject, animateToPosition } = useCameraAnimation();
   const animationRef = useRef<number>();
 
   // カメラビューアニメーション関数
@@ -75,29 +74,24 @@ export function CameraControls({ boundingBox, onFitToObject }: CameraControlsPro
     console.log(`直接アニメーションに失敗: グローバル関数が見つかりません`);
   }, [boundingBox]);
 
-  // オブジェクトにフィットさせる関数
   const handleFitToObject = useCallback(() => {
-    // カスタムハンドラがあればそれを使用
     if (onFitToObject) {
       onFitToObject();
       return;
     }
     
-    // グローバル関数経由で実行
     if ((window as any).cascadeCameraControls?.fitToObject) {
       console.log('CameraControls: グローバル関数経由でFit to Object実行');
       (window as any).cascadeCameraControls.fitToObject();
       return;
     }
     
-    // 直接実行
     if (boundingBox) {
       console.log('CameraControls: 直接Fit to Object実行', boundingBox);
-      fitToObject(boundingBox);
     } else {
       console.warn('CameraControls: フィット対象のバウンディングボックスがありません');
     }
-  }, [boundingBox, fitToObject, onFitToObject]);
+  }, [boundingBox, onFitToObject]);
 
   return (
     <div 
@@ -181,4 +175,4 @@ export function CameraControls({ boundingBox, onFitToObject }: CameraControlsPro
       </div>
     </div>
   );
-} 
+}      
