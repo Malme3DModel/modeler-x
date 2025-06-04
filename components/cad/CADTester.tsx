@@ -80,6 +80,23 @@ const rotated = Rotate([0, 0, 1], 45, translated);
     setCode(testCode);
   };
 
+  const handleTestAdvancedCAD = () => {
+    const testCode = `
+const circle = Cylinder(5, 1);
+const translated = Translate([0, 0, 10], [circle]);
+return translated[0];
+    `.trim();
+    setCode(testCode);
+  };
+
+  const handleTestRevolve = () => {
+    const testCode = `
+const profile = Box(2, 8, 1);
+const revolved = Revolve(profile, [0, 1, 0], 180);
+    `.trim();
+    setCode(testCode);
+  };
+
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="card bg-base-100 shadow-xl">
@@ -178,6 +195,22 @@ const rotated = Rotate([0, 0, 1], 45, translated);
             >
               変形テスト
             </button>
+            
+            <button 
+              className="btn btn-accent"
+              onClick={handleTestAdvancedCAD}
+              disabled={isWorking}
+            >
+              高度なCADテスト
+            </button>
+            
+            <button 
+              className="btn btn-accent"
+              onClick={handleTestRevolve}
+              disabled={isWorking}
+            >
+              回転体テスト
+            </button>
           </div>
 
           {/* 形状情報表示 */}
@@ -236,4 +269,4 @@ const rotated = Rotate([0, 0, 1], 45, translated);
       </div>
     </div>
   );
-} 
+}    

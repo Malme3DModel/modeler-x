@@ -646,6 +646,37 @@ messageHandlers["importFile"] = function(payload) {
 };
 
 // エクスポート関連のメッセージハンドラー
+messageHandlers["combineAndRenderShapes"] = function(payload) {
+  try {
+    console.log("🎨 Combining and rendering shapes...");
+    
+    if (sceneShapes.length === 0) {
+      console.log("⚠️ No shapes to render");
+      return { meshes: [], success: false };
+    }
+    
+    const meshes = [];
+    const maxDeviation = payload.maxDeviation || 0.1;
+    
+    for (let i = 0; i < sceneShapes.length; i++) {
+      try {
+        const mesh = ShapeToMesh(sceneShapes[i], maxDeviation);
+        if (mesh) {
+          meshes.push(mesh);
+        }
+      } catch (error) {
+        console.error(`❌ Failed to mesh shape ${i}:`, error);
+      }
+    }
+    
+    console.log(`✅ Successfully rendered ${meshes.length} shapes`);
+    return { meshes, success: true };
+  } catch (error) {
+    console.error("❌ combineAndRenderShapes failed:", error);
+    return { meshes: [], success: false, error: error.message };
+  }
+};
+
 messageHandlers["exportFile"] = function(payload) {
   try {
     console.log(`📤 ファイルエクスポート開始: ${payload.format}`);
@@ -985,6 +1016,258 @@ function Text3D(text, size, height, fontName = 'Arial') {
   }
 }
 
+
+function Extrude(shape, distance, direction) {
+  if (!direction) direction = [0, 0, 1];
+  if (!distance) distance = 10;
+  
+  console.log(`🔧 Extruding shape by distance ${distance} in direction [${direction.join(', ')}]`);
+  
+  try {
+    const extrudeVector = new oc.gp_Vec_4(
+      direction[0] * distance,
+      direction[1] * distance,
+      direction[2] * distance
+    );
+    
+    const extruded = new oc.BRepPrimAPI_MakePrism_1(shape, extrudeVector, false, true).Shape();
+    sceneShapes.push(extruded);
+    
+    console.log("✅ Extrude operation successful");
+    return extruded;
+  } catch (error) {
+    console.error("❌ Extrude operation failed:", error);
+    console.log("🔄 Falling back to translation method");
+    
+    const offset = [
+      direction[0] * distance,
+      direction[1] * distance,
+      direction[2] * distance
+    ];
+    
+    const extruded = Translate(offset, [shape])[0];
+    sceneShapes.push(extruded);
+    
+    console.log("✅ Extrude operation successful (using translation fallback)");
+    return extruded;
+  }
+}
+
+function Revolve(shape, axis, angle) {
+  if (!axis) axis = [0, 0, 1];
+  if (!angle) angle = 360;
+  
+  console.log(`🔄 Revolving shape around axis [${axis.join(', ')}] by ${angle} degrees`);
+  
+  try {
+    const radians = angle * Math.PI / 180;
+    
+    const origin = new oc.gp_Pnt_1();
+    origin.SetXYZ(new oc.gp_XYZ_2(0, 0, 0));
+    
+    const direction = new oc.gp_Dir_4(axis[0], axis[1], axis[2]);
+    const rotationAxis = new oc.gp_Ax1_2(origin, direction);
+    
+    let revolved;
+    if (angle >= 360) {
+      revolved = new oc.BRepPrimAPI_MakeRevol_1(shape, rotationAxis).Shape();
+    } else {
+      revolved = new oc.BRepPrimAPI_MakeRevol_2(shape, rotationAxis, radians).Shape();
+    }
+    
+    sceneShapes.push(revolved);
+    console.log("✅ Revolve operation successful");
+    return revolved;
+  } catch (error) {
+    console.error("❌ Revolve operation failed:", error);
+    console.log("🔄 Falling back to rotation method");
+    
+    try {
+      const fallbackRadians = angle * Math.PI / 180;
+      const tf = new oc.gp_Trsf_1();
+      
+      const fallbackOrigin = new oc.gp_Pnt_1();
+      fallbackOrigin.SetXYZ(new oc.gp_XYZ_2(0, 0, 0));
+      const fallbackDirection = new oc.gp_Dir_4(axis[0], axis[1], axis[2]);
+      const rotAxis = new oc.gp_Ax1_2(fallbackOrigin, fallbackDirection);
+      
+      tf.SetRotation_1(rotAxis, fallbackRadians);
+      
+      const transform = new oc.BRepBuilderAPI_Transform_2(shape, tf, false);
+      const rotated = transform.Shape();
+      
+      sceneShapes.push(rotated);
+      console.log("✅ Revolve operation successful (using rotation fallback)");
+      return rotated;
+    } catch (fallbackError) {
+      console.error("❌ Revolve fallback also failed:", fallbackError);
+      throw error;
+    }
+  }
+}
+
+function Loft(profiles) {
+  if (!profiles || !Array.isArray(profiles) || profiles.length < 2) {
+    throw new Error("Loft requires at least 2 profile shapes");
+  }
+  
+  console.log(`🏗️ Lofting ${profiles.length} profiles`);
+  
+  try {
+    const loftBuilder = new oc.BRepOffsetAPI_ThruSections_1(true, false, 1e-6);
+    
+    for (const profile of profiles) {
+      loftBuilder.AddWire(profile);
+    }
+    
+    loftBuilder.Build();
+    const lofted = loftBuilder.Shape();
+    
+    sceneShapes.push(lofted);
+    console.log("✅ Loft operation successful");
+    return lofted;
+  } catch (error) {
+    console.error("❌ Loft operation failed:", error);
+    throw error;
+  }
+}
+
+function FilletEdges(shape, radius, edges) {
+  if (!shape) throw new Error("Invalid shape for filleting");
+  if (!radius) radius = 1;
+  
+  console.log(`🔘 Applying fillet with radius ${radius}`);
+  
+  try {
+    const filletBuilder = new oc.BRepFilletAPI_MakeFillet_1(shape, oc.ChFi3d_FilletShape.ChFi3d_Rational);
+    
+    if (edges && edges.length > 0) {
+      for (const edge of edges) {
+        filletBuilder.Add_2(radius, edge);
+      }
+    } else {
+      const explorer = new oc.TopExp_Explorer_2(shape, oc.TopAbs_ShapeEnum.TopAbs_EDGE, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+      while (explorer.More()) {
+        const edge = oc.TopoDS.Edge_1(explorer.Current());
+        filletBuilder.Add_2(radius, edge);
+        explorer.Next();
+      }
+    }
+    
+    filletBuilder.Build();
+    const filleted = filletBuilder.Shape();
+    
+    sceneShapes.push(filleted);
+    console.log("✅ Fillet operation successful");
+    return filleted;
+  } catch (error) {
+    console.error("❌ Fillet operation failed:", error);
+    throw error;
+  }
+}
+
+function ChamferEdges(shape, distance, edges) {
+  if (!shape) throw new Error("Invalid shape for chamfering");
+  if (!distance) distance = 1;
+  
+  console.log(`🔲 Applying chamfer with distance ${distance}`);
+  
+  try {
+    const chamferBuilder = new oc.BRepFilletAPI_MakeChamfer_1(shape);
+    
+    if (edges && edges.length > 0) {
+      for (const edge of edges) {
+        const explorer = new oc.TopExp_Explorer_2(shape, oc.TopAbs_ShapeEnum.TopAbs_FACE, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+        if (explorer.More()) {
+          const face = oc.TopoDS.Face_1(explorer.Current());
+          chamferBuilder.Add_3(distance, edge, face);
+        }
+      }
+    } else {
+      const edgeExplorer = new oc.TopExp_Explorer_2(shape, oc.TopAbs_ShapeEnum.TopAbs_EDGE, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+      while (edgeExplorer.More()) {
+        const edge = oc.TopoDS.Edge_1(edgeExplorer.Current());
+        
+        const faceExplorer = new oc.TopExp_Explorer_2(shape, oc.TopAbs_ShapeEnum.TopAbs_FACE, oc.TopAbs_ShapeEnum.TopAbs_SHAPE);
+        if (faceExplorer.More()) {
+          const face = oc.TopoDS.Face_1(faceExplorer.Current());
+          chamferBuilder.Add_3(distance, edge, face);
+        }
+        
+        edgeExplorer.Next();
+      }
+    }
+    
+    chamferBuilder.Build();
+    const chamfered = chamferBuilder.Shape();
+    
+    sceneShapes.push(chamfered);
+    console.log("✅ Chamfer operation successful");
+    return chamfered;
+  } catch (error) {
+    console.error("❌ Chamfer operation failed:", error);
+    throw error;
+  }
+}
+
+function Mirror(plane, shapes) {
+  if (!plane || plane.length !== 4) {
+    plane = [1, 0, 0, 0];
+  }
+  if (!shapes) shapes = sceneShapes;
+  if (!Array.isArray(shapes)) shapes = [shapes];
+  
+  console.log(`🪞 Mirroring ${shapes.length} shapes across plane [${plane.join(', ')}]`);
+  
+  try {
+    const mirrored = [];
+    
+    for (const shape of shapes) {
+      const tf = new oc.gp_Trsf_1();
+      
+      const planePoint = new oc.gp_Pnt_1();
+      planePoint.SetXYZ(new oc.gp_XYZ_2(0, 0, -plane[3] / (plane[2] || 1)));
+      
+      const planeNormal = new oc.gp_Dir_4(plane[0], plane[1], plane[2]);
+      const mirrorPlane = new oc.gp_Pln_3(planePoint, planeNormal);
+      tf.SetMirror_2(mirrorPlane);
+      
+      const transform = new oc.BRepBuilderAPI_Transform_2(shape, tf, false);
+      const mirroredShape = transform.Shape();
+      
+      mirrored.push(mirroredShape);
+      sceneShapes.push(mirroredShape);
+    }
+    
+    console.log("✅ Mirror operation successful");
+    return mirrored.length === 1 ? mirrored[0] : mirrored;
+  } catch (error) {
+    console.error("❌ Mirror operation failed:", error);
+    throw error;
+  }
+}
+
+function Offset(shape, distance) {
+  if (!shape) throw new Error("Invalid shape for offset");
+  if (!distance) distance = 1;
+  
+  console.log(`📏 Offsetting shape by distance ${distance}`);
+  
+  try {
+    const offsetBuilder = new oc.BRepOffsetAPI_MakeOffsetShape_1();
+    offsetBuilder.PerformByJoin(shape, distance, 1e-6);
+    
+    const offset = offsetBuilder.Shape();
+    
+    sceneShapes.push(offset);
+    console.log("✅ Offset operation successful");
+    return offset;
+  } catch (error) {
+    console.error("❌ Offset operation failed:", error);
+    throw error;
+  }
+}
+
 // グローバル関数としてUIライブラリ関数を定義
 self.Slider = Slider;
 self.Checkbox = Checkbox;
@@ -992,3 +1275,11 @@ self.TextInput = TextInput;
 self.Dropdown = Dropdown;
 self.Button = Button;
 self.Text3D = Text3D;
+
+self.Extrude = Extrude;
+self.Revolve = Revolve;
+self.Loft = Loft;
+self.FilletEdges = FilletEdges;
+self.ChamferEdges = ChamferEdges;
+self.Mirror = Mirror;
+self.Offset = Offset;
