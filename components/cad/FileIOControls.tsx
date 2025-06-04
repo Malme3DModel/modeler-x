@@ -4,6 +4,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useCADWorker } from '../../hooks/useCADWorker';
 import { Download, Upload, FileSymlink, AlertTriangle, X, CheckCircle, FolderDown } from 'lucide-react';
 import BatchExportDialog from './BatchExportDialog';
+import ExportSettings, { ExportSettingsValues } from './ExportSettings';
 import FilePreview from './FilePreview';
 
 interface FileIOControlsProps {
@@ -23,8 +24,13 @@ export default function FileIOControls({ cadWorkerState }: FileIOControlsProps) 
   const [importError, setImportError] = useState<string | null>(null);
   const [fileInfo, setFileInfo] = useState<FileInfo | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [exportFormat, setExportFormat] = useState<'step' | 'stl'>('step');
-  const [exportQuality, setExportQuality] = useState(0.1);
+  const [exportFormat, setExportFormat] = useState<'step' | 'stl' | 'obj'>('step');
+  const [exportSettings, setExportSettings] = useState<ExportSettingsValues>({
+    format: 'step',
+    quality: 0.1,
+    binaryStl: true,
+    includeNormals: true,
+  });
   const [showBatchExportDialog, setShowBatchExportDialog] = useState(false);
   const [previewFile, setPreviewFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -131,7 +137,9 @@ export default function FileIOControls({ cadWorkerState }: FileIOControlsProps) 
         payload: {
           format: exportFormat,
           fileName: fileName,
-          quality: exportQuality
+          quality: exportSettings.quality,
+          binaryStl: exportSettings.binaryStl,
+          includeNormals: exportSettings.includeNormals
         }
       });
       
@@ -139,9 +147,9 @@ export default function FileIOControls({ cadWorkerState }: FileIOControlsProps) 
         console.log('✅ エクスポート成功:', result);
         
         // ファイルダウンロード処理
-        const blob = new Blob([new Uint8Array(result.data)], { 
-          type: exportFormat === 'step' ? 'application/step' : 'application/octet-stream' 
-        });
+        const mimeType = exportFormat === 'step' ? 'application/step' : 
+                        exportFormat === 'stl' ? 'model/stl' : 'model/obj';
+        const blob = new Blob([new Uint8Array(result.data)], { type: mimeType });
         
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -170,7 +178,7 @@ export default function FileIOControls({ cadWorkerState }: FileIOControlsProps) 
     } finally {
       setIsExporting(false);
     }
-  }, [cadWorkerState, exportFormat, exportQuality]);
+  }, [cadWorkerState, exportFormat, exportSettings]);
 
   // ドラッグ&ドロップ処理
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -320,34 +328,32 @@ export default function FileIOControls({ cadWorkerState }: FileIOControlsProps) 
             <select
               className="select select-bordered select-sm w-full"
               value={exportFormat}
-              onChange={(e) => setExportFormat(e.target.value as 'step' | 'stl')}
+              onChange={(e) => {
+                const format = e.target.value as 'step' | 'stl' | 'obj';
+                setExportFormat(format);
+                setExportSettings(prev => ({ ...prev, format }));
+              }}
               disabled={isExporting}
               title="エクスポート形式を選択"
               aria-label="エクスポート形式"
             >
               <option value="step">STEP (.step)</option>
               <option value="stl">STL (.stl)</option>
+              <option value="obj">OBJ (.obj)</option>
             </select>
           </div>
           
-          {exportFormat === 'stl' && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium">品質 (mm)</label>
-              <select
-                className="select select-bordered select-sm w-full"
-                value={exportQuality}
-                onChange={(e) => setExportQuality(parseFloat(e.target.value))}
-                disabled={isExporting}
-                title="エクスポート品質を選択"
-                aria-label="エクスポート品質"
-              >
-                <option value="0.01">高品質 (0.01mm)</option>
-                <option value="0.05">標準 (0.05mm)</option>
-                <option value="0.1">低品質 (0.1mm)</option>
-              </select>
-            </div>
-          )}
         </div>
+        
+        {(exportFormat === 'stl' || exportFormat === 'obj') && (
+          <div className="mt-4">
+            <ExportSettings
+              format={exportFormat}
+              initialValues={exportSettings}
+              onChange={setExportSettings}
+            />
+          </div>
+        )}
         
         <button
           className="btn btn-primary w-full mt-2"
@@ -400,4 +406,4 @@ export default function FileIOControls({ cadWorkerState }: FileIOControlsProps) 
       />
     </div>
   );
-} 
+}      
