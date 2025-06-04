@@ -519,6 +519,260 @@ messageHandlers["evaluateCode"] = function(payload) {
   }
 };
 
+// ファイル読み込み関連のメッセージハンドラー
+messageHandlers["importFile"] = function(payload) {
+  try {
+    console.log(`📂 ファイルインポート開始: ${payload.fileName}`);
+    
+    // ファイル形式を拡張子から判定
+    const extension = payload.fileType.toLowerCase();
+    const fileContent = new Uint8Array(payload.fileContent);
+    let shape = null;
+    
+    // ファイル形式に応じた読み込み処理
+    if (extension === 'step' || extension === 'stp') {
+      console.log(`🔄 STEPファイル読み込み中... (${fileContent.length} bytes)`);
+      
+      try {
+        // STEPファイル読み込み
+        const stepReader = new oc.STEPControl_Reader_1();
+        
+        // ファイルデータを一時ファイルに書き込み
+        const tempFileName = "temp.stp";
+        oc.FS.writeFile(tempFileName, fileContent);
+        
+        // ファイルを読み込み
+        if (stepReader.ReadFile(tempFileName) !== oc.IFSelect_ReturnStatus.IFSelect_RetDone) {
+          throw new Error("STEPファイルの読み込みに失敗しました");
+        }
+        
+        // ファイルからルートを読み込み
+        const rootCount = stepReader.NbRootsForTransfer();
+        console.log(`📊 STEPファイル内のルート数: ${rootCount}`);
+        
+        if (rootCount <= 0) {
+          throw new Error("STEPファイルに有効なデータがありません");
+        }
+        
+        // すべてのルートを変換
+        stepReader.TransferRoots();
+        
+        // 形状を取得
+        shape = stepReader.OneShape();
+        
+        // 一時ファイルを削除
+        oc.FS.unlink(tempFileName);
+        
+        console.log("✅ STEPファイル読み込み成功");
+      } catch (error) {
+        console.error(`❌ STEPファイル読み込みエラー: ${error.message}`);
+        throw error;
+      }
+    } else if (extension === 'iges' || extension === 'igs') {
+      console.log(`🔄 IGESファイル読み込み中... (${fileContent.length} bytes)`);
+      
+      try {
+        // IGESファイル読み込み
+        const igesReader = new oc.IGESControl_Reader_1();
+        
+        // ファイルデータを一時ファイルに書き込み
+        const tempFileName = "temp.igs";
+        oc.FS.writeFile(tempFileName, fileContent);
+        
+        // ファイルを読み込み
+        if (igesReader.ReadFile(tempFileName) !== oc.IFSelect_ReturnStatus.IFSelect_RetDone) {
+          throw new Error("IGESファイルの読み込みに失敗しました");
+        }
+        
+        // ファイルからルートを読み込み
+        const rootCount = igesReader.NbRootsForTransfer();
+        console.log(`📊 IGESファイル内のルート数: ${rootCount}`);
+        
+        if (rootCount <= 0) {
+          throw new Error("IGESファイルに有効なデータがありません");
+        }
+        
+        // すべてのルートを変換
+        igesReader.TransferRoots();
+        
+        // 形状を取得
+        shape = igesReader.OneShape();
+        
+        // 一時ファイルを削除
+        oc.FS.unlink(tempFileName);
+        
+        console.log("✅ IGESファイル読み込み成功");
+      } catch (error) {
+        console.error(`❌ IGESファイル読み込みエラー: ${error.message}`);
+        throw error;
+      }
+    } else {
+      throw new Error(`サポートされていないファイル形式です: ${extension}`);
+    }
+    
+    // 有効な形状があれば追加
+    if (shape) {
+      // 形状情報取得
+      const shapeInfo = {
+        type: 'imported',
+        source: payload.fileName,
+        format: extension.toUpperCase()
+      };
+      
+      // 形状をシーンに追加
+      sceneShapes.push(shape);
+      
+      // メッシュ変換
+      const mesh = ShapeToMesh(shape);
+      
+      console.log("🎯 インポート完了");
+      
+      return {
+        success: true,
+        shapeInfo: shapeInfo,
+        mesh: mesh
+      };
+    } else {
+      throw new Error("有効な形状が見つかりませんでした");
+    }
+  } catch (error) {
+    console.error(`❌ ファイルインポートエラー: ${error.message}`);
+    postMessage({ 
+      type: "error", 
+      payload: { message: `ファイルインポートエラー: ${error.message}` } 
+    });
+    return { success: false, error: error.message };
+  }
+};
+
+// エクスポート関連のメッセージハンドラー
+messageHandlers["exportFile"] = function(payload) {
+  try {
+    console.log(`📤 ファイルエクスポート開始: ${payload.format}`);
+    
+    // 形式を確認
+    const format = payload.format.toLowerCase();
+    let exportedData = null;
+    
+    // エクスポート対象がない場合
+    if (sceneShapes.length === 0) {
+      throw new Error("エクスポートする形状がありません");
+    }
+    
+    // 複数の形状を結合（必要に応じて）
+    let exportShape = sceneShapes[0];
+    if (sceneShapes.length > 1) {
+      // 複合形状を作成
+      const compound = new oc.TopoDS_Compound();
+      const builder = new oc.BRep_Builder();
+      builder.MakeCompound(compound);
+      
+      // すべての形状を追加
+      for (const shape of sceneShapes) {
+        builder.Add(compound, shape);
+      }
+      
+      exportShape = compound;
+    }
+    
+    // 形式に応じたエクスポート処理
+    if (format === 'step') {
+      console.log("🔄 STEPフォーマットでエクスポート中...");
+      
+      try {
+        // STEPエクスポート
+        const stepWriter = new oc.STEPControl_Writer_1();
+        
+        // 初期化と形状の転送
+        stepWriter.Transfer(exportShape, oc.STEPControl_StepModelType.STEPControl_AsIs);
+        
+        // 一時ファイル名
+        const tempFileName = "export.step";
+        
+        // ファイルに書き込み
+        if (stepWriter.Write(tempFileName) !== oc.IFSelect_ReturnStatus.IFSelect_RetDone) {
+          throw new Error("STEPファイルの書き込みに失敗しました");
+        }
+        
+        // ファイルからデータを読み込み
+        exportedData = oc.FS.readFile(tempFileName, { encoding: 'binary' });
+        
+        // 一時ファイルを削除
+        oc.FS.unlink(tempFileName);
+        
+        console.log("✅ STEPエクスポート成功");
+      } catch (error) {
+        console.error(`❌ STEPエクスポートエラー: ${error.message}`);
+        throw error;
+      }
+    } else if (format === 'stl') {
+      console.log("🔄 STLフォーマットでエクスポート中...");
+      try {
+        const stlWriter = new oc.StlAPI_Writer();
+        // 品質設定（分割精度）
+        const deflection = typeof payload.quality === 'number' ? payload.quality : 0.1;
+        // バイナリ/アスキー切り替え
+        stlWriter.SetASCIIMode(payload.binaryStl === false); // false:バイナリ, true:アスキー
+        // メッシュ分割精度をShapeToMesh等で利用する場合はここで適用（現状はSTL出力APIに直接渡せないため、将来的に拡張）
+        // 一時ファイル名
+        const tempFileName = "export.stl";
+        // ファイルに書き込み
+        if (!stlWriter.Write(exportShape, tempFileName)) {
+          throw new Error("STLファイルの書き込みに失敗しました");
+        }
+        exportedData = oc.FS.readFile(tempFileName, { encoding: 'binary' });
+        oc.FS.unlink(tempFileName);
+        console.log("✅ STLエクスポート成功");
+      } catch (error) {
+        console.error(`❌ STLエクスポートエラー: ${error.message}`);
+        throw error;
+      }
+    } else if (format === 'obj') {
+      console.log("🔄 OBJフォーマットでエクスポート中...");
+      try {
+        // TODO: OBJエクスポート実装例（OpenCascade標準APIにOBJ出力がない場合は独自実装が必要）
+        // ここではダミーでSTLと同様の処理を行う（実際はOBJフォーマットで出力する必要あり）
+        // 品質設定や法線出力オプションもpayloadから取得
+        const deflection = typeof payload.quality === 'number' ? payload.quality : 0.1;
+        const includeNormals = payload.includeNormals !== false; // デフォルトtrue
+        // 一時ファイル名
+        const tempFileName = "export.obj";
+        // TODO: OBJファイル書き込み処理を実装
+        // ここではエラーを投げて未実装を明示
+        throw new Error("OBJエクスポートは未実装です（OpenCascade標準APIにOBJ出力なし）");
+        // exportedData = oc.FS.readFile(tempFileName, { encoding: 'binary' });
+        // oc.FS.unlink(tempFileName);
+        // console.log("✅ OBJエクスポート成功");
+      } catch (error) {
+        console.error(`❌ OBJエクスポートエラー: ${error.message}`);
+        throw error;
+      }
+    } else {
+      throw new Error(`サポートされていないエクスポート形式です: ${format}`);
+    }
+    
+    if (exportedData) {
+      console.log(`📊 エクスポートデータサイズ: ${exportedData.length} bytes`);
+      
+      return {
+        success: true,
+        format: format,
+        fileName: payload.fileName || `export.${format}`,
+        data: Array.from(new Uint8Array(exportedData))
+      };
+    } else {
+      throw new Error("エクスポートデータの生成に失敗しました");
+    }
+  } catch (error) {
+    console.error(`❌ ファイルエクスポートエラー: ${error.message}`);
+    postMessage({ 
+      type: "error", 
+      payload: { message: `ファイルエクスポートエラー: ${error.message}` } 
+    });
+    return { success: false, error: error.message };
+  }
+};
+
 // グローバル関数として標準ライブラリ関数を定義
 self.Box = Box;
 self.Sphere = Sphere;

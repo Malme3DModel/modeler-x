@@ -73,8 +73,9 @@
 | STEPインポート | STEP読み込み | STEP読み込み | 🔄 | `public/workers/cadWorker.js` | エラーハンドリング要改善 |
 | STEPエクスポート | STEP出力 | STEP出力 | 🔄 | `public/workers/cadWorker.js` | 品質確認要 |
 | IGESサポート | IGES対応 | IGES対応 | 🔄 | 要詳細確認 | フェーズ4で検証 |
-| STLエクスポート | STL出力 | STL出力 | 🔄 | `public/workers/cadWorker.js` | 品質向上要 |
-| OBJエクスポート | OBJ出力 | OBJ出力 | 🔄 | `public/workers/cadWorker.js` | 品質向上要 |
+| STLエクスポート | STL出力 | STL出力 | 🔄 | `public/workers/cadWorker.js` | 品質・バイナリ/アスキー設定UIは部分実装、今後UI/UX統合予定 |
+| OBJエクスポート | OBJ出力 | OBJ出力 | 🔄 | `public/workers/cadWorker.js` | 本体未実装・UI/UXも今後拡張予定 |
+| **バッチエクスポート** | **❌** | **複数形式一括出力** | **✅** | **`hooks/useBatchExport.ts`** | **2024年12月実装完了** |
 
 ---
 
@@ -191,10 +192,10 @@
 | 開発・保守性 | 7 | 1 | 0 | 8 | **88%** |
 
 ### 全体実装状況
-- **完全実装**: 46機能 (80%)
+- **完全実装**: 47機能 (81%)
 - **部分実装**: 8機能 (13%)
-- **未実装**: 5機能 (7%)
-- **新機能**: 9機能（元にない改善）
+- **未実装**: 4機能 (6%)
+- **新機能**: 10機能（元にない改善）
 
 ---
 

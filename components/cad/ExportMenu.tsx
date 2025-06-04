@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useCADWorker } from '@/hooks/useCADWorker';
+import ExportSettings, { ExportSettingsValues } from './ExportSettings';
 
 type ExportFormat = 'step' | 'stl' | 'obj';
 
@@ -23,6 +24,12 @@ export default function ExportMenu({
   const [filename, setFilename] = useState('model');
   const [isExporting, setIsExporting] = useState(false);
   const { worker, isWorkerReady } = useCADWorker();
+  const [exportSettings, setExportSettings] = useState<ExportSettingsValues>({
+    format: exportFormat,
+    quality: 0.1,
+    binaryStl: true,
+    includeNormals: true,
+  });
 
   // STEPファイルとしてエクスポート
   const exportSTEP = async () => {
@@ -70,33 +77,36 @@ export default function ExportMenu({
       onExportError?.('CADワーカーが初期化されていません');
       return;
     }
-    
     setIsExporting(true);
-    
     try {
-      // ワーカーにSTLエクスポートを要求
       return new Promise<void>((resolve, reject) => {
-        // メッセージハンドラーを設定
         const messageHandler = (e: MessageEvent) => {
-          if (e.data.type === 'saveShapeSTL') {
+          if (e.data.type === 'exportFile' && e.data.payload?.format === 'stl') {
             worker.removeEventListener('message', messageHandler);
-            
-            if (e.data.payload) {
-              // STLデータを受け取ったらファイルとしてダウンロード
-              downloadFile(e.data.payload, `${filename}.stl`, 'model/stl');
+            if (e.data.payload.success) {
+              // バイナリデータをBlobに変換してダウンロード
+              const uint8Array = new Uint8Array(e.data.payload.data);
+              const blob = new Blob([uint8Array], { type: 'model/stl' });
+              downloadFile(blob, `${filename}.stl`, 'model/stl');
               onExportSuccess?.('stl', `${filename}.stl`);
               resolve();
             } else {
-              onExportError?.('STLデータの生成に失敗しました');
-              reject(new Error('STLデータの生成に失敗しました'));
+              onExportError?.(e.data.payload.error || 'STLデータの生成に失敗しました');
+              reject(new Error(e.data.payload.error || 'STLデータの生成に失敗しました'));
             }
             setIsExporting(false);
           }
         };
-        
-        // ハンドラーを登録してメッセージを送信
         worker.addEventListener('message', messageHandler);
-        worker.postMessage({ type: 'saveShapeSTL' });
+        worker.postMessage({
+          type: 'exportFile',
+          payload: {
+            format: 'stl',
+            fileName: `${filename}.stl`,
+            quality: exportSettings.quality,
+            binaryStl: exportSettings.binaryStl,
+          },
+        });
       });
     } catch (error) {
       setIsExporting(false);
@@ -110,33 +120,35 @@ export default function ExportMenu({
       onExportError?.('CADワーカーが初期化されていません');
       return;
     }
-    
     setIsExporting(true);
-    
     try {
-      // ワーカーにOBJエクスポートを要求
       return new Promise<void>((resolve, reject) => {
-        // メッセージハンドラーを設定
         const messageHandler = (e: MessageEvent) => {
-          if (e.data.type === 'saveShapeOBJ') {
+          if (e.data.type === 'exportFile' && e.data.payload?.format === 'obj') {
             worker.removeEventListener('message', messageHandler);
-            
-            if (e.data.payload) {
-              // OBJデータを受け取ったらファイルとしてダウンロード
-              downloadFile(e.data.payload, `${filename}.obj`, 'model/obj');
+            if (e.data.payload.success) {
+              const uint8Array = new Uint8Array(e.data.payload.data);
+              const blob = new Blob([uint8Array], { type: 'model/obj' });
+              downloadFile(blob, `${filename}.obj`, 'model/obj');
               onExportSuccess?.('obj', `${filename}.obj`);
               resolve();
             } else {
-              onExportError?.('OBJデータの生成に失敗しました');
-              reject(new Error('OBJデータの生成に失敗しました'));
+              onExportError?.(e.data.payload.error || 'OBJデータの生成に失敗しました');
+              reject(new Error(e.data.payload.error || 'OBJデータの生成に失敗しました'));
             }
             setIsExporting(false);
           }
         };
-        
-        // ハンドラーを登録してメッセージを送信
         worker.addEventListener('message', messageHandler);
-        worker.postMessage({ type: 'saveShapeOBJ' });
+        worker.postMessage({
+          type: 'exportFile',
+          payload: {
+            format: 'obj',
+            fileName: `${filename}.obj`,
+            quality: exportSettings.quality,
+            includeNormals: exportSettings.includeNormals,
+          },
+        });
       });
     } catch (error) {
       setIsExporting(false);
@@ -145,10 +157,9 @@ export default function ExportMenu({
   };
 
   // ファイルをダウンロードする関数
-  const downloadFile = (content: string, filename: string, mime: string) => {
-    const blob = new Blob([content], { type: mime });
+  const downloadFile = (content: Blob, filename: string, mime: string) => {
     const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
+    link.href = URL.createObjectURL(content);
     link.download = filename;
     link.click();
     URL.revokeObjectURL(link.href);
@@ -169,6 +180,12 @@ export default function ExportMenu({
     }
   };
 
+  // フォーマット変更時に設定も同期
+  const handleFormatChange = (format: ExportFormat) => {
+    setExportFormat(format);
+    setExportSettings((prev) => ({ ...prev, format }));
+  };
+
   return (
     <div className="bg-gray-800 p-4 rounded-lg shadow-lg min-w-[300px]">
       <h3 className="text-lg font-semibold mb-4 text-white">エクスポート設定</h3>
@@ -181,13 +198,23 @@ export default function ExportMenu({
           id="export-format"
           className="w-full bg-gray-700 text-white rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={exportFormat}
-          onChange={(e) => setExportFormat(e.target.value as ExportFormat)}
+          onChange={(e) => handleFormatChange(e.target.value as ExportFormat)}
         >
           <option value="step">STEP (.step)</option>
           <option value="stl">STL (.stl)</option>
           <option value="obj">OBJ (.obj)</option>
         </select>
       </div>
+      
+      {(exportFormat === 'stl' || exportFormat === 'obj') && (
+        <div className="mb-4">
+          <ExportSettings
+            format={exportFormat}
+            initialValues={exportSettings}
+            onChange={setExportSettings}
+          />
+        </div>
+      )}
       
       <div className="mb-4">
         <label htmlFor="export-filename" className="block text-sm font-medium text-gray-300 mb-1">

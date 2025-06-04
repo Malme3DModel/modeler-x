@@ -15,6 +15,7 @@
     "test:debug": "playwright test --debug"
   },
   "dependencies": {
+    "@heroicons/react": "^2.2.0",
     "@monaco-editor/react": "^4.7.0",
     "@react-three/drei": "^9.92.7",
     "@react-three/fiber": "^8.15.12",
