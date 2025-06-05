@@ -1,4 +1,6 @@
 /** @type {import('next').NextConfig} */
+const isProd = process.env.NODE_ENV === 'production';
+
 const nextConfig = {
   reactStrictMode: true,
   output: 'export',
@@ -68,7 +70,9 @@ const nextConfig = {
   devIndicators: {
     buildActivity: false,
   },
-  generateBuildId: () => 'build'
+  generateBuildId: () => 'build',
+  basePath: isProd ? '/modeler-x' : '',
+  assetPrefix: isProd ? '/modeler-x/' : '',
 };
 
 export default nextConfig;
