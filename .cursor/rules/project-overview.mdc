@@ -1,0 +1,8 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+このプロジェクトは、[Cascade Studio](mdc:docs/v0)をNext.js 14、TypeScript、React 18に移植した現代的なWebベースCADアプリケーションです。
+
+`README.md`を確認して、[Cascade Studio](docs/v0)とロジックが変わらないように作業してください。

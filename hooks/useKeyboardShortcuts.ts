@@ -66,18 +66,29 @@ export function useKeyboardShortcuts({
   // キーボードイベントハンドラ
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // エディタ内でのキー操作は無視（エディタ自身のショートカットを優先）
+    // ただし、F5キーについてはMonacoCodeEditorのグローバルハンドラーに任せる
     if (e.target instanceof Element && (
       e.target.closest('.monaco-editor') ||
       e.target.tagName === 'INPUT' ||
       e.target.tagName === 'TEXTAREA'
     )) {
-      return;
+      // F5キー以外はエディタ内では処理しない
+      if (e.key !== 'F5' && e.keyCode !== 116) {
+        return;
+      }
     }
 
     // F5: コード実行
-    if (e.key === 'F5') {
-      e.preventDefault();
-      defaultEvaluateCode();
+    // MonacoCodeEditorがマウントされている場合は、そちらのグローバルハンドラーに任せる
+    // エディタがない場合のみここで処理
+    if (e.key === 'F5' || e.keyCode === 116) {
+      // MonacoCodeEditorのグローバルハンドラーが存在するかチェック
+      const hasMonacoEditor = document.querySelector('.monaco-editor') !== null;
+      if (!hasMonacoEditor) {
+        e.preventDefault();
+        e.stopPropagation();
+        defaultEvaluateCode();
+      }
       return;
     }
 
@@ -146,15 +157,32 @@ export function useKeyboardShortcuts({
 export function useComprehensiveKeyboardShortcuts() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // エディタ内でのキー操作は無視（エディタ自身のショートカットを優先）
+      // ただし、F5キーについてはMonacoCodeEditorのグローバルハンドラーに任せる
       if (event.target instanceof Element && (
         event.target.closest('.monaco-editor') ||
         event.target.tagName === 'INPUT' ||
         event.target.tagName === 'TEXTAREA'
       )) {
-        return;
+        // F5キー以外はエディタ内では処理しない
+        if (event.key !== 'F5' && event.keyCode !== 116) {
+          return;
+        }
       }
 
       const key = getShortcutKey(event);
+      
+      // F5キーの特別処理
+      if (event.key === 'F5' || event.keyCode === 116) {
+        // MonacoCodeEditorのグローバルハンドラーが存在するかチェック
+        const hasMonacoEditor = document.querySelector('.monaco-editor') !== null;
+        if (!hasMonacoEditor) {
+          event.preventDefault();
+          event.stopPropagation();
+          document.dispatchEvent(new CustomEvent('project-evaluate'));
+        }
+        return;
+      }
       
       switch (key) {
         case 'Ctrl+N':

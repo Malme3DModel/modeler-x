@@ -54,10 +54,31 @@ const MonacoCodeEditor = forwardRef<MonacoCodeEditorRef, MonacoCodeEditorProps>(
         });
         
         // F5キーでの評価実行（元のCascadeStudioと同様）
+        // ブラウザのデフォルト動作（ページリロード）を確実に阻止
         editor.addCommand(monaco.KeyCode.F5, () => {
           onEvaluate(editor.getValue());
         });
       }
+
+      // グローバルなF5キーハンドラーを追加（エディタ内外問わず統一的に処理）
+      const handleGlobalF5 = (e: KeyboardEvent) => {
+        if (e.key === 'F5' || e.keyCode === 116) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (onEvaluate) {
+            onEvaluate(editor.getValue());
+          }
+          return false;
+        }
+      };
+
+      // エディタがマウントされた時にグローバルハンドラーを追加
+      document.addEventListener('keydown', handleGlobalF5, true); // useCapture: true で優先的にキャプチャ
+
+      // エディタが破棄される時にハンドラーを削除
+      editor.onDidDispose(() => {
+        document.removeEventListener('keydown', handleGlobalF5, true);
+      });
 
       // TypeScript設定の最適化
       monaco.languages.typescript.typescriptDefaults.setCompilerOptions({

@@ -19,12 +19,12 @@ import 'golden-layout/dist/css/themes/goldenlayout-dark-theme.css';
 
 // MonacoCodeEditorを動的インポート
 const MonacoCodeEditor = dynamic(
-  () => import('@/components/cad/MonacoCodeEditor'),
+  () => import('@/components/cad/MonacoCodeEditor').then(mod => ({ default: mod.default })),
   { ssr: false }
 );
 
 // TweakpaneGUIを動的インポート
-const TweakpaneGUI = dynamic(() => import('@/components/gui/TweakpaneGUI'), {
+const TweakpaneGUI = dynamic(() => import('@/components/gui/TweakpaneGUI').then(mod => ({ default: mod.default })), {
   ssr: false,
   loading: () => <div style={{ color: '#a0a0a0', fontSize: '12px', padding: '12px' }}>Tweakpane初期化中...</div>
 });
@@ -371,7 +371,7 @@ function CascadeStudioLayoutInner({
     const viewRoot = createRoot(viewContainer);
     
     // ThreeJSViewportコンポーネントをレンダリング
-    const ThreeJSViewport = dynamic(() => import('@/components/threejs/ThreeJSViewport'), {
+    const ThreeJSViewport = dynamic(() => import('@/components/threejs/ThreeJSViewport').then(mod => ({ default: mod.default })), {
       ssr: false,
       loading: () => <div style={{ color: '#a0a0a0', fontSize: '12px', padding: '12px' }}>3Dビューポート初期化中...</div>
     });
