@@ -78,11 +78,15 @@ async function initializeOpenCascade() {
   console.log("🚀 Starting OpenCascade initialization...");
   
   try {
+    // GitHub Pages用のbasePath対応
+    const basePath = self.location.pathname.includes('/modeler-x') ? '/modeler-x' : '';
+    const opencascadeUrl = `${basePath}/opencascade/opencascade.wasm.js`;
+    
     console.log("📁 Loading OpenCascade v1.1.1 from local files...");
-    console.log("📡 URL: /opencascade/opencascade.wasm.js");
+    console.log(`📡 URL: ${opencascadeUrl}`);
     
     console.log("📦 Fetching OpenCascade.js file...");
-    const response = await fetch('/opencascade/opencascade.wasm.js');
+    const response = await fetch(opencascadeUrl);
     
     if (!response.ok) {
       throw new Error(`Failed to fetch OpenCascade.js: ${response.status} ${response.statusText}`);
@@ -109,8 +113,9 @@ async function initializeOpenCascade() {
       locateFile(path) {
         console.log(`🔍 Locating file: ${path}`);
         if (path.endsWith('.wasm')) {
-          console.log("🎯 WASM file requested, returning: /opencascade/opencascade.wasm.wasm");
-          return '/opencascade/opencascade.wasm.wasm';
+          const wasmUrl = `${basePath}/opencascade/opencascade.wasm.wasm`;
+          console.log(`🎯 WASM file requested, returning: ${wasmUrl}`);
+          return wasmUrl;
         }
         return path;
       }
