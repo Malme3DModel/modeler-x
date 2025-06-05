@@ -72,8 +72,8 @@ const nextConfig = {
   },
   generateBuildId: () => 'build',
   // GitHub Pages用の設定
-  basePath: '',
-  assetPrefix: '',
+  basePath: process.env.NODE_ENV === 'production' ? '/modeler-x' : '',
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/modeler-x' : '',
 };
 
 export default nextConfig;
