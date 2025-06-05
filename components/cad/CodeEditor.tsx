@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import { useCADWorker } from '../../hooks/useCADWorker';
+import { getPublicPath } from '@/lib/utils/paths';
 
 interface CodeEditorProps {
   cadWorkerState: ReturnType<typeof useCADWorker>;
@@ -36,7 +37,7 @@ export default function CodeEditor({ cadWorkerState }: CodeEditorProps) {
     const monaco = (window as any).monaco;
     if (monaco) {
       // 詳細なCAD関数の型定義を追加
-      fetch('/types/cad-library.d.ts')
+      fetch(getPublicPath('/types/cad-library.d.ts'))
         .then(response => response.text())
         .then(typeDefinitions => {
           monaco.languages.typescript.typescriptDefaults.addExtraLib(

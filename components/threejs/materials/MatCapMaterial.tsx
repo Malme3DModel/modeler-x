@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import * as THREE from 'three';
 import { useLoader } from '@react-three/fiber';
+import { getPublicPath } from '@/lib/utils/paths';
 
 interface MatCapMaterialProps {
   color?: string;
@@ -15,7 +16,7 @@ export function useMatCapMaterial({
 }: MatCapMaterialProps = {}) {
   const matcapTexture = useLoader(
     THREE.TextureLoader, 
-    '/textures/dullFrontLitMetal.png'
+    getPublicPath('/textures/dullFrontLitMetal.png')
   );
   
   return useMemo(() => {

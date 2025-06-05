@@ -1,35 +1,30 @@
 /**
- * GitHub Pages用のbasePath管理ヘルパー
+ * Next.jsのbasePathを考慮した公開ファイルのパスを取得
+ * @param path - publicフォルダからの相対パス（先頭の/は含める）
+ * @returns 完全なパス
  */
-
-// 本番環境でのbasePath
-export const BASE_PATH = process.env.NODE_ENV === 'production' ? '/modeler-x' : '';
-
-/**
- * パスにbasePathを追加
- */
-export function withBasePath(path: string): string {
-  // すでにbasePathが付いている場合は重複を避ける
-  if (BASE_PATH && path.startsWith(BASE_PATH)) {
-    return path;
-  }
+export function getPublicPath(path: string): string {
+  // 開発環境ではbasePathなし、本番環境では/modeler-xを追加
+  const basePath = process.env.NODE_ENV === 'production' ? '/modeler-x' : '';
   
-  // パスが / で始まっていない場合は追加
+  // pathが/で始まっていない場合は追加
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   
-  return `${BASE_PATH}${normalizedPath}`;
+  return `${basePath}${normalizedPath}`;
 }
 
 /**
- * public配下のアセットパスを取得
+ * クライアントサイドでbasePathを取得
  */
-export function getAssetPath(path: string): string {
-  return withBasePath(path);
-}
-
-/**
- * Web Workerのパスを取得
- */
-export function getWorkerPath(path: string): string {
-  return withBasePath(path);
+export function getBasePath(): string {
+  // クライアントサイドでは、実際のURLから推測
+  if (typeof window !== 'undefined') {
+    const pathname = window.location.pathname;
+    if (pathname.startsWith('/modeler-x')) {
+      return '/modeler-x';
+    }
+  }
+  
+  // サーバーサイドまたはデフォルト
+  return process.env.NODE_ENV === 'production' ? '/modeler-x' : '';
 } 
