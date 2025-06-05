@@ -1,24 +1,5 @@
 // Next.js用CADワーカー - CascadeStudioMainWorkerを参考に実装
 
-// グローバル設定を読み込み（basePathを考慮）
-const currentPath = self.location.pathname;
-const basePath = currentPath.includes('/modeler-x') ? '/modeler-x' : '';
-try {
-  importScripts(`${basePath}/config.js`);
-} catch (e) {
-  // フォールバック: 直接設定を定義
-  const isGitHubPages = self.location.hostname.includes('github.io');
-  const BASE_PATH = isGitHubPages ? '/modeler-x' : '';
-  self.PUBLIC_ASSET_CONFIG = {
-    BASE_PATH,
-    getPublicAssetPath: (path) => {
-      const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-      return `${BASE_PATH}${normalizedPath}`;
-    }
-  };
-  console.log(`🔧 Fallback config loaded - BASE_PATH: ${BASE_PATH}`);
-}
-
 // 🔥 WebWorker起動確認 - 最初に実行される
 console.log("🎬 Worker script loaded, sending alive signal...");
 postMessage({ type: "log", payload: "[Worker] 🎬 WebWorker script loaded successfully!" });
@@ -93,19 +74,33 @@ function createDirection(x = 0, y = 0, z = 1) {
 let ocInitialized = false;
 var messageHandlers = {};
 
+// BasePathの取得関数
+function getBasePath() {
+  // Service Worker内ではlocationを使用
+  const pathname = self.location.pathname;
+  if (pathname.includes('/modeler-x/')) {
+    return '/modeler-x';
+  }
+  return '';
+}
+
+// 公開ファイルパスの取得関数
+function getPublicPath(path) {
+  const basePath = getBasePath();
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${basePath}${normalizedPath}`;
+}
+
 async function initializeOpenCascade() {
   console.log("🚀 Starting OpenCascade initialization...");
   
   try {
-    // グローバル設定からパスを取得
-    const { getPublicAssetPath } = self.PUBLIC_ASSET_CONFIG;
-    const opencascadeUrl = getPublicAssetPath('/opencascade/opencascade.wasm.js');
-    
     console.log("📁 Loading OpenCascade v1.1.1 from local files...");
-    console.log(`📡 URL: ${opencascadeUrl}`);
+    const jsUrl = getPublicPath('/opencascade/opencascade.wasm.js');
+    console.log("📡 URL:", jsUrl);
     
     console.log("📦 Fetching OpenCascade.js file...");
-    const response = await fetch(opencascadeUrl);
+    const response = await fetch(jsUrl);
     
     if (!response.ok) {
       throw new Error(`Failed to fetch OpenCascade.js: ${response.status} ${response.statusText}`);
@@ -132,8 +127,8 @@ async function initializeOpenCascade() {
       locateFile(path) {
         console.log(`🔍 Locating file: ${path}`);
         if (path.endsWith('.wasm')) {
-          const wasmUrl = getPublicAssetPath('/opencascade/opencascade.wasm.wasm');
-          console.log(`🎯 WASM file requested, returning: ${wasmUrl}`);
+          const wasmUrl = getPublicPath('/opencascade/opencascade.wasm.wasm');
+          console.log("🎯 WASM file requested, returning:", wasmUrl);
           return wasmUrl;
         }
         return path;
