@@ -1,17 +1,17 @@
 {
   "name": "Modeler-X CAD Studio",
   "short_name": "Modeler-X",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "description": "A fully integrated Scripted CAD Kernel for the browser built with Next.js and OpenCascade.js",
   "icons": [
     {
-      "src": "/icon-192x192.svg",
+      "src": "./icon-192x192.svg",
       "sizes": "192x192",
       "type": "image/svg+xml"
     },
     {
-      "src": "/icon-512x512.svg",
+      "src": "./icon-512x512.svg",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
