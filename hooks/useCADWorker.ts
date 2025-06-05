@@ -142,7 +142,9 @@ export function useCADWorker(): UseCADWorkerReturn {
         throw new Error('WebWorker is not supported in this browser');
       }
 
-      const basePath = process.env.NODE_ENV === 'production' ? '/modeler-x' : '';
+      // GitHub Pages用のbasePath対応
+      const isGitHubPages = typeof window !== 'undefined' && window.location.hostname.includes('github.io');
+      const basePath = isGitHubPages ? '/modeler-x' : '';
       const workerPath = `${basePath}/workers/cadWorker.js`;
       console.log(`🔧 [useCADWorker] Attempting to create Worker('${workerPath}')...`);
       worker = new Worker(workerPath);

@@ -1,5 +1,24 @@
 // Next.js用CADワーカー - CascadeStudioMainWorkerを参考に実装
 
+// グローバル設定を読み込み（basePathを考慮）
+const currentPath = self.location.pathname;
+const basePath = currentPath.includes('/modeler-x') ? '/modeler-x' : '';
+try {
+  importScripts(`${basePath}/config.js`);
+} catch (e) {
+  // フォールバック: 直接設定を定義
+  const isGitHubPages = self.location.hostname.includes('github.io');
+  const BASE_PATH = isGitHubPages ? '/modeler-x' : '';
+  self.PUBLIC_ASSET_CONFIG = {
+    BASE_PATH,
+    getPublicAssetPath: (path) => {
+      const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+      return `${BASE_PATH}${normalizedPath}`;
+    }
+  };
+  console.log(`🔧 Fallback config loaded - BASE_PATH: ${BASE_PATH}`);
+}
+
 // 🔥 WebWorker起動確認 - 最初に実行される
 console.log("🎬 Worker script loaded, sending alive signal...");
 postMessage({ type: "log", payload: "[Worker] 🎬 WebWorker script loaded successfully!" });
@@ -78,9 +97,9 @@ async function initializeOpenCascade() {
   console.log("🚀 Starting OpenCascade initialization...");
   
   try {
-    // GitHub Pages用のbasePath対応
-    const basePath = self.location.pathname.includes('/modeler-x') ? '/modeler-x' : '';
-    const opencascadeUrl = `${basePath}/opencascade/opencascade.wasm.js`;
+    // グローバル設定からパスを取得
+    const { getPublicAssetPath } = self.PUBLIC_ASSET_CONFIG;
+    const opencascadeUrl = getPublicAssetPath('/opencascade/opencascade.wasm.js');
     
     console.log("📁 Loading OpenCascade v1.1.1 from local files...");
     console.log(`📡 URL: ${opencascadeUrl}`);
@@ -113,7 +132,7 @@ async function initializeOpenCascade() {
       locateFile(path) {
         console.log(`🔍 Locating file: ${path}`);
         if (path.endsWith('.wasm')) {
-          const wasmUrl = `${basePath}/opencascade/opencascade.wasm.wasm`;
+          const wasmUrl = getPublicAssetPath('/opencascade/opencascade.wasm.wasm');
           console.log(`🎯 WASM file requested, returning: ${wasmUrl}`);
           return wasmUrl;
         }
