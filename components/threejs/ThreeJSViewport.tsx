@@ -24,9 +24,11 @@ import { PWAInstallBanner } from '../ui/PWAInstallBanner';
 import { SelectionBox } from '../ui/SelectionBox';
 import { KeyboardShortcutIntegration } from '../integration/KeyboardShortcutIntegration';
 
-
-
 import { FeatureParityStatus } from '../ui/FeatureParityStatus';
+import { PerformanceStatus } from '../ui/PerformanceStatus';
+import { usePerformanceOptimization } from '../../hooks/usePerformanceOptimization';
+import { RenderingOptimizer } from '../../lib/performance/RenderingOptimizer';
+import { MemoryManager } from '../../lib/performance/MemoryManager';
 import { isTransformKey, isCameraViewKey, isFitToObjectKey, getCameraViewName } from '../../lib/utils/keyboardShortcuts';
 import { logFeatureParityCompletion } from '../../lib/utils/featureParityLogger';
 import { useComprehensiveKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
@@ -356,6 +358,7 @@ export default function ThreeJSViewport({
   const [fogEnabled, setFogEnabled] = useState(false);
   const [fogSettings, setFogSettings] = useState({ near: 50, far: 200 });
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+  const { initializeRenderingOptimizer } = usePerformanceOptimization();
 
   useComprehensiveKeyboardShortcuts();
   
@@ -573,9 +576,27 @@ export default function ThreeJSViewport({
 
       {/* Canvas */}
       <Canvas
-        gl={{ antialias: true }}
+        gl={{ 
+          antialias: true,
+          powerPreference: "high-performance",
+          alpha: false,
+          stencil: false,
+          depth: true,
+          preserveDrawingBuffer: false
+        }}
         camera={{ position: cameraPosition, fov: 45 }}
         style={{ background: 'linear-gradient(to bottom, #1e293b, #334155)' }}
+        onCreated={({ gl, scene, camera }) => {
+          initializeRenderingOptimizer(gl, scene, camera);
+          
+          const memoryManager = new MemoryManager();
+          memoryManager.monitorMemoryUsage();
+          
+          (window as any).cascadePerformanceOptimizers = {
+            rendering: (window as any).cascadePerformanceOptimizers?.rendering,
+            memory: memoryManager
+          };
+        }}
       >
         <ambientLight intensity={0.5} />
         <directionalLight position={[10, 10, 5]} intensity={0.8} castShadow />
@@ -701,6 +722,8 @@ export default function ThreeJSViewport({
       <PWAInstallBanner />
       
       <FeatureParityStatus visible={true} />
+      
+      <PerformanceStatus visible={true} />
     </div>
   );
 }
@@ -836,4 +859,4 @@ function CameraAnimationController({ boundingBox }: { boundingBox: THREE.Box3 | 
   }, [boundingBox, handleFitToObject, animateToView]);
 
   return null;
-}                                                                                                                                                                                                                                                                                    
+}                                                                                                                                                                                                                                                                                                
