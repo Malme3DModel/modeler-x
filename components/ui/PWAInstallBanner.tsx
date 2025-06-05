@@ -6,6 +6,11 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export function PWAInstallBanner() {
+  // PWAインストールバナーを非表示にする
+  return null;
+
+  // 以下のコードはコメントアウト
+  /*
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
 
@@ -76,4 +81,5 @@ export function PWAInstallBanner() {
       </div>
     </div>
   );
+  */
 }
