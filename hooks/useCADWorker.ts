@@ -65,8 +65,10 @@ export function useCADWorker(): UseCADWorkerReturn {
         throw new Error('WebWorker is not supported in this browser');
       }
 
-      console.log("🔧 [useCADWorker] Attempting to create Worker('/workers/cadWorker.js')...");
-      worker = new Worker('/workers/cadWorker.js');
+      const basePath = process.env.NODE_ENV === 'production' ? '/modeler-x' : '';
+      const workerPath = `${basePath}/workers/cadWorker.js`;
+      console.log(`🔧 [useCADWorker] Attempting to create Worker('${workerPath}')...`);
+      worker = new Worker(workerPath);
       console.log("✅ [useCADWorker] Worker created successfully:", worker);
       
       workerRef.current = worker;
