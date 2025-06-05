@@ -60,12 +60,11 @@ Phase 3では、パフォーマンス最適化に特化してCascadeStudioの動
 
 ##### 実装計画
 
-**ファイル**: `lib/cad/WebAssemblyOptimizer.ts`
+**ファイル**: `lib/cad/WebAssemblyOptimizer.ts` (削除済み)
 
 ```typescript
-export class WebAssemblyOptimizer {
-  private wasmCache = new Map<string, WebAssembly.Module>();
-  private preloadPromises = new Map<string, Promise<WebAssembly.Module>>();
+// WebAssemblyOptimizer クラスは削除されました
+// 基本的なWebAssembly最適化は cadWorker.js で実装済み
 
   // WebAssembly事前コンパイル
   async precompileWasm(url: string): Promise<WebAssembly.Module> {
@@ -126,13 +125,11 @@ export class WebAssemblyOptimizer {
 
 ##### 実装計画
 
-**ファイル**: `lib/threejs/RenderingOptimizer.ts`
+**ファイル**: `lib/threejs/RenderingOptimizer.ts` (削除済み)
 
 ```typescript
-export class RenderingOptimizer {
-  private renderer: THREE.WebGLRenderer;
-  private scene: THREE.Scene;
-  private camera: THREE.Camera;
+// RenderingOptimizer クラスは削除されました
+// 基本的なレンダリング最適化は ThreeJSViewport.tsx で実装済み
   private frameStats = { fps: 0, frameTime: 0 };
 
   constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.Camera) {
@@ -237,13 +234,11 @@ export class RenderingOptimizer {
 
 #### 1.3 メモリ管理最適化
 
-**ファイル**: `lib/core/MemoryManager.ts`
+**ファイル**: `lib/core/MemoryManager.ts` (削除済み)
 
 ```typescript
-export class MemoryManager {
-  private disposables = new Set<THREE.Object3D>();
-  private textureCache = new Map<string, THREE.Texture>();
-  private geometryCache = new Map<string, THREE.BufferGeometry>();
+// MemoryManager クラスは削除されました
+// 基本的なメモリ管理は既存のコンポーネントで実装済み
 
   // リソース自動解放
   autoDisposeResources(): void {
@@ -688,4 +683,4 @@ const AnimationTimeline: React.FC = () => {
 ---
 
 *Phase 3実装責任者: AI Assistant*  
-*作成日時: 2024年1月1日*      
+*作成日時: 2024年1月1日*        
