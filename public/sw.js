@@ -1,3 +1,21 @@
+// グローバル設定を読み込み（basePathを考慮）
+const currentPath = self.location.pathname;
+const basePath = currentPath.includes('/modeler-x') ? '/modeler-x' : '';
+try {
+  importScripts(`${basePath}/config.js`);
+} catch (e) {
+  // フォールバック: 直接設定を定義
+  const isGitHubPages = self.location.hostname.includes('github.io');
+  const BASE_PATH = isGitHubPages ? '/modeler-x' : '';
+  self.PUBLIC_ASSET_CONFIG = {
+    BASE_PATH,
+    getPublicAssetPath: (path) => {
+      const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+      return `${BASE_PATH}${normalizedPath}`;
+    }
+  };
+}
+
 const version = 'modeler-x-v1.1.0::';
 
 const CACHES = {
@@ -7,8 +25,8 @@ const CACHES = {
   assets: version + 'assets'
 };
 
-// GitHub Pagesの場合、basePathを適用
-const BASE_PATH = self.location.pathname.includes('/modeler-x') ? '/modeler-x' : '';
+// グローバル設定からbasePathを取得
+const { BASE_PATH, getPublicAssetPath } = self.PUBLIC_ASSET_CONFIG;
 
 const CAD_RESOURCES = [
   `${BASE_PATH}/`,

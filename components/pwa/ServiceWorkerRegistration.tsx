@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect } from 'react';
-import { getAssetPath } from '@/lib/utils/paths';
 
 export default function ServiceWorkerRegistration() {
   useEffect(() => {
     if ('serviceWorker' in navigator) {
-      const swPath = getAssetPath('/sw.js');
+      // GitHub Pages用のbasePath対応
+      const isGitHubPages = window.location.hostname.includes('github.io');
+      const basePath = isGitHubPages ? '/modeler-x' : '';
+      const swPath = `${basePath}/sw.js`;
       
       navigator.serviceWorker
         .register(swPath)
