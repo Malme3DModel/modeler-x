@@ -25,7 +25,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          NEXT_PUBLIC_BASE_PATH: ''
+          NODE_ENV: production
 
       - name: Create .nojekyll file
         run: touch ./out/.nojekyll
