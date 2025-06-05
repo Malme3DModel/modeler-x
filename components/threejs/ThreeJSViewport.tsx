@@ -554,11 +554,17 @@ export default function ThreeJSViewport({
   return (
     <div className="w-full h-full relative canvas-container" data-testid="threejs-viewport">
       <TransformModeIndicator mode={transformMode} visible={isTransformVisible && !!selectedObject} />
-      
+      {isClient && <PWAInstallBanner />}
+      {/* <FeatureParityStatus visible={false} /> */}
+
+      {/* カメラコントロール */}
       <div className="absolute top-2 right-2 z-50" data-testid="camera-controls-container">
-        <CameraControls boundingBox={boundingBox} />
+        {/* <CameraControls boundingBox={boundingBox} /> */}
       </div>
-      
+
+      {/* <SelectionBox enabled={isBoxSelectionEnabled} onSelectionComplete={handleSelectionComplete} /> */}
+      {/* キーボードショートカットの処理 */}
+
       <TransformControlsUI 
         onModeChange={setTransformMode} 
         onSpaceChange={setTransformSpace}
@@ -709,9 +715,7 @@ export default function ThreeJSViewport({
 
       <KeyboardShortcutIntegration />
 
-      <PWAInstallBanner />
-      
-      <FeatureParityStatus visible={true} />
+      {/* <FeatureParityStatus visible={false} /> */}
       
 
     </div>
