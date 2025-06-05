@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Cascade Studio specific styles */
+:root {
+  --tp-font-family: Arial, sans-serif;
+  --tp-base-background-color: #2e2e2e;
+  --tp-button-background-color: hsl(0, 0%, 25%);
+  --tp-button-background-color-active: hsl(0, 0%, 40%);
+  --tp-button-background-color-focus: hsl(0, 0%, 35%);
+  --tp-button-background-color-hover: hsl(0, 0%, 30%);
+  --tp-button-foreground-color: #eeeeee;
+  --tp-label-foreground-color: #aeb5b8;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Consolas', monospace;
+  overflow: hidden;
+}
+
+/* Monaco Editor styles */
+.monaco-editor {
+  background-color: #1e1e1e !important;
+}
+
+/* TweakPane styles */
+.gui-panel {
+  position: absolute;
+  right: 0;
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+.gui-panel::-webkit-scrollbar {
+  width: 10px;
+  background: var(--tp-base-background-color);
+}
+
+.gui-panel::-webkit-scrollbar-thumb {
+  background: #777;
+}
+
+.tp-rotv {
+  text-shadow: 1px 1px #000;
+}
+
+.tp-rotv button {
+  text-shadow: inherit;
+}
+
+/* Golden Layout overrides */
+.lm_content {
+  background-color: #222222 !important;
+}
+
+.lm_header {
+  background-color: #333333 !important;
+}
+
+.lm_tab {
+  background-color: #444444 !important;
+  color: #ffffff !important;
+}
+
+.lm_tab.lm_active {
+  background-color: #555555 !important;
+}
