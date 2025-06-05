@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback, MutableRefObject } from 'reac
 import { DEFAULT_LAYOUT_CONFIG, STARTER_CODE } from '@/lib/layout/cascadeLayoutConfig';
 import dynamic from 'next/dynamic';
 import { createRoot } from 'react-dom/client';
+import { AppProvider } from '@/contexts/AppContext';
 
 // 新しいインポート
 import { URLStateManager } from '@/lib/layout/urlStateManager';
@@ -38,21 +39,28 @@ interface CascadeStudioLayoutProps {
 export default function CascadeStudioLayout({ 
   onProjectLoad 
 }: CascadeStudioLayoutProps) {
+  return (
+    <AppProvider>
+      <CascadeStudioLayoutInner onProjectLoad={onProjectLoad} />
+    </AppProvider>
+  );
+}
+
+function CascadeStudioLayoutInner({ 
+  onProjectLoad 
+}: CascadeStudioLayoutProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const layoutRef = useRef<any>(null);
   const [isLayoutReady, setIsLayoutReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guiState, setGuiState] = useState<GUIState>({});
-  // consoleRefをMutableRefObjectとして作成
   const consoleRef = useRef<CascadeConsoleRef | null>(null);
   const [editorInstance, setEditorInstance] = useState<MonacoCodeEditorRef | null>(null);
   const lastSavedCodeRef = useRef<string>(STARTER_CODE);
   const lastSavedGuiStateRef = useRef<GUIState>({});
 
-  // コンソールインスタンスの状態
   const [consoleInstance, setConsoleInstance] = useState<CascadeConsoleRef | null>(null);
 
-  // CADワーカーフックを追加
   const {
     isWorkerReady,
     isWorking,
@@ -511,4 +519,4 @@ export default function CascadeStudioLayout({
       </div>
     </div>
   );
-} 
+}             

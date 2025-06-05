@@ -81,7 +81,6 @@ async function initializeOpenCascade() {
     console.log("📁 Loading OpenCascade v1.1.1 from local files...");
     console.log("📡 URL: /opencascade/opencascade.wasm.js");
     
-    // ES Modules形式のファイルをfetch()で読み込み、export文を削除してからeval()で実行
     console.log("📦 Fetching OpenCascade.js file...");
     const response = await fetch('/opencascade/opencascade.wasm.js');
     
@@ -93,23 +92,19 @@ async function initializeOpenCascade() {
     let jsCode = await response.text();
     
     console.log("🔧 Processing ES Modules format...");
-    // export文を削除（ES Modules形式をWebWorker対応に変換）
     jsCode = jsCode.replace(/export\s+default\s+[^;]+;?\s*$/, '');
     
     console.log("📦 Executing OpenCascade.js code...");
-    // グローバルスコープで実行
     eval(jsCode);
     
     console.log("✅ OpenCascade.js code executed successfully");
     
-    // opencascade関数の存在確認
     if (typeof opencascade === 'undefined') {
       throw new Error("opencascade function not available after execution");
     }
     
     console.log("🔧 opencascade function found, initializing...");
     
-    // OpenCascadeの初期化（v1.1.1 形式）
     const openCascade = await opencascade({
       locateFile(path) {
         console.log(`🔍 Locating file: ${path}`);
@@ -126,13 +121,13 @@ async function initializeOpenCascade() {
     oc = openCascade;
     ocInitialized = true;
     
-    // 初期化完了を通知
     postMessage({ type: "startupCallback" });
-    console.log("✅ OpenCascade v1.1.1 initialized successfully from local files");
+    console.log("✅ OpenCascade v1.1.1 initialized successfully");
+    
     return;
     
   } catch (error) {
-    console.log("❌ Failed to load from local files");
+    console.log("❌ Failed to load OpenCascade");
     console.log(`❌ Error type: ${error.constructor.name}`);
     console.log(`❌ Error message: ${error.message}`);
     console.log(`❌ Error stack: ${error.stack}`);
@@ -140,7 +135,7 @@ async function initializeOpenCascade() {
     postMessage({ 
       type: "error", 
       payload: { 
-        message: `Failed to load OpenCascade.js from local files: ${error.message}` 
+        message: `Failed to load OpenCascade.js: ${error.message}` 
       } 
     });
   }

@@ -14,6 +14,21 @@ import { ObjectSelector } from './ObjectSelector';
 import { TransformControlsUI } from './TransformControlsUI';
 import { CameraControls } from '../cad/CameraControls';
 import { useCameraAnimation } from '../../hooks/useCameraAnimation';
+import { useSelectionManager } from '../../hooks/useSelectionManager';
+import { CameraViewControls } from './CameraViewControls';
+
+import { MultiSelectionManager } from './MultiSelectionManager';
+import { TransformModeIndicator } from '../ui/TransformModeIndicator';
+import { SelectionIndicator } from '../ui/SelectionIndicator';
+import { PWAInstallBanner } from '../ui/PWAInstallBanner';
+import { SelectionBox } from '../ui/SelectionBox';
+import { KeyboardShortcutIntegration } from '../integration/KeyboardShortcutIntegration';
+
+import { FeatureParityStatus } from '../ui/FeatureParityStatus';
+
+import { isTransformKey, isCameraViewKey, isFitToObjectKey, getCameraViewName } from '../../lib/utils/keyboardShortcuts';
+import { logFeatureParityCompletion } from '../../lib/utils/featureParityLogger';
+import { useComprehensiveKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 
 interface ThreeJSViewportProps {
   cameraPosition?: [number, number, number];
@@ -331,13 +346,18 @@ export default function ThreeJSViewport({
   const [hoveredFace, setHoveredFace] = useState<number | null>(null);
   const [isRaycastingEnabled, setIsRaycastingEnabled] = useState(true);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
-  const [selectedObject, setSelectedObject] = useState<THREE.Object3D | null>(null);
+  const { selectedObjects, selectObject, clearSelection, isSelected } = useSelectionManager();
+  const selectedObject = selectedObjects[0] || null;
   const [boundingBox, setBoundingBox] = useState<THREE.Box3 | null>(null);
   const [transformMode, setTransformMode] = useState<'translate' | 'rotate' | 'scale'>('translate');
   const [transformSpace, setTransformSpace] = useState<'local' | 'world'>('local');
   const [isTransformVisible, setIsTransformVisible] = useState(false);
   const [fogEnabled, setFogEnabled] = useState(false);
   const [fogSettings, setFogSettings] = useState({ near: 50, far: 200 });
+  const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+
+
+  useComprehensiveKeyboardShortcuts();
   
   // 🎯 オブジェクト変更ハンドラー
   const handleObjectChange = useCallback((object: THREE.Object3D) => {
@@ -349,16 +369,20 @@ export default function ThreeJSViewport({
   }, []);
   
   // 🎯 オブジェクト選択ハンドラー
-  const handleSelectObject = useCallback((object: THREE.Object3D | null) => {
+  const handleSelectObject = useCallback((object: THREE.Object3D | null, multiSelect = false) => {
     console.log('オブジェクト選択:', object?.name || 'none');
-    setSelectedObject(object);
     
-    // 選択オブジェクトのバウンディングボックスを計算
     if (object) {
+      selectObject(object, multiSelect);
+      setIsTransformVisible(true);
+      
       const box = new THREE.Box3().setFromObject(object);
       setBoundingBox(box);
+    } else if (!multiSelect) {
+      clearSelection();
+      setIsTransformVisible(false);
     }
-  }, []);
+  }, [selectObject, clearSelection]);
 
   // バウンディングボックスの計算
   const calculateBoundingBox = useCallback((objects: THREE.Object3D[]) => {
@@ -384,24 +408,64 @@ export default function ThreeJSViewport({
   // ⌨️ キーボードショートカット
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (!selectedObject) return;
-      
-      switch (event.key.toLowerCase()) {
-        case 'g':
-          setTransformMode('translate');
-          break;
-        case 'r':
-          setTransformMode('rotate');
-          break;
-        case 's':
-          setTransformMode('scale');
-          break;
+      if (event.target instanceof Element && (
+        event.target.closest('.monaco-editor') ||
+        event.target.tagName === 'INPUT' ||
+        event.target.tagName === 'TEXTAREA'
+      )) {
+        return;
+      }
+
+      const transformModeKey = isTransformKey(event.key);
+      if (transformModeKey) {
+        setTransformMode(transformModeKey);
+        return;
+      }
+
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        const modes: ('translate' | 'rotate' | 'scale')[] = ['translate', 'rotate', 'scale'];
+        const currentIndex = modes.indexOf(transformMode);
+        const nextMode = modes[(currentIndex + 1) % modes.length];
+        setTransformMode(nextMode);
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        if (showShortcutsHelp) {
+          setShowShortcutsHelp(false);
+        } else {
+          clearSelection();
+          setIsTransformVisible(false);
+        }
+        return;
+      }
+
+      if (event.key === '?' || (event.shiftKey && event.key === '/')) {
+        setShowShortcutsHelp(true);
+        return;
+      }
+
+      const cameraViewNumber = isCameraViewKey(event.key);
+      if (cameraViewNumber) {
+        const viewName = getCameraViewName(cameraViewNumber);
+        if (viewName && (window as any).cascadeCameraControls?.animateToView) {
+          (window as any).cascadeCameraControls.animateToView(viewName);
+        }
+        return;
+      }
+
+      if (isFitToObjectKey(event.key)) {
+        if ((window as any).cascadeCameraControls?.fitToObject) {
+          (window as any).cascadeCameraControls.fitToObject();
+        }
+        return;
       }
     };
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedObject]);
+  }, [transformMode, clearSelection, setTransformMode]);
   
   // テスト用のグローバルユーティリティ関数を拡張
   useEffect(() => {
@@ -414,6 +478,10 @@ export default function ThreeJSViewport({
       };
     }
   }, [selectedObject]);
+
+  useEffect(() => {
+    logFeatureParityCompletion();
+  }, []);
 
   // バウンディングボックスに基づくフォグ距離の計算
   const calculateFogDistance = useCallback((boundingBox: THREE.Box3) => {
@@ -485,7 +553,8 @@ export default function ThreeJSViewport({
 
   return (
     <div className="w-full h-full relative canvas-container" onMouseMove={handleMouseMove} data-testid="threejs-viewport">
-      {/* CameraControlsを画面上部に追加 */}
+      <TransformModeIndicator mode={transformMode} visible={isTransformVisible && !!selectedObject} />
+      
       <div className="absolute top-2 right-2 z-50" data-testid="camera-controls-container">
         <CameraControls boundingBox={boundingBox} />
       </div>
@@ -495,7 +564,7 @@ export default function ThreeJSViewport({
         onModeChange={setTransformMode} 
         onSpaceChange={setTransformSpace}
         onVisibilityChange={setIsTransformVisible}
-        visible={isTransformVisible}
+        visible={isTransformVisible && !!selectedObject}
         mode={transformMode}
         space={transformSpace}
         enabled={!!selectedObject}
@@ -504,9 +573,24 @@ export default function ThreeJSViewport({
 
       {/* Canvas */}
       <Canvas
-        gl={{ antialias: true }}
+        gl={{ 
+          antialias: true,
+          powerPreference: "high-performance",
+          alpha: false,
+          stencil: false,
+          depth: true,
+          preserveDrawingBuffer: false
+        }}
         camera={{ position: cameraPosition, fov: 45 }}
         style={{ background: 'linear-gradient(to bottom, #1e293b, #334155)' }}
+        onCreated={({ gl, scene, camera }) => {
+          gl.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          gl.shadowMap.enabled = true;
+          gl.shadowMap.type = THREE.PCFSoftShadowMap;
+          gl.outputColorSpace = THREE.SRGBColorSpace;
+          
+          console.log('✅ Basic rendering optimizations applied');
+        }}
       >
         <ambientLight intensity={0.5} />
         <directionalLight position={[10, 10, 5]} intensity={0.8} castShadow />
@@ -544,12 +628,13 @@ export default function ThreeJSViewport({
           selectedObject={selectedObject}
           mode={transformMode}
           space={transformSpace}
-          enabled={isTransformVisible}
+          visible={isTransformVisible && !!selectedObject}
+          enabled={!!selectedObject}
           onObjectChange={handleObjectChange}
         />
 
         {/* ObjectSelector */}
-        <ObjectSelector onSelectObject={handleSelectObject}>
+        <ObjectSelector onSelectObject={(object, multiSelect) => handleSelectObject(object, multiSelect)}>
           {/* テスト用のシンプルな3Dオブジェクト */}
           <mesh position={[0, 0, 0]} name="Cube">
             <boxGeometry args={[1, 1, 1]} />
@@ -567,6 +652,35 @@ export default function ThreeJSViewport({
         {/* Canvas内でのカメラアニメーション制御 */}
         <CameraAnimationController boundingBox={boundingBox} />
       </Canvas>
+
+      {/* カメラビューコントロール */}
+      <CameraViewControls 
+        onViewChange={(view) => {
+          const viewNames = ['front', 'back', 'top', 'bottom', 'left', 'right', 'iso'];
+          const viewName = viewNames[view - 1];
+          if (viewName && (window as any).cascadeCameraControls?.animateToView) {
+            (window as any).cascadeCameraControls.animateToView(viewName);
+          }
+        }}
+        onFitToObject={() => {
+          if ((window as any).cascadeCameraControls?.fitToObject) {
+            (window as any).cascadeCameraControls.fitToObject();
+          }
+        }}
+      />
+
+
+
+      <MultiSelectionManager 
+        onSelectionChange={(objects: THREE.Object3D[]) => {
+          console.log('選択オブジェクト数:', objects.length);
+        }}
+      />
+
+      <SelectionIndicator 
+        selectedCount={selectedObjects.length}
+        visible={selectedObjects.length > 0}
+      />
 
       {/* ツールチップを追加 */}
       <HoverTooltip 
@@ -587,6 +701,23 @@ export default function ThreeJSViewport({
           レイキャスティング
         </label>
       </div>
+
+
+
+      <SelectionBox 
+        enabled={true}
+        onSelectionComplete={(objects: any[]) => {
+          objects.forEach((obj: any) => selectObject(obj, true));
+        }}
+      />
+
+      <KeyboardShortcutIntegration />
+
+      <PWAInstallBanner />
+      
+      <FeatureParityStatus visible={true} />
+      
+
     </div>
   );
 }
@@ -722,4 +853,4 @@ function CameraAnimationController({ boundingBox }: { boundingBox: THREE.Box3 | 
   }, [boundingBox, handleFitToObject, animateToView]);
 
   return null;
-}      
+}                                                                                                                                                                                                                                                                                                                        
