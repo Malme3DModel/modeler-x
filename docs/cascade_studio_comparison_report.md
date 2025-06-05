@@ -20,7 +20,7 @@
 - **コンソール**: 下部に固定
 - **ナビゲーション**: 上部にシンプルなボタン配列
 
-![元版レイアウト](/home/ubuntu/screenshots/localhost_3001_002851.png)
+![元版レイアウト](img/original_cascadestudio_interface.png)
 
 #### 新版（モダンUI）
 - **フレームワーク**: TailwindCSS + DaisyUI + Golden Layout V2
@@ -31,7 +31,7 @@
 - **ナビゲーション**: 上部にドロップダウンメニュー
 - **コントロールパネル**: 右側にTweakpane統合
 
-![新版レイアウト](/home/ubuntu/screenshots/localhost_3000_002945.png)
+![新版レイアウト](img/nextjs_cascadestudio_interface.png)
 
 ### UIフレームワーク比較
 
