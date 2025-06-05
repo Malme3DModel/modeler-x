@@ -25,10 +25,7 @@ import { SelectionBox } from '../ui/SelectionBox';
 import { KeyboardShortcutIntegration } from '../integration/KeyboardShortcutIntegration';
 
 import { FeatureParityStatus } from '../ui/FeatureParityStatus';
-import { PerformanceStatus } from '../ui/PerformanceStatus';
-import { usePerformanceOptimization } from '../../hooks/usePerformanceOptimization';
-import { RenderingOptimizer } from '../../lib/performance/RenderingOptimizer';
-import { MemoryManager } from '../../lib/performance/MemoryManager';
+
 import { isTransformKey, isCameraViewKey, isFitToObjectKey, getCameraViewName } from '../../lib/utils/keyboardShortcuts';
 import { logFeatureParityCompletion } from '../../lib/utils/featureParityLogger';
 import { useComprehensiveKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
@@ -358,7 +355,7 @@ export default function ThreeJSViewport({
   const [fogEnabled, setFogEnabled] = useState(false);
   const [fogSettings, setFogSettings] = useState({ near: 50, far: 200 });
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
-  const { initializeRenderingOptimizer } = usePerformanceOptimization();
+
 
   useComprehensiveKeyboardShortcuts();
   
@@ -587,15 +584,12 @@ export default function ThreeJSViewport({
         camera={{ position: cameraPosition, fov: 45 }}
         style={{ background: 'linear-gradient(to bottom, #1e293b, #334155)' }}
         onCreated={({ gl, scene, camera }) => {
-          initializeRenderingOptimizer(gl, scene, camera);
+          gl.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+          gl.shadowMap.enabled = true;
+          gl.shadowMap.type = THREE.PCFSoftShadowMap;
+          gl.outputColorSpace = THREE.SRGBColorSpace;
           
-          const memoryManager = new MemoryManager();
-          memoryManager.monitorMemoryUsage();
-          
-          (window as any).cascadePerformanceOptimizers = {
-            rendering: (window as any).cascadePerformanceOptimizers?.rendering,
-            memory: memoryManager
-          };
+          console.log('✅ Basic rendering optimizations applied');
         }}
       >
         <ambientLight intensity={0.5} />
@@ -723,7 +717,7 @@ export default function ThreeJSViewport({
       
       <FeatureParityStatus visible={true} />
       
-      <PerformanceStatus visible={true} />
+
     </div>
   );
 }
@@ -859,4 +853,4 @@ function CameraAnimationController({ boundingBox }: { boundingBox: THREE.Box3 | 
   }, [boundingBox, handleFitToObject, animateToView]);
 
   return null;
-}                                                                                                                                                                                                                                                                                                
+}                                                                                                                                                                                                                                                                                                                        
