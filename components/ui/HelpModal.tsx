@@ -40,6 +40,24 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
     { key: 'G', description: '移動ツール', category: '3D操作' },
     { key: 'R', description: '回転ツール', category: '3D操作' },
     { key: 'S', description: 'スケールツール', category: '3D操作' },
+    { key: 'Tab', description: 'ツール切り替え', category: '3D操作' },
+    { key: 'Ctrl+Click', description: '複数選択', category: '3D操作' },
+    { key: '?', description: 'ショートカットヘルプ', category: '3D操作' },
+    { key: 'Ctrl+N', description: '新規プロジェクト', category: 'ファイル操作' },
+    { key: 'Ctrl+O', description: 'プロジェクトを開く', category: 'ファイル操作' },
+    { key: 'Ctrl+Shift+S', description: '名前を付けて保存', category: 'ファイル操作' },
+    { key: 'Ctrl+Z', description: '元に戻す', category: '編集操作' },
+    { key: 'Ctrl+Y', description: 'やり直し', category: '編集操作' },
+    { key: 'Ctrl+X', description: '切り取り', category: '編集操作' },
+    { key: 'Ctrl+C', description: 'コピー', category: '編集操作' },
+    { key: 'Ctrl+V', description: '貼り付け', category: '編集操作' },
+    { key: 'Delete', description: '削除', category: '編集操作' },
+    { key: 'Ctrl+A', description: '全選択', category: '選択操作' },
+    { key: 'Ctrl+D', description: '選択解除', category: '選択操作' },
+    { key: 'Ctrl+I', description: '選択反転', category: '選択操作' },
+    { key: 'Ctrl+G', description: 'グループ化', category: 'グループ操作' },
+    { key: 'Ctrl+Shift+G', description: 'グループ解除', category: 'グループ操作' },
+    { key: 'Ctrl+Enter', description: 'コード実行', category: '実行操作' },
     { key: '1', description: '前面視点', category: 'カメラ' },
     { key: '2', description: '背面視点', category: 'カメラ' },
     { key: '3', description: '上面視点', category: 'カメラ' },
@@ -152,4 +170,4 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
       </div>
     </div>
   );
-} 
+}          

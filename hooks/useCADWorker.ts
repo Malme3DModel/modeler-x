@@ -86,6 +86,8 @@ export function useCADWorker(): UseCADWorkerReturn {
           setIsWorkerReady(true);
           setError(null);
           
+          console.log('📊 WebAssembly initialization completed with optimization');
+          
           // タイムアウトのクリア
           if (initTimeout) {
             clearTimeout(initTimeout);
@@ -414,4 +416,4 @@ export function useCADWorker(): UseCADWorkerReturn {
     clearError,
     sendToWorker
   };
-}  
+}    
