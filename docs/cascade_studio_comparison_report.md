@@ -4,7 +4,6 @@
 
 元のCascadeStudio（Vanilla JavaScript版）と新しいNext.js + TypeScript + React Three Fiber実装の包括的な比較分析を実施しました。
 
-**比較日時**: 2025年6月5日  
 **元版URL**: http://localhost:3001 (docs/v0)  
 **新版URL**: http://localhost:3000  
 
