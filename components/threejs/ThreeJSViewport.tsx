@@ -33,6 +33,9 @@ import { useComprehensiveKeyboardShortcuts } from '../../hooks/useKeyboardShortc
 interface ThreeJSViewportProps {
   cameraPosition?: [number, number, number];
   enableControls?: boolean;
+  shapes?: any[];
+  isWorking?: boolean;
+  error?: string | null;
 }
 
 interface RaycastingHandlerProps {
@@ -338,12 +341,72 @@ function SceneSetup({ selectedObject }: { selectedObject: THREE.Object3D | null 
 
 export default function ThreeJSViewport({ 
   cameraPosition = [5, 5, 5],
-  enableControls = true 
+  enableControls = true,
+  shapes = [],
+  isWorking = false,
+  error: workerError = null
 }: ThreeJSViewportProps) {
-  const { modelUrl, isLoading, error } = useOpenCascade();
+  const { modelUrl, isLoading, error: openCascadeError } = useOpenCascade();
   const isClient = useIsClient();
   const [hoveredObject, setHoveredObject] = useState<THREE.Mesh | null>(null);
   const [hoveredFace, setHoveredFace] = useState<number | null>(null);
+
+  useEffect(() => {
+    console.log('🖼️ [ThreeJSViewport] Shapes updated:', shapes);
+    console.log('🖼️ [ThreeJSViewport] Shapes count:', shapes.length);
+    console.log('🖼️ [ThreeJSViewport] Is working:', isWorking);
+    console.log('🖼️ [ThreeJSViewport] Worker error:', workerError);
+    if (shapes.length > 0) {
+      console.log('🖼️ [ThreeJSViewport] First shape:', shapes[0]);
+      console.log('🖼️ [ThreeJSViewport] First shape mesh:', shapes[0]?.mesh);
+      
+      setTimeout(() => {
+        if (typeof window !== 'undefined' && (window as any).cascadeCameraControls) {
+          const { camera, controls } = (window as any).cascadeCameraControls;
+          
+          let minX = Infinity, maxX = -Infinity;
+          let minY = Infinity, maxY = -Infinity;
+          let minZ = Infinity, maxZ = -Infinity;
+          
+          shapes.forEach(shape => {
+            if (shape.mesh && shape.mesh.vertices) {
+              const vertices = shape.mesh.vertices;
+              for (let i = 0; i < vertices.length; i += 3) {
+                const x = vertices[i];
+                const y = vertices[i + 1];
+                const z = vertices[i + 2];
+                
+                minX = Math.min(minX, x);
+                maxX = Math.max(maxX, x);
+                minY = Math.min(minY, y);
+                maxY = Math.max(maxY, y);
+                minZ = Math.min(minZ, z);
+                maxZ = Math.max(maxZ, z);
+              }
+            }
+          });
+          
+          if (minX !== Infinity) {
+            const center = [(minX + maxX) / 2, (minY + maxY) / 2, (minZ + maxZ) / 2];
+            const size = [maxX - minX, maxY - minY, maxZ - minZ];
+            const maxSize = Math.max(...size);
+            const distance = maxSize * 1.5;
+            
+            console.log('📷 [ThreeJSViewport] Auto-fitting camera to shapes:', {
+              center,
+              size,
+              distance,
+              cameraPosition: [center[0] + distance, center[1] + distance, center[2] + distance]
+            });
+            
+            camera.position.set(center[0] + distance, center[1] + distance, center[2] + distance);
+            controls.target.set(center[0], center[1], center[2]);
+            controls.update();
+          }
+        }
+      }, 100);
+    }
+  }, [shapes, isWorking, workerError]);
   const [isRaycastingEnabled, setIsRaycastingEnabled] = useState(true);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const { selectedObjects, selectObject, clearSelection, isSelected } = useSelectionManager();
@@ -543,8 +606,8 @@ export default function ThreeJSViewport({
     }
   }, [boundingBox]);
 
-  if (error) {
-    return <div className="error">Error: {error}</div>;
+  if (openCascadeError) {
+    return <div className="error">Error: {openCascadeError}</div>;
   }
 
   if (isLoading || !isClient) {
@@ -643,16 +706,76 @@ export default function ThreeJSViewport({
 
         {/* ObjectSelector */}
         <ObjectSelector onSelectObject={(object, multiSelect) => handleSelectObject(object, multiSelect)}>
-          {/* テスト用のシンプルな3Dオブジェクト */}
-          <mesh position={[0, 0, 0]} name="Cube">
-            <boxGeometry args={[1, 1, 1]} />
-            <meshStandardMaterial color="royalblue" />
-          </mesh>
+          {/* CADワーカーから生成されたシェイプをレンダリング */}
+          {shapes.map((shape, index) => {
+            if (!shape.mesh || !shape.mesh.vertices || !shape.mesh.indices) {
+              console.warn(`⚠️ [ThreeJSViewport] Invalid shape data at index ${index}:`, shape);
+              return null;
+            }
+            
+            console.log(`🔧 [ThreeJSViewport] Rendering CAD shape ${index}:`, {
+              vertices: shape.mesh.vertices.length,
+              normals: shape.mesh.normals?.length,
+              indices: shape.mesh.indices.length,
+              hash: shape.hash
+            });
+            
+            const vertices = shape.mesh.vertices instanceof Float32Array ? 
+              shape.mesh.vertices : new Float32Array(shape.mesh.vertices);
+            const indices = shape.mesh.indices instanceof Uint16Array ? 
+              shape.mesh.indices : new Uint16Array(shape.mesh.indices);
+            const normals = shape.mesh.normals ? 
+              (shape.mesh.normals instanceof Float32Array ? 
+                shape.mesh.normals : new Float32Array(shape.mesh.normals)) : null;
+            
+            return (
+              <mesh key={shape.hash || index} name={`CADShape-${index}`}>
+                <bufferGeometry>
+                  <bufferAttribute
+                    attach="attributes-position"
+                    count={vertices.length / 3}
+                    array={vertices}
+                    itemSize={3}
+                  />
+                  {normals && (
+                    <bufferAttribute
+                      attach="attributes-normal"
+                      count={normals.length / 3}
+                      array={normals}
+                      itemSize={3}
+                    />
+                  )}
+                  <bufferAttribute
+                    attach="index"
+                    count={indices.length}
+                    array={indices}
+                    itemSize={1}
+                  />
+                </bufferGeometry>
+                <meshStandardMaterial
+                  color="#4a90e2"
+                  metalness={0.2}
+                  roughness={0.6}
+                  side={THREE.DoubleSide}
+                />
+              </mesh>
+            );
+          })}
           
-          <mesh position={[2, 0, 0]} name="Sphere">
-            <sphereGeometry args={[0.5, 32, 32]} />
-            <meshStandardMaterial color="tomato" />
-          </mesh>
+          {/* テスト用のシンプルな3Dオブジェクト（CADシェイプがない場合のみ表示） */}
+          {shapes.length === 0 && (
+            <>
+              <mesh position={[0, 0, 0]} name="Cube">
+                <boxGeometry args={[1, 1, 1]} />
+                <meshStandardMaterial color="royalblue" />
+              </mesh>
+              
+              <mesh position={[2, 0, 0]} name="Sphere">
+                <sphereGeometry args={[0.5, 32, 32]} />
+                <meshStandardMaterial color="tomato" />
+              </mesh>
+            </>
+          )}
         </ObjectSelector>
 
         <SceneSetup selectedObject={selectedObject} />
@@ -853,4 +976,4 @@ function CameraAnimationController({ boundingBox }: { boundingBox: THREE.Box3 | 
   }, [boundingBox, handleFitToObject, animateToView]);
 
   return null;
-}                                                                                                                                                                                                                                                                                                                        
+}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                

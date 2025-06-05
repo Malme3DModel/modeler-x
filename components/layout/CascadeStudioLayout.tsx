@@ -164,6 +164,40 @@ function CascadeStudioLayoutInner({
     }
   }, [logs, appendConsoleMessage]);
 
+  const hasInitialEvaluationRef = useRef(false);
+  useEffect(() => {
+    console.log('🔍 [Initial Evaluation] Dependencies check:', {
+      isWorkerReady,
+      isLayoutReady,
+      editorInstance: !!editorInstance,
+      hasInitialEvaluationRef: hasInitialEvaluationRef.current
+    });
+    
+    if (isWorkerReady && isLayoutReady && !hasInitialEvaluationRef.current) {
+      hasInitialEvaluationRef.current = true;
+      appendConsoleMessage('🚀 初期化完了 - コードを自動評価します', 'info');
+      
+      const initialCode = editorInstance ? editorInstance.getValue() : lastSavedCodeRef.current;
+      evaluateCode(initialCode);
+    }
+  }, [isWorkerReady, isLayoutReady, editorInstance, evaluateCode, appendConsoleMessage]);
+
+  const shapesRef = useRef(shapes);
+  shapesRef.current = shapes;
+
+  useEffect(() => {
+    console.log('🔄 [CascadeStudioLayout] Shapes changed:', shapes.length);
+    console.log('🔄 [CascadeStudioLayout] Shapes data:', shapes);
+    console.log('🔄 [CascadeStudioLayout] isWorking:', isWorking);
+    console.log('🔄 [CascadeStudioLayout] workerError:', workerError);
+    
+    if (typeof window !== 'undefined') {
+      (window as any).cascadeShapes = shapes;
+      (window as any).cascadeIsWorking = isWorking;
+      (window as any).cascadeWorkerError = workerError;
+    }
+  }, [shapes, isWorking, workerError]);
+
   useEffect(() => {
     if (!containerRef.current || isLayoutReady) return; // 既に初期化済みの場合はスキップ
 
@@ -212,10 +246,12 @@ function CascadeStudioLayoutInner({
               editorRoot.render(
                 <MonacoCodeEditor
                   ref={(ref) => {
+                    console.log('🔧 [Monaco Editor] Ref callback called:', !!ref);
                     if (ref) {
                       // refがセットされたらインスタンスを保存
                       localEditorRef.current = ref;
                       setEditorInstance(ref);
+                      console.log('✅ [Monaco Editor] Editor instance set successfully');
                     }
                   }}
                   initialCode={lastSavedCodeRef.current}
@@ -385,13 +421,40 @@ function CascadeStudioLayoutInner({
       loading: () => <div style={{ color: '#a0a0a0', fontSize: '12px', padding: '12px' }}>3Dビューポート初期化中...</div>
     });
     
-    // メインビューポートをレンダリング
-    viewRoot.render(
-      <ThreeJSViewport 
-        cameraPosition={[50, 50, 50]} 
-        enableControls={true} 
-      />
-    );
+    const renderViewport = () => {
+      const currentShapes = shapesRef.current;
+      console.log('🔄 [CascadeStudioLayout] Re-rendering ThreeJSViewport with shapes:', currentShapes.length);
+      console.log('🔄 [CascadeStudioLayout] Shapes data:', currentShapes);
+      viewRoot.render(
+        <ThreeJSViewport 
+          cameraPosition={[50, 50, 50]} 
+          enableControls={true}
+          shapes={currentShapes}
+          isWorking={isWorking}
+          error={workerError}
+        />
+      );
+    };
+    
+    renderViewport();
+    
+    (container as any).renderViewport = renderViewport;
+    if (typeof window !== 'undefined') {
+      (window as any).cascadeRenderViewport = renderViewport;
+    }
+    
+    const intervalId = setInterval(() => {
+      const currentShapes = shapesRef.current;
+      const windowShapes = typeof window !== 'undefined' ? (window as any).cascadeShapes : [];
+      if (currentShapes !== windowShapes && windowShapes) {
+        console.log('🔄 [CascadeStudioLayout] Shapes changed, re-rendering viewport');
+        renderViewport();
+      }
+    }, 100);
+    
+    container.on('destroy', () => {
+      clearInterval(intervalId);
+    });
     
     // クリーンアップ関数を設定
     container.on('destroy', () => {
@@ -528,4 +591,4 @@ function CascadeStudioLayoutInner({
       </div>
     </div>
   );
-}                          
+}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    
