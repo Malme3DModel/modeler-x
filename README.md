@@ -1,134 +1,256 @@
-# OpenCascade.js Demo with Three.js, Next.js and TypeScript
+# Modeler-X: Cascade Studio Next.js移植プロジェクト
 
-This is a [Next.js](https://nextjs.org/) project showcasing [OpenCascade.js](https://ocjs.org/) integration with [Three.js](https://threejs.org/) rendering, fully implemented in TypeScript.
+このプロジェクトは、[Cascade Studio](docs/v0/)をNext.js 14、TypeScript、React 18に移植した現代的なWebベースCADアプリケーションです。
 
-## ✨ Features
+## 📋 プロジェクト概要
 
-- **Three.js Rendering**: High-performance WebGL-based 3D visualization
-- **OpenCascade.js Integration**: Advanced CAD geometry processing
-- **Interactive Controls**: Orbit controls for camera manipulation
-- **TypeScript**: Full type safety and developer experience
-- **Next.js 14**: Modern React framework with App Router
-- **CascadeStudio**: Full-featured CAD environment with code editor, 3D viewport and GUI
+**Modeler-X**は、ブラウザ上で動作するフル機能のCADカーネルとIDEです。元の[Cascade Studio](https://zalo.github.io/CascadeStudio/)の機能を維持しながら、最新のWeb技術スタックに移植することで、より高いパフォーマンス、型安全性、開発体験を実現しています。
 
-## CascadeStudio Migration
+### 🔄 移植の背景
 
-This project includes a complete migration of [CascadeStudio](https://github.com/zalo/CascadeStudio) to Next.js 14, TypeScript, and React 18. The migration process is documented in the `docs/` directory:
+元のCascade Studioは静的なHTML/JavaScript/jQueryベースのアプリケーションでしたが、以下の理由により現代的なフレームワークへの移植を行いました：
 
-1. **Phase 1-6**: Basic migration and feature implementation
-2. **Phase 7**: Code quality improvements and performance optimization
+- **保守性の向上**: TypeScriptによる型安全性とコード品質の向上
+- **開発体験の改善**: React/Next.jsエコシステムの活用
+- **パフォーマンス最適化**: モダンなバンドリングとコード分割
+- **テスト可能性**: Playwrightによるエンドツーエンドテスト
+- **スケーラビリティ**: コンポーネントベースアーキテクチャ
 
-### CascadeStudio Features
+## ✨ 主要機能
 
-- **Code Editor**: Monaco Editor with syntax highlighting and code completion
-- **3D Viewport**: Three.js-based viewing with orbit controls
-- **GUI Panel**: Parameter controls using Tweakpane
-- **URL State Management**: Share designs via URL
-- **Import/Export**: Support for STEP, STL, OBJ formats
-- **WebWorker Processing**: OpenCascade.js runs in a worker thread for better performance
+### CAD機能
+- **3Dモデリング**: プリミティブ形状からCSG、フィレット、スイープまで対応
+- **コードエディタ**: Monaco Editorによるシンタックスハイライトと自動補完
+- **3Dビューポート**: Three.jsベースの高性能WebGL描画
+- **GUIパネル**: Tweakpaneによるパラメータ制御
+- **ファイル入出力**: STEP、STL、OBJフォーマット対応
+- **URL状態管理**: デザインをURLで共有可能
 
-### How to Use CascadeStudio
+### 技術的特徴
+- **WebWorker処理**: OpenCascade.jsをワーカースレッドで実行
+- **レスポンシブデザイン**: モバイル対応のUI
+- **PWA対応**: オフライン利用可能（予定）
+- **型安全性**: 完全なTypeScript実装
 
-1. Navigate to `/cascade-studio` route
-2. Write JavaScript code using the OpenCascade.js API in the editor
-3. Use the GUI panel to control parameters
-4. Export your models in various formats
-5. Share your designs via URL
+## 🔄 元版との主な相違点
 
-## Getting Started
+| 項目 | 元のCascade Studio | Modeler-X (移植版) |
+|------|-------------------|-------------------|
+| **フレームワーク** | 静的HTML + jQuery | Next.js 14 + React 18 |
+| **言語** | JavaScript | TypeScript |
+| **スタイリング** | カスタムCSS | Tailwind CSS + DaisyUI |
+| **状態管理** | グローバル変数 | React Context + Hooks |
+| **レイアウト** | Golden Layout v1.5.9 | Golden Layout v2.6.0 |
+| **Three.js** | v0.129.0 (直接利用) | v0.160.0 + React Three Fiber |
+| **Monaco Editor** | v0.20.0 | v4.7.0 (@monaco-editor/react) |
+| **Tweakpane** | v3.0.5 | v4.0.3 |
+| **OpenCascade.js** | v0.1.15 | v1.1.1 |
+| **テスト** | 基本的なスクリーンショット比較 | Playwright E2Eテスト |
+| **ビルドシステム** | なし（静的ファイル） | Next.js + Webpack |
+| **開発サーバー** | Live Server等 | Next.js Dev Server |
+| **デプロイ** | GitHub Pages | Vercel対応 |
 
-First, install dependencies:
+## 🏗️ アーキテクチャ
 
-```bash
-npm install
+### 移植版のアーキテクチャ
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Next.js App Router                      │
+├─────────────────────────────────────────────────────────────┤
+│  React Components (TypeScript)                             │
+│  ├── CascadeStudioLayout (Golden Layout v2)                │
+│  ├── MonacoCodeEditor (@monaco-editor/react)               │
+│  ├── ThreeJSViewport (React Three Fiber)                   │
+│  └── TweakpaneGUI (Tweakpane v4)                          │
+├─────────────────────────────────────────────────────────────┤
+│  Custom Hooks & Context                                    │
+│  ├── useCADWorker (WebWorker管理)                          │
+│  ├── AppContext (グローバル状態)                            │
+│  └── URLStateManager (URL状態管理)                         │
+├─────────────────────────────────────────────────────────────┤
+│  WebWorker (OpenCascade.js v1.1.1)                        │
+│  └── CAD処理・形状生成                                      │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-Then, run the development server:
+### 元版のアーキテクチャ
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    静的HTML + jQuery                        │
+├─────────────────────────────────────────────────────────────┤
+│  JavaScript Modules                                        │
+│  ├── CascadeMain.js (メイン制御)                            │
+│  ├── CascadeView.js (3Dビュー)                             │
+│  └── CascadeViewHandles.js (UI制御)                        │
+├─────────────────────────────────────────────────────────────┤
+│  External Libraries                                        │
+│  ├── Golden Layout v1.5.9                                 │
+│  ├── Monaco Editor v0.20.0                                │
+│  ├── Three.js v0.129.0                                    │
+│  └── Tweakpane v3.0.5                                     │
+├─────────────────────────────────────────────────────────────┤
+│  WebWorker (OpenCascade.js v0.1.15)                       │
+│  └── CAD処理・形状生成                                      │
+└─────────────────────────────────────────────────────────────┘
+```
 
+## 🚀 セットアップと実行
+
+### 前提条件
+- Node.js 18以上
+- npm または yarn
+
+### インストール
 ```bash
+# 依存関係のインストール
+npm install
+
+# 開発サーバーの起動
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+ブラウザで [http://localhost:3000](http://localhost:3000) を開いてください。
 
-## Available Scripts
+### 利用可能なスクリプト
+```bash
+npm run dev          # 開発サーバー起動
+npm run build        # プロダクションビルド
+npm run start        # プロダクションサーバー起動
+npm run lint         # ESLint実行
+npm run type-check   # TypeScript型チェック
+npm run test         # Playwrightテスト実行
+npm run test:ui      # テストUIモード
+npm run test:headed  # ヘッドありテスト
+npm run test:debug   # デバッグモード
+```
 
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm start` - Start production server
-- `npm run lint` - Run ESLint
-- `npm run type-check` - Run TypeScript type checking
-- `npm run test:e2e` - Run Playwright end-to-end tests
-
-## Project Structure
+## 📁 プロジェクト構造
 
 ```
+modeler-x/
 ├── app/                    # Next.js App Router
-│   ├── layout.tsx         # Root layout
-│   ├── page.tsx           # Home page
-│   └── cascade-studio/    # CascadeStudio page
-├── components/            # React components
-│   ├── cad/               # CAD-specific components
-│   ├── threejs/           # Three.js components
-│   ├── layout/            # Layout components
-│   └── gui/               # GUI components
-├── hooks/                 # Custom React hooks
-│   └── useCADWorker.ts    # CAD worker hook
-├── lib/                   # Library code
-│   ├── cad/               # CAD utilities
-│   └── layout/            # Layout utilities
-├── public/                # Static files
-│   └── workers/           # Web workers
-└── types/                 # TypeScript type definitions
+│   ├── layout.tsx         # ルートレイアウト
+│   ├── page.tsx           # ホームページ（CascadeStudio）
+│   └── api/               # APIルート
+├── components/            # Reactコンポーネント
+│   ├── cad/               # CAD関連コンポーネント
+│   │   └── MonacoCodeEditor.tsx
+│   ├── threejs/           # Three.js関連
+│   │   └── ThreeJSViewport.tsx
+│   ├── layout/            # レイアウトコンポーネント
+│   │   ├── CascadeStudioLayout.tsx
+│   │   └── CascadeNavigation.tsx
+│   └── gui/               # GUI関連
+│       └── TweakpaneGUI.tsx
+├── hooks/                 # カスタムフック
+│   └── useCADWorker.ts    # CADワーカー管理
+├── lib/                   # ライブラリコード
+│   ├── cad/               # CADユーティリティ
+│   ├── layout/            # レイアウト設定
+│   └── utils/             # 共通ユーティリティ
+├── public/                # 静的ファイル
+│   ├── workers/           # WebWorkerファイル
+│   ├── opencascade/       # OpenCascade.jsライブラリ
+│   └── monaco-editor-workers/ # Monaco Editorワーカー
+├── types/                 # TypeScript型定義
+├── docs/                  # ドキュメント
+│   ├── v0/                # 元のCascade Studio
+│   └── wiki/              # 移植関連ドキュメント
+└── tests/                 # Playwrightテスト
 ```
 
-## Architecture
+## 🛠️ 使用技術
 
-### Three.js Rendering Pipeline
-1. **OpenCascade.js**: Generates 3D geometry using CAD operations
-2. **WebWorker**: Processes CAD operations in a background thread
-3. **Three.js**: Renders 3D models with WebGL
-4. **React Three Fiber**: React integration for Three.js
+### フロントエンド
+- **[Next.js 14.2.5](https://nextjs.org/)** - Reactフレームワーク
+- **[TypeScript](https://www.typescriptlang.org/)** - 型安全性
+- **[React 18.3.1](https://react.dev/)** - UIライブラリ
+- **[Tailwind CSS](https://tailwindcss.com/)** - スタイリング
+- **[DaisyUI](https://daisyui.com/)** - UIコンポーネント
 
-### CascadeStudio Architecture
-1. **Monaco Editor**: Code editing with syntax highlighting
-2. **CAD Worker**: Processes OpenCascade.js operations
-3. **Three.js Viewport**: 3D visualization of CAD models
-4. **Tweakpane GUI**: Parameter controls
+### 3D・CAD
+- **[Three.js 0.160.0](https://threejs.org/)** - 3D描画エンジン
+- **[React Three Fiber 8.15.12](https://docs.pmnd.rs/react-three-fiber)** - React統合
+- **[React Three Drei 9.92.7](https://github.com/pmndrs/drei)** - Three.jsユーティリティ
+- **[OpenCascade.js 1.1.1](https://ocjs.org/)** - CADカーネル
 
-## Technologies Used
+### エディタ・UI
+- **[Monaco Editor 4.7.0](https://microsoft.github.io/monaco-editor/)** - コードエディタ
+- **[Tweakpane 4.0.3](https://tweakpane.github.io/docs/)** - GUIコントロール
+- **[Golden Layout 2.6.0](http://golden-layout.com/)** - マルチパネルレイアウト
 
-- [Next.js 14.2.5](https://nextjs.org/) - React framework
-- [TypeScript](https://www.typescriptlang.org/) - Type safety
-- [Three.js 0.160.0](https://threejs.org/) - 3D rendering
-- [React Three Fiber 8.15.12](https://docs.pmnd.rs/react-three-fiber) - React integration
-- [React Three Drei 9.92.7](https://github.com/pmndrs/drei) - Three.js utilities
-- [OpenCascade.js](https://ocjs.org/) - CAD geometry processing
-- [Monaco Editor](https://microsoft.github.io/monaco-editor/) - Code editor
-- [Tweakpane](https://tweakpane.github.io/docs/) - GUI controls
-- [Golden Layout](http://golden-layout.com/) - Multi-panel layout
-- [Tailwind CSS](https://tailwindcss.com/) - Styling
-- [DaisyUI](https://daisyui.com/) - UI components
+### 開発・テスト
+- **[Playwright](https://playwright.dev/)** - E2Eテスト
+- **[ESLint](https://eslint.org/)** - コード品質
+- **[PostCSS](https://postcss.org/)** - CSS処理
 
-## Migration History
+## 📚 使い方
 
-This project has been migrated from `@google/model-viewer` to Three.js for enhanced performance and customization. The migration documentation can be found in `docs/4_convert_threejs/`.
+1. **コードエディタ**: 左パネルでJavaScript/TypeScriptコードを記述
+2. **3Dビューポート**: 中央で3Dモデルをリアルタイム表示
+3. **GUIパネル**: 右側でパラメータを調整
+4. **エクスポート**: ナビゲーションバーからSTEP/STL/OBJ形式で出力
+5. **URL共有**: ブラウザのURLでデザインを共有
 
-**Migration completed**: June 2024
+### サンプルコード
+```javascript
+// 基本的なボックスの作成
+let box = Box(10, 10, 10, true);
 
-## Learn More
+// フィレット付きシリンダー
+let cylinder = Cylinder(5, 20, true);
+let filletedCylinder = Fillet(cylinder, 1);
 
-- [Three.js Documentation](https://threejs.org/docs/)
-- [React Three Fiber Documentation](https://docs.pmnd.rs/react-three-fiber)
-- [Next.js Documentation](https://nextjs.org/docs)
-- [OpenCascade.js Documentation](https://ocjs.org/docs)
+// ブール演算
+let result = Difference(box, cylinder);
+```
 
-## Contributing
+## 🔄 移植の進捗
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+### ✅ 完了済み
+- [x] Next.js 14 + TypeScript基盤構築
+- [x] Monaco Editorの統合
+- [x] Three.js + React Three Fiberの統合
+- [x] OpenCascade.js WebWorkerの移植
+- [x] Golden Layout v2への更新
+- [x] Tweakpane v4への更新
+- [x] URL状態管理の実装
+- [x] ファイル入出力機能
+- [x] Playwrightテストの実装
 
-## Deploy on Vercel
+### 🚧 進行中・予定
+- [ ] PWA機能の実装
+- [ ] パフォーマンス最適化
+- [ ] モバイル対応の改善
+- [ ] 追加のCAD機能
+- [ ] ドキュメントの充実
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🤝 コントリビューション
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+プロジェクトへの貢献を歓迎します！以下の手順でご参加ください：
+
+1. このリポジトリをフォーク
+2. 機能ブランチを作成 (`git checkout -b feature/amazing-feature`)
+3. 変更をコミット (`git commit -m 'Add amazing feature'`)
+4. ブランチにプッシュ (`git push origin feature/amazing-feature`)
+5. プルリクエストを作成
+
+## 📄 ライセンス
+
+このプロジェクトはMITライセンスの下で公開されています。詳細は[LICENSE](LICENSE)ファイルをご覧ください。
+
+## 🙏 謝辞
+
+- **[Johnathon Selstad (@zalo)](https://github.com/zalo)** - 元のCascade Studioの作者
+- **[OpenCascade.js](https://github.com/donalffons/opencascade.js)** - WebAssembly CADカーネル
+- **[Three.js](https://threejs.org/)** - 3D描画ライブラリ
+- **[Monaco Editor](https://microsoft.github.io/monaco-editor/)** - コードエディタ
+
+## 📞 サポート
+
+質問や問題がある場合は、[GitHub Issues](https://github.com/your-username/modeler-x/issues)でお気軽にお知らせください。
+
+---
+
+**元のCascade Studio**: https://zalo.github.io/CascadeStudio/  
+**移植版デモ**: https://your-demo-url.vercel.app/

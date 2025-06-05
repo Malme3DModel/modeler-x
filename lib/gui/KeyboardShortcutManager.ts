@@ -36,6 +36,15 @@ export class KeyboardShortcutManager {
       return;
     }
 
+    // F5キーの特別処理：MonacoCodeEditorのグローバルハンドラーに優先権を与える
+    if (event.key === 'F5' || event.keyCode === 116) {
+      const hasMonacoEditor = document.querySelector('.monaco-editor') !== null;
+      if (hasMonacoEditor) {
+        // MonacoCodeEditorが存在する場合は、そちらのハンドラーに任せる
+        return;
+      }
+    }
+
     const shortcutKey = this.getShortcutKey(event);
     const callback = this.shortcuts.get(shortcutKey);
 

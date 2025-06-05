@@ -9,6 +9,11 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 export default function PWAInstallPrompt() {
+  // PWAインストールプロンプトを非表示にする
+  return null;
+
+  // 以下のコードはコメントアウト
+  /*
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showInstallPrompt, setShowInstallPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -85,4 +90,5 @@ export default function PWAInstallPrompt() {
       </button>
     </div>
   );
+  */
 }

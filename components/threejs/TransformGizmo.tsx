@@ -27,26 +27,24 @@ export function TransformGizmo({
   onDragEnd
 }: TransformGizmoProps) {
   const transformRef = useRef<any>(null);
-  const { camera, gl, scene } = useThree();
+  const { camera, gl, scene, controls: orbitControls } = useThree();
   
   // 🔧 OrbitControlsとの競合解決
   const handleDragStart = useCallback(() => {
     // OrbitControlsを無効化
-    const orbitControls = scene.userData.orbitControls;
     if (orbitControls) {
-      orbitControls.enabled = false;
+      (orbitControls as any).enabled = false;
     }
     onDragStart?.();
-  }, [scene, onDragStart]);
+  }, [orbitControls, onDragStart]);
   
   const handleDragEnd = useCallback(() => {
     // OrbitControlsを再有効化
-    const orbitControls = scene.userData.orbitControls;
     if (orbitControls) {
-      orbitControls.enabled = true;
+      (orbitControls as any).enabled = true;
     }
     onDragEnd?.();
-  }, [scene, onDragEnd]);
+  }, [orbitControls, onDragEnd]);
   
   // 🎯 オブジェクト変更イベント
   const handleObjectChange = useCallback(() => {

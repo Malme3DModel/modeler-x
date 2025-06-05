@@ -234,10 +234,10 @@ export default function CADViewport({
         <FileIOControls cadWorkerState={cadWorkerState} />
         
         {/* カメラコントロール */}
-        <CameraControls 
+        {/* <CameraControls 
           boundingBox={null}
           onFitToObject={() => console.log('フィットオブジェクト')}
-        />
+        /> */}
       </div>
       
       {/* 3Dビューポート */}

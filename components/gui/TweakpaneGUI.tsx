@@ -84,17 +84,8 @@ export default function TweakpaneGUI({
         handlers.registerGlobalHandlers();
         console.log('✅ [TweakpaneGUI] CascadeGUIHandlers initialized');
 
-        // STARTER_CODEを評価してDynamic GUIを生成するためのイベント発火
-        if (cadWorkerReady) {
-          console.log('✅ [TweakpaneGUI] CAD Worker ready, will evaluate code soon...');
-          setTimeout(() => {
-            // Evaluateボタンをクリックしてコードを実行
-            if (isComponentMounted) {
-              console.log('🔄 [TweakpaneGUI] Auto-triggering Evaluate');
-              onGUIUpdate?.(guiState);
-            }
-          }, 1000);
-        }
+        // 初期化時の自動評価を無効化（手動でEvaluateボタンを押すまで待機）
+        console.log('✅ [TweakpaneGUI] CAD Worker ready, waiting for manual evaluation...');
 
       } catch (error) {
         console.error('❌ [TweakpaneGUI] Failed to initialize Tweakpane:', error);

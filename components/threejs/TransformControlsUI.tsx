@@ -32,6 +32,10 @@ export function TransformControlsUI({
   onVisibilityChange,
   selectedObjectName
 }: TransformControlsUIProps) {
+  if (!selectedObjectName) {
+    return null;
+  }
+
   return (
     <div className="transform-controls-ui bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-lg">
       {/* 選択オブジェクト情報 */}
