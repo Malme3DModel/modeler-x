@@ -1,22 +1,21 @@
-// グローバル設定を読み込み（basePathを考慮）
-const currentPath = self.location.pathname;
-const basePath = currentPath.includes('/modeler-x') ? '/modeler-x' : '';
-try {
-  importScripts(`${basePath}/config.js`);
-} catch (e) {
-  // フォールバック: 直接設定を定義
-  const isGitHubPages = self.location.hostname.includes('github.io');
-  const BASE_PATH = isGitHubPages ? '/modeler-x' : '';
-  self.PUBLIC_ASSET_CONFIG = {
-    BASE_PATH,
-    getPublicAssetPath: (path) => {
-      const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-      return `${BASE_PATH}${normalizedPath}`;
-    }
-  };
+const version = 'modeler-x-v1.1.0::';
+
+// BasePathの取得関数
+function getBasePath() {
+  // Service Worker内ではlocationを使用
+  const pathname = self.location.pathname;
+  if (pathname.includes('/modeler-x/')) {
+    return '/modeler-x';
+  }
+  return '';
 }
 
-const version = 'modeler-x-v1.1.0::';
+// 公開ファイルパスの取得関数
+function getPublicPath(path) {
+  const basePath = getBasePath();
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${basePath}${normalizedPath}`;
+}
 
 const CACHES = {
   static: version + 'static',
@@ -25,27 +24,24 @@ const CACHES = {
   assets: version + 'assets'
 };
 
-// グローバル設定からbasePathを取得
-const { BASE_PATH, getPublicAssetPath } = self.PUBLIC_ASSET_CONFIG;
-
 const CAD_RESOURCES = [
-  `${BASE_PATH}/`,
-  `${BASE_PATH}/manifest.json`,
-  `${BASE_PATH}/_next/static/`,
-  `${BASE_PATH}/opencascade/opencascade.wasm.js`,
-  `${BASE_PATH}/opencascade/opencascade.wasm.wasm`,
-  `${BASE_PATH}/monaco-editor-workers/editor.worker.js`,
-  `${BASE_PATH}/monaco-editor-workers/ts.worker.js`,
-  `${BASE_PATH}/workers/cadWorker.js`,
-  `${BASE_PATH}/textures/`,
-  `${BASE_PATH}/fonts/`
+  getPublicPath('/'),
+  getPublicPath('/manifest.webmanifest'),
+  getPublicPath('/_next/static/'),
+  getPublicPath('/opencascade/opencascade.wasm.js'),
+  getPublicPath('/opencascade/opencascade.wasm.wasm'),
+  getPublicPath('/monaco-editor-workers/editor.worker.js'),
+  getPublicPath('/monaco-editor-workers/ts.worker.js'),
+  getPublicPath('/workers/cadWorker.js'),
+  getPublicPath('/textures/'),
+  getPublicPath('/fonts/')
 ];
 
 const STATIC_ASSETS = [
-  `${BASE_PATH}/icon-192x192.png`,
-  `${BASE_PATH}/icon-512x512.png`,
-  `${BASE_PATH}/badge-72x72.png`,
-  `${BASE_PATH}/favicon.ico`
+  getPublicPath('/icon-192x192.png'),
+  getPublicPath('/icon-512x512.png'),
+  getPublicPath('/badge-72x72.png'),
+  getPublicPath('/favicon.ico')
 ];
 
 function useNetworkFirst(request) {
@@ -66,13 +62,17 @@ function useCacheFirst(request) {
 
 function shouldCacheRequest(request) {
   const url = new URL(request.url);
+  const basePath = getBasePath();
   
-  if (url.pathname.includes('/_next/static/')) return true;
-  if (url.pathname.includes('/opencascade/')) return true;
-  if (url.pathname.includes('/monaco-editor-workers/')) return true;
-  if (url.pathname.includes('/workers/')) return true;
-  if (url.pathname.includes('/api/')) return false;
-  if (url.pathname.includes('/socket.io/')) return false;
+  // basePathを考慮したパス判定
+  const normalizedPath = basePath ? url.pathname.replace(basePath, '') : url.pathname;
+  
+  if (normalizedPath.includes('/_next/static/')) return true;
+  if (normalizedPath.includes('/opencascade/')) return true;
+  if (normalizedPath.includes('/monaco-editor-workers/')) return true;
+  if (normalizedPath.includes('/workers/')) return true;
+  if (normalizedPath.includes('/api/')) return false;
+  if (normalizedPath.includes('/socket.io/')) return false;
   
   return false;
 }
