@@ -552,14 +552,13 @@ export default function ThreeJSViewport({
   }
 
   return (
-    <div className="w-full h-full relative canvas-container" onMouseMove={handleMouseMove} data-testid="threejs-viewport">
+    <div className="w-full h-full relative canvas-container" data-testid="threejs-viewport">
       <TransformModeIndicator mode={transformMode} visible={isTransformVisible && !!selectedObject} />
       
       <div className="absolute top-2 right-2 z-50" data-testid="camera-controls-container">
         <CameraControls boundingBox={boundingBox} />
       </div>
       
-      {/* TransformControls UI */}
       <TransformControlsUI 
         onModeChange={setTransformMode} 
         onSpaceChange={setTransformSpace}
@@ -601,6 +600,9 @@ export default function ThreeJSViewport({
             enableDamping
             dampingFactor={0.05}
             rotateSpeed={0.5}
+            panSpeed={1}
+            zoomSpeed={1}
+            screenSpacePanning={true}
             minDistance={0.1}
             maxDistance={1000}
             target={[0, 0, 0]}
@@ -669,8 +671,6 @@ export default function ThreeJSViewport({
         }}
       />
 
-
-
       <MultiSelectionManager 
         onSelectionChange={(objects: THREE.Object3D[]) => {
           console.log('選択オブジェクト数:', objects.length);
@@ -682,14 +682,12 @@ export default function ThreeJSViewport({
         visible={selectedObjects.length > 0}
       />
 
-      {/* ツールチップを追加 */}
       <HoverTooltip 
         hoveredObject={hoveredObject}
         hoveredFace={hoveredFace}
         mousePosition={mousePosition}
       />
 
-      {/* レイキャスティング制御UI */}
       <div className="absolute bottom-2 left-2 z-10 bg-gray-800 bg-opacity-80 p-1 rounded shadow-lg text-white text-sm">
         <label className="flex items-center">
           <input 
@@ -702,10 +700,8 @@ export default function ThreeJSViewport({
         </label>
       </div>
 
-
-
       <SelectionBox 
-        enabled={true}
+        enabled={false}
         onSelectionComplete={(objects: any[]) => {
           objects.forEach((obj: any) => selectObject(obj, true));
         }}
