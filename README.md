@@ -1,6 +1,6 @@
 # Modeler-X: Cascade Studio Next.js移植プロジェクト
 
-このプロジェクトは、[Cascade Studio](https://github.com/zalo/CascadeStudio)をNext.js 14、TypeScript、React 18に移植した現代的なWebベースCADアプリケーションです。
+このプロジェクトは、[Cascade Studio](docs/v0/)をNext.js 14、TypeScript、React 18に移植した現代的なWebベースCADアプリケーションです。
 
 ## 📋 プロジェクト概要
 

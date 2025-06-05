@@ -9,9 +9,9 @@ import { AppProvider } from '@/contexts/AppContext';
 // 新しいインポート
 import { URLStateManager } from '@/lib/layout/urlStateManager';
 import { GUIState } from '@/types/gui';
-import { useCADWorker } from '@/hooks/useCADWorker';
 import { CascadeConsole, CascadeConsoleRef } from '@/components/layout/CascadeConsole';
 import type { MonacoCodeEditorRef } from '@/components/cad/MonacoCodeEditor';
+import { useAppContext } from '@/contexts/AppContext';
 
 // Golden Layout CSS
 import 'golden-layout/dist/css/goldenlayout-base.css';
@@ -39,6 +39,7 @@ interface CascadeStudioLayoutProps {
 export default function CascadeStudioLayout({ 
   onProjectLoad 
 }: CascadeStudioLayoutProps) {
+  console.log('🏗️ [CascadeStudioLayout] Component mounting...');
   return (
     <AppProvider>
       <CascadeStudioLayoutInner onProjectLoad={onProjectLoad} />
@@ -61,6 +62,7 @@ function CascadeStudioLayoutInner({
 
   const [consoleInstance, setConsoleInstance] = useState<CascadeConsoleRef | null>(null);
 
+  const { cadEngine } = useAppContext();
   const {
     isWorkerReady,
     isWorking,
@@ -70,7 +72,7 @@ function CascadeStudioLayoutInner({
     executeCADCode,
     combineAndRender,
     worker
-  } = useCADWorker();
+  } = cadEngine;
 
   // コンソールインスタンスが更新されたらrefを更新
   useEffect(() => {
@@ -114,9 +116,12 @@ function CascadeStudioLayoutInner({
     }
   }, [isWorkerReady, executeCADCode, guiState, appendConsoleMessage]);
   
-  // URLハッシュから初期状態を読み込む
+  // URLハッシュから初期状態を読み込む（一度だけ実行）
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    
+    // 既に読み込み済みの場合はスキップ
+    if (lastSavedCodeRef.current !== STARTER_CODE) return;
     
     try {
       const urlState = URLStateManager.getStateFromURL();
@@ -137,7 +142,7 @@ function CascadeStudioLayoutInner({
       console.error('URL状態の読み込みに失敗:', error);
       appendConsoleMessage('⚠️ URL状態の読み込みに失敗しました', 'error');
     }
-  }, [appendConsoleMessage]);
+  }, []); // 依存配列を空にして一度だけ実行
 
   // ワーカーエラーをコンソールに表示
   useEffect(() => {
@@ -149,14 +154,14 @@ function CascadeStudioLayoutInner({
   // ワーカーログをコンソールに表示
   useEffect(() => {
     if (logs.length > 0) {
-      logs.forEach(log => {
+      logs.forEach((log: string) => {
         appendConsoleMessage(`${log}`, 'info');
       });
     }
   }, [logs, appendConsoleMessage]);
 
   useEffect(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || isLayoutReady) return; // 既に初期化済みの場合はスキップ
 
     // Golden Layout動的インポート
     const initializeLayout = async () => {
