@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { useCADWorker } from './useCADWorker';
 import { useGUIState } from './useGUIState';
+import { isTransformKey, isCameraViewKey, isFitToObjectKey, getCameraViewName } from '../lib/utils/keyboardShortcuts';
 
 interface KeyboardShortcutsOptions {
   onEvaluateCode?: () => void;
@@ -93,28 +94,33 @@ export function useKeyboardShortcuts({
       return;
     }
 
-    // G: 移動ツール
-    if (e.key === 'g' || e.key === 'G') {
-      // TransformControlsのモード変更処理
+    const transformModeKey = isTransformKey(e.key);
+    if (transformModeKey) {
       document.dispatchEvent(new CustomEvent('transform-mode-change', { 
-        detail: { mode: 'translate' } 
+        detail: { mode: transformModeKey } 
       }));
       return;
     }
 
-    // R: 回転ツール
-    if (e.key === 'r' || e.key === 'R') {
-      document.dispatchEvent(new CustomEvent('transform-mode-change', { 
-        detail: { mode: 'rotate' } 
-      }));
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      document.dispatchEvent(new CustomEvent('transform-mode-cycle'));
       return;
     }
 
-    // S: スケールツール
-    if (e.key === 's' || e.key === 'S') {
-      document.dispatchEvent(new CustomEvent('transform-mode-change', { 
-        detail: { mode: 'scale' } 
-      }));
+    const cameraViewNumber = isCameraViewKey(e.key);
+    if (cameraViewNumber) {
+      const viewName = getCameraViewName(cameraViewNumber);
+      if (viewName && (window as any).cascadeCameraControls?.animateToView) {
+        (window as any).cascadeCameraControls.animateToView(viewName);
+      }
+      return;
+    }
+
+    if (isFitToObjectKey(e.key)) {
+      if ((window as any).cascadeCameraControls?.fitToObject) {
+        (window as any).cascadeCameraControls.fitToObject();
+      }
       return;
     }
   }, [defaultEvaluateCode, defaultSaveProject, defaultClearSelection]);
@@ -135,4 +141,4 @@ export function useKeyboardShortcuts({
     saveProject: defaultSaveProject,
     clearSelection: defaultClearSelection
   };
-} 
+}        

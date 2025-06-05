@@ -7,6 +7,7 @@ interface TransformGizmoProps {
   selectedObject: THREE.Object3D | null;
   mode: 'translate' | 'rotate' | 'scale';
   space: 'local' | 'world';
+  visible: boolean;
   enabled?: boolean;
   size?: number;
   onObjectChange?: (object: THREE.Object3D) => void;
@@ -18,6 +19,7 @@ export function TransformGizmo({
   selectedObject, 
   mode, 
   space,
+  visible,
   enabled = true,
   size = 1,
   onObjectChange,
@@ -82,7 +84,7 @@ export function TransformGizmo({
   }, [handleDragStart, handleDragEnd, handleObjectChange]);
   
   // ✨ レンダリング条件
-  if (!selectedObject || !enabled) return null;
+  if (!selectedObject || !visible || !enabled) return null;
   
   return (
     <TransformControls
@@ -96,4 +98,4 @@ export function TransformGizmo({
       showZ={true}
     />
   );
-} 
+}  

@@ -40,6 +40,9 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
     { key: 'G', description: '移動ツール', category: '3D操作' },
     { key: 'R', description: '回転ツール', category: '3D操作' },
     { key: 'S', description: 'スケールツール', category: '3D操作' },
+    { key: 'Tab', description: 'ツール切り替え', category: '3D操作' },
+    { key: 'Ctrl+Click', description: '複数選択', category: '3D操作' },
+    { key: '?', description: 'ショートカットヘルプ', category: '3D操作' },
     { key: '1', description: '前面視点', category: 'カメラ' },
     { key: '2', description: '背面視点', category: 'カメラ' },
     { key: '3', description: '上面視点', category: 'カメラ' },
@@ -152,4 +155,4 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
       </div>
     </div>
   );
-} 
+}        

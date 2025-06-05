@@ -4,7 +4,7 @@ import * as THREE from 'three';
 
 interface ObjectSelectorProps {
   children: React.ReactNode;
-  onSelectObject: (object: THREE.Object3D | null) => void;
+  onSelectObject: (object: THREE.Object3D | null, multiSelect?: boolean) => void;
   selectableObjects?: THREE.Object3D[];
   multiSelect?: boolean;
 }
@@ -46,25 +46,19 @@ export function ObjectSelector({
     
     if (intersects.length > 0) {
       const selectedObject = intersects[0].object;
+      const isMultiSelect = event.nativeEvent.ctrlKey || event.nativeEvent.metaKey;
       
-      // 📍 マルチセレクション対応
-      if (multiSelect && event.nativeEvent.ctrlKey) {
-        // Ctrl+クリックでマルチセレクション
-        // TODO: マルチセレクション状態管理
-        console.log('Multi-select mode:', selectedObject);
-      }
+      console.log('🎯 オブジェクトクリック:', selectedObject.name || selectedObject.type, isMultiSelect ? '(複数選択)' : '');
       
-      onSelectObject(selectedObject);
+      onSelectObject(selectedObject, isMultiSelect);
     } else {
-      // 空白クリックで選択解除
-      onSelectObject(null);
+      onSelectObject(null, false);
     }
   }, [camera, scene, selectableObjects, multiSelect, onSelectObject]);
   
-  // 🔧 キーボードイベント（Escape で選択解除）
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (event.key === 'Escape') {
-      onSelectObject(null);
+      onSelectObject(null, false);
     }
   }, [onSelectObject]);
   
@@ -79,4 +73,4 @@ export function ObjectSelector({
       {children}
     </group>
   );
-} 
+}  
