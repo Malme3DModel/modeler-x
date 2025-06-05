@@ -21,10 +21,15 @@ import { MultiSelectionManager } from './MultiSelectionManager';
 import { TransformModeIndicator } from '../ui/TransformModeIndicator';
 import { SelectionIndicator } from '../ui/SelectionIndicator';
 import { PWAInstallBanner } from '../ui/PWAInstallBanner';
+import { SelectionBox } from '../ui/SelectionBox';
+import { KeyboardShortcutIntegration } from '../integration/KeyboardShortcutIntegration';
+
+
 
 import { FeatureParityStatus } from '../ui/FeatureParityStatus';
 import { isTransformKey, isCameraViewKey, isFitToObjectKey, getCameraViewName } from '../../lib/utils/keyboardShortcuts';
 import { logFeatureParityCompletion } from '../../lib/utils/featureParityLogger';
+import { useComprehensiveKeyboardShortcuts } from '../../hooks/useKeyboardShortcuts';
 
 interface ThreeJSViewportProps {
   cameraPosition?: [number, number, number];
@@ -351,6 +356,8 @@ export default function ThreeJSViewport({
   const [fogEnabled, setFogEnabled] = useState(false);
   const [fogSettings, setFogSettings] = useState({ near: 50, far: 200 });
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
+
+  useComprehensiveKeyboardShortcuts();
   
   // 🎯 オブジェクト変更ハンドラー
   const handleObjectChange = useCallback((object: THREE.Object3D) => {
@@ -680,9 +687,18 @@ export default function ThreeJSViewport({
         </label>
       </div>
 
-      <PWAInstallBanner />
-      
 
+
+      <SelectionBox 
+        enabled={true}
+        onSelectionComplete={(objects: any[]) => {
+          objects.forEach((obj: any) => selectObject(obj, true));
+        }}
+      />
+
+      <KeyboardShortcutIntegration />
+
+      <PWAInstallBanner />
       
       <FeatureParityStatus visible={true} />
     </div>
@@ -820,4 +836,4 @@ function CameraAnimationController({ boundingBox }: { boundingBox: THREE.Box3 | 
   }, [boundingBox, handleFitToObject, animateToView]);
 
   return null;
-}                                                                                                                                                                                    
+}                                                                                                                                                                                                                                                                                    

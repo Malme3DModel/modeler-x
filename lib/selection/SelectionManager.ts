@@ -51,6 +51,62 @@ export class SelectionManager {
       if (index > -1) this.listeners.splice(index, 1);
     };
   }
+
+  selectByArea(startPoint: THREE.Vector2, endPoint: THREE.Vector2, scene: THREE.Scene, camera: THREE.Camera): void {
+    const bounds = new THREE.Box2(startPoint, endPoint);
+    const selectedInArea: THREE.Object3D[] = [];
+    
+    scene.traverse((object) => {
+      if (this.isSelectableObject(object)) {
+        const screenPosition = this.getScreenPosition(object, camera);
+        if (bounds.containsPoint(screenPosition)) {
+          selectedInArea.push(object);
+        }
+      }
+    });
+
+    selectedInArea.forEach(obj => this.addToSelection(obj));
+  }
+
+  selectAll(scene: THREE.Scene): void {
+    scene.traverse((object) => {
+      if (this.isSelectableObject(object)) {
+        this.addToSelection(object);
+      }
+    });
+  }
+
+  invertSelection(scene: THREE.Scene): void {
+    const allObjects: THREE.Object3D[] = [];
+    scene.traverse((object) => {
+      if (this.isSelectableObject(object)) {
+        allObjects.push(object);
+      }
+    });
+
+    allObjects.forEach(obj => {
+      if (this.isSelected(obj)) {
+        this.removeFromSelection(obj);
+      } else {
+        this.addToSelection(obj);
+      }
+    });
+  }
+
+  private isSelectableObject(object: THREE.Object3D): boolean {
+    return object instanceof THREE.Mesh && object.visible;
+  }
+
+  private getScreenPosition(object: THREE.Object3D, camera: THREE.Camera): THREE.Vector2 {
+    const vector = new THREE.Vector3();
+    object.getWorldPosition(vector);
+    vector.project(camera);
+    
+    return new THREE.Vector2(
+      (vector.x + 1) / 2,
+      (-vector.y + 1) / 2
+    );
+  }
 }
 
 export const selectionManager = new SelectionManager();

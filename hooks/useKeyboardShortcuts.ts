@@ -141,4 +141,90 @@ export function useKeyboardShortcuts({
     saveProject: defaultSaveProject,
     clearSelection: defaultClearSelection
   };
-}        
+}
+
+export function useComprehensiveKeyboardShortcuts() {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.target instanceof Element && (
+        event.target.closest('.monaco-editor') ||
+        event.target.tagName === 'INPUT' ||
+        event.target.tagName === 'TEXTAREA'
+      )) {
+        return;
+      }
+
+      const key = getShortcutKey(event);
+      
+      switch (key) {
+        case 'Ctrl+N':
+          event.preventDefault();
+          document.dispatchEvent(new CustomEvent('project-new'));
+          break;
+        case 'Ctrl+O':
+          event.preventDefault();
+          document.dispatchEvent(new CustomEvent('project-open-dialog'));
+          break;
+        case 'Ctrl+S':
+          event.preventDefault();
+          document.dispatchEvent(new CustomEvent('project-save-dialog'));
+          break;
+        case 'Ctrl+Shift+S':
+          event.preventDefault();
+          document.dispatchEvent(new CustomEvent('project-save-as-dialog'));
+          break;
+        case 'Ctrl+Z':
+          event.preventDefault();
+          document.dispatchEvent(new CustomEvent('history-undo'));
+          break;
+        case 'Ctrl+Y':
+          event.preventDefault();
+          document.dispatchEvent(new CustomEvent('history-redo'));
+          break;
+        case 'Delete':
+          event.preventDefault();
+          document.dispatchEvent(new CustomEvent('selection-delete'));
+          break;
+        case 'Ctrl+A':
+          event.preventDefault();
+          document.dispatchEvent(new CustomEvent('selection-select-all'));
+          break;
+        case 'Ctrl+D':
+          event.preventDefault();
+          document.dispatchEvent(new CustomEvent('selection-clear'));
+          break;
+        case 'Ctrl+I':
+          event.preventDefault();
+          document.dispatchEvent(new CustomEvent('selection-invert'));
+          break;
+        case 'Ctrl+G':
+          event.preventDefault();
+          document.dispatchEvent(new CustomEvent('group-create'));
+          break;
+        case 'Ctrl+Shift+G':
+          event.preventDefault();
+          document.dispatchEvent(new CustomEvent('group-ungroup'));
+          break;
+      }
+    };
+
+    const getShortcutKey = (event: KeyboardEvent): string => {
+      const parts: string[] = [];
+      
+      if (event.ctrlKey) parts.push('Ctrl');
+      if (event.shiftKey) parts.push('Shift');
+      if (event.altKey) parts.push('Alt');
+      if (event.metaKey) parts.push('Meta');
+      
+      parts.push(event.key);
+      
+      return parts.join('+');
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+}                
