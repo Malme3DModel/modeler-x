@@ -276,11 +276,22 @@ function Intersection(shapes) {
 function Translate(offset, shapes) {
   if (!oc || !Array.isArray(offset) || offset.length !== 3) return shapes;
   
-  const tf = new oc.gp_Trsf_1();
-  tf.SetTranslation_1(new oc.gp_Vec_4(offset[0], offset[1], offset[2]));
-  const loc = new oc.TopLoc_Location_2(tf);
-  
-  return shapes.map(shape => shape.Moved(loc));
+  try {
+    const tf = new oc.gp_Trsf_1();
+    tf.SetTranslation_1(new oc.gp_Vec_4(offset[0], offset[1], offset[2]));
+    const loc = new oc.TopLoc_Location_2(tf);
+    
+    // shapesが配列でない場合は単一の形状として処理
+    if (!Array.isArray(shapes)) {
+      return shapes.Moved(loc);
+    }
+    
+    // 配列の場合は各形状を変換
+    return shapes.map(shape => shape.Moved(loc));
+  } catch (error) {
+    console.error("❌ Translation failed:", error);
+    return shapes; // エラー時は元の形状を返す
+  }
 }
 
 function Rotate(axis, degrees, shapes) {
@@ -309,6 +320,12 @@ function Rotate(axis, degrees, shapes) {
     tf.SetRotation_1(ax1, radians);
     const loc = new oc.TopLoc_Location_2(tf);
     
+    // shapesが配列でない場合は単一の形状として処理
+    if (!Array.isArray(shapes)) {
+      return shapes.Moved(loc);
+    }
+    
+    // 配列の場合は各形状を変換
     return shapes.map(shape => shape.Moved(loc));
   } catch (error) {
     console.error("❌ Rotation failed:", error);
