@@ -75,12 +75,10 @@ let ocInitialized = false;
 var messageHandlers = {};
 
 async function initializeOpenCascade() {
-  console.log("🚀 Starting optimized OpenCascade initialization...");
-  
-  const startTime = performance.now();
+  console.log("🚀 Starting OpenCascade initialization...");
   
   try {
-    console.log("📁 Loading OpenCascade v1.1.1 with optimization...");
+    console.log("📁 Loading OpenCascade v1.1.1 from local files...");
     console.log("📡 URL: /opencascade/opencascade.wasm.js");
     
     console.log("📦 Fetching OpenCascade.js file...");
@@ -105,7 +103,7 @@ async function initializeOpenCascade() {
       throw new Error("opencascade function not available after execution");
     }
     
-    console.log("🔧 opencascade function found, initializing with optimization...");
+    console.log("🔧 opencascade function found, initializing...");
     
     const openCascade = await opencascade({
       locateFile(path) {
@@ -118,30 +116,18 @@ async function initializeOpenCascade() {
       }
     });
     
-    console.log("🎉 Optimized OpenCascade instance created successfully!");
+    console.log("🎉 OpenCascade instance created successfully!");
     
     oc = openCascade;
     ocInitialized = true;
     
-    const endTime = performance.now();
-    const initDuration = endTime - startTime;
-    
     postMessage({ type: "startupCallback" });
-    console.log("✅ OpenCascade v1.1.1 initialized with optimization");
-    console.log(`📊 WebAssembly initialization time: ${initDuration.toFixed(2)}ms`);
-    
-    if ('memory' in performance) {
-      const memInfo = performance.memory;
-      console.log('📊 Memory usage after initialization:', {
-        used: Math.round(memInfo.usedJSHeapSize / 1048576) + 'MB',
-        total: Math.round(memInfo.totalJSHeapSize / 1048576) + 'MB'
-      });
-    }
+    console.log("✅ OpenCascade v1.1.1 initialized successfully");
     
     return;
     
   } catch (error) {
-    console.log("❌ Failed to load optimized OpenCascade");
+    console.log("❌ Failed to load OpenCascade");
     console.log(`❌ Error type: ${error.constructor.name}`);
     console.log(`❌ Error message: ${error.message}`);
     console.log(`❌ Error stack: ${error.stack}`);
@@ -149,7 +135,7 @@ async function initializeOpenCascade() {
     postMessage({ 
       type: "error", 
       payload: { 
-        message: `Failed to load optimized OpenCascade.js: ${error.message}` 
+        message: `Failed to load OpenCascade.js: ${error.message}` 
       } 
     });
   }
