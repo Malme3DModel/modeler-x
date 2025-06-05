@@ -115,12 +115,7 @@ async function initializeOpenCascade() {
           return '/opencascade/opencascade.wasm.wasm';
         }
         return path;
-      },
-      wasmMemory: new WebAssembly.Memory({
-        initial: 256,
-        maximum: 1024,
-        shared: false
-      })
+      }
     });
     
     console.log("🎉 Optimized OpenCascade instance created successfully!");
