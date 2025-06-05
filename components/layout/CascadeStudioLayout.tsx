@@ -90,8 +90,12 @@ function CascadeStudioLayoutInner({
   const evaluateCode = useCallback((code: string) => {
     appendConsoleMessage('🔄 コード評価を開始します...', 'info');
     
+    // CADワーカーマネージャーから直接状態を取得
+    const workerManager = (window as any).cadWorkerManager;
+    const isWorkerActuallyReady = workerManager?.isWorkerReady() || isWorkerReady;
+    
     // CADワーカーにコードを送信
-    if (isWorkerReady) {
+    if (isWorkerActuallyReady) {
       executeCADCode(code, guiState)
         .then(() => {
           appendConsoleMessage('✅ コード評価を送信しました', 'success');
@@ -524,4 +528,4 @@ function CascadeStudioLayoutInner({
       </div>
     </div>
   );
-}             
+}                          

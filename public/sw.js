@@ -7,24 +7,27 @@ const CACHES = {
   assets: version + 'assets'
 };
 
+// GitHub Pagesの場合、basePathを適用
+const BASE_PATH = self.location.pathname.includes('/modeler-x') ? '/modeler-x' : '';
+
 const CAD_RESOURCES = [
-  '/',
-  '/manifest.json',
-  '/_next/static/',
-  '/opencascade/opencascade.wasm.js',
-  '/opencascade/opencascade.wasm.wasm',
-  '/monaco-editor-workers/editor.worker.js',
-  '/monaco-editor-workers/ts.worker.js',
-  '/workers/cadWorker.js',
-  '/textures/',
-  '/fonts/'
+  `${BASE_PATH}/`,
+  `${BASE_PATH}/manifest.json`,
+  `${BASE_PATH}/_next/static/`,
+  `${BASE_PATH}/opencascade/opencascade.wasm.js`,
+  `${BASE_PATH}/opencascade/opencascade.wasm.wasm`,
+  `${BASE_PATH}/monaco-editor-workers/editor.worker.js`,
+  `${BASE_PATH}/monaco-editor-workers/ts.worker.js`,
+  `${BASE_PATH}/workers/cadWorker.js`,
+  `${BASE_PATH}/textures/`,
+  `${BASE_PATH}/fonts/`
 ];
 
 const STATIC_ASSETS = [
-  '/icon-192x192.png',
-  '/icon-512x512.png',
-  '/badge-72x72.png',
-  '/favicon.ico'
+  `${BASE_PATH}/icon-192x192.png`,
+  `${BASE_PATH}/icon-512x512.png`,
+  `${BASE_PATH}/badge-72x72.png`,
+  `${BASE_PATH}/favicon.ico`
 ];
 
 function useNetworkFirst(request) {

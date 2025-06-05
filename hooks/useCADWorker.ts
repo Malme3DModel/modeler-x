@@ -31,8 +31,66 @@ interface UseCADWorkerReturn {
  * OpenCascade.jsを使用したCAD操作をWebWorkerで実行するための
  * フックです。コードの評価、形状のレンダリング、エラーハンドリングを提供します。
  */
+class CADWorkerManager {
+  private static instance: CADWorkerManager | null = null;
+  private worker: Worker | null = null;
+  private isReady: boolean = false;
+  private isInitializing: boolean = false;
+  private readyCallbacks: (() => void)[] = [];
+
+  private constructor() {}
+
+  static getInstance(): CADWorkerManager {
+    if (!CADWorkerManager.instance) {
+      CADWorkerManager.instance = new CADWorkerManager();
+      (window as any).cadWorkerManager = CADWorkerManager.instance;
+    }
+    return CADWorkerManager.instance;
+  }
+
+  getWorker(): Worker | null {
+    return this.worker;
+  }
+
+  isWorkerReady(): boolean {
+    return this.isReady;
+  }
+
+  isWorkerInitializing(): boolean {
+    return this.isInitializing;
+  }
+
+  setWorker(worker: Worker): void {
+    this.worker = worker;
+  }
+
+  setReady(ready: boolean): void {
+    this.isReady = ready;
+    if (ready) {
+      this.isInitializing = false;
+      this.readyCallbacks.forEach(callback => callback());
+      this.readyCallbacks = [];
+    }
+  }
+
+  setInitializing(initializing: boolean): void {
+    this.isInitializing = initializing;
+  }
+
+  onReady(callback: () => void): void {
+    if (this.isReady) {
+      callback();
+    } else {
+      this.readyCallbacks.push(callback);
+    }
+  }
+}
+
+const workerManager = CADWorkerManager.getInstance();
+
 export function useCADWorker(): UseCADWorkerReturn {
   const workerRef = useRef<Worker | null>(null);
+  const isInitializingRef = useRef(false);
   const [isWorkerReady, setIsWorkerReady] = useState(false);
   const [isWorking, setIsWorking] = useState(false);
   const [shapes, setShapes] = useState<CADShape[]>([]);
@@ -54,9 +112,28 @@ export function useCADWorker(): UseCADWorkerReturn {
 
   // ワーカーの初期化
   useEffect(() => {
+    if (workerManager.getWorker() && workerManager.isWorkerReady()) {
+      console.log("🔄 [useCADWorker] Using existing worker");
+      workerRef.current = workerManager.getWorker();
+      setIsWorkerReady(true);
+      return;
+    }
+
+    if (workerManager.isWorkerInitializing()) {
+      console.log("🔄 [useCADWorker] Worker is initializing, waiting...");
+      workerManager.onReady(() => {
+        console.log("✅ [useCADWorker] Worker ready, using it");
+        workerRef.current = workerManager.getWorker();
+        setIsWorkerReady(true);
+      });
+      return;
+    }
+
     let worker: Worker | null = null;
     let initTimeout: NodeJS.Timeout | null = null;
 
+    workerManager.setInitializing(true);
+    isInitializingRef.current = true;
     console.log("🔧 [useCADWorker] Starting WebWorker initialization...");
 
     try {
@@ -65,10 +142,13 @@ export function useCADWorker(): UseCADWorkerReturn {
         throw new Error('WebWorker is not supported in this browser');
       }
 
-      console.log("🔧 [useCADWorker] Attempting to create Worker('/workers/cadWorker.js')...");
-      worker = new Worker('/workers/cadWorker.js');
+      const basePath = process.env.NODE_ENV === 'production' ? '/modeler-x' : '';
+      const workerPath = `${basePath}/workers/cadWorker.js`;
+      console.log(`🔧 [useCADWorker] Attempting to create Worker('${workerPath}')...`);
+      worker = new Worker(workerPath);
       console.log("✅ [useCADWorker] Worker created successfully:", worker);
       
+      workerManager.setWorker(worker);
       workerRef.current = worker;
 
       // タイムアウト処理の設定（10秒で初期化失敗と判断）
@@ -82,9 +162,11 @@ export function useCADWorker(): UseCADWorkerReturn {
       // メッセージハンドラーの設定
       messageHandlers.current = {
         startupCallback: () => {
-          console.log('✅ [useCADWorker] CAD Worker initialized successfully');
+          console.log('✅ [useCADWorker] Received startupCallback - Worker is ready!');
+          workerManager.setReady(true);
           setIsWorkerReady(true);
           setError(null);
+          isInitializingRef.current = false;
           
           console.log('📊 WebAssembly initialization completed with optimization');
           
@@ -175,6 +257,8 @@ export function useCADWorker(): UseCADWorkerReturn {
         
         setIsWorkerReady(false);
         setIsWorking(false);
+        workerManager.setInitializing(false);
+        isInitializingRef.current = false;
       };
 
       // 追加: ワーカーメッセージエラーハンドリング
@@ -183,6 +267,8 @@ export function useCADWorker(): UseCADWorkerReturn {
         const errorMessage = `Worker message error: ${error}`;
         setError(errorMessage);
         addLog(`❌ ${errorMessage}`);
+        workerManager.setInitializing(false);
+        isInitializingRef.current = false;
       };
 
       console.log("🔧 [useCADWorker] Event handlers attached successfully");
@@ -196,6 +282,8 @@ export function useCADWorker(): UseCADWorkerReturn {
       const errorMessage = `Failed to create worker: ${err instanceof Error ? err.message : 'Unknown error'}`;
       setError(errorMessage);
       addLog(`❌ ${errorMessage}`);
+      workerManager.setInitializing(false);
+      isInitializingRef.current = false;
       
       // タイムアウトのクリア
       if (initTimeout) {
@@ -214,17 +302,26 @@ export function useCADWorker(): UseCADWorkerReturn {
         initTimeout = null;
       }
       
-      if (worker) {
+      if (worker && worker === workerManager.getWorker()) {
+        console.log("🧹 [useCADWorker] Cleaning up local worker reference (keeping managed worker alive)");
+        workerRef.current = null;
+      } else if (worker) {
         worker.terminate();
         workerRef.current = null;
         console.log("✅ [useCADWorker] Worker terminated");
       }
+      
+      isInitializingRef.current = false;
     };
-  }, [addLog]);
+  }, []);
 
   // CADコードの実行
   const executeCADCode = useCallback(async (code: string, guiState: GUIState = {}): Promise<void> => {
-    if (!workerRef.current || !isWorkerReady) {
+    const workerManager = (window as any).cadWorkerManager;
+    const isWorkerActuallyReady = workerManager?.isWorkerReady() || false;
+    const worker = workerManager?.getWorker() || workerRef.current;
+    
+    if (!worker || !isWorkerActuallyReady) {
       throw new Error('Worker not ready');
     }
 
@@ -292,7 +389,11 @@ export function useCADWorker(): UseCADWorkerReturn {
 
   // 形状の結合とレンダリング
   const combineAndRender = useCallback(async (options: CombineAndRenderPayload = {}): Promise<void> => {
-    if (!workerRef.current || !isWorkerReady) {
+    const workerManager = (window as any).cadWorkerManager;
+    const isWorkerActuallyReady = workerManager?.isWorkerReady() || false;
+    const worker = workerManager?.getWorker() || workerRef.current;
+    
+    if (!worker || !isWorkerActuallyReady) {
       throw new Error('Worker not ready');
     }
 
@@ -372,9 +473,13 @@ export function useCADWorker(): UseCADWorkerReturn {
 
   // ワーカーへのメッセージ送信
   const sendToWorker = useCallback(async (message: { type: string; payload: any }) => {
-    if (!workerRef.current) {
+    const workerManager = (window as any).cadWorkerManager;
+    const isWorkerActuallyReady = workerManager?.isWorkerReady() || false;
+    const worker = workerManager?.getWorker() || workerRef.current;
+    
+    if (!worker || !isWorkerActuallyReady) {
       console.error('CADワーカーが初期化されていません');
-      return { success: false, error: 'CADワーカーが初期化されていません' };
+      return { success: false, error: 'Worker not ready' };
     }
     
     return new Promise((resolve) => {
@@ -384,17 +489,15 @@ export function useCADWorker(): UseCADWorkerReturn {
       const handleMessage = (e: MessageEvent) => {
         if (e.data.type === message.type) {
           // nullチェック後に呼び出し
-          if (workerRef.current) {
-            workerRef.current.removeEventListener('message', handleMessage);
-          }
+          worker.removeEventListener('message', handleMessage);
           resolve(e.data.payload);
         }
       };
       
-      workerRef.current?.addEventListener('message', handleMessage);
+      worker.addEventListener('message', handleMessage);
       
       // メッセージ送信
-      workerRef.current?.postMessage({
+      worker.postMessage({
         type: message.type,
         payload: message.payload,
         id: messageId
@@ -416,4 +519,4 @@ export function useCADWorker(): UseCADWorkerReturn {
     clearError,
     sendToWorker
   };
-}    
+}                                                                        
