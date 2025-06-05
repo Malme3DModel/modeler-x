@@ -206,24 +206,57 @@ export function useCADWorker(): UseCADWorkerReturn {
         
         combineAndRenderShapes: (payload: any) => {
           console.log('🎨 [useCADWorker] Combine and render:', payload);
-          if (payload && payload[0]) {
-            const [facesAndEdges, sceneOptions] = payload;
+          
+          if (payload && payload.meshes && Array.isArray(payload.meshes)) {
+            console.log('🔍 [useCADWorker] Processing meshes:', payload.meshes.length);
             
-            // CADShape形式に変換
-            const newShape: CADShape = {
-              hash: Date.now().toString(), // 一時的なハッシュ
-              mesh: facesAndEdges.faces ? {
-                vertices: facesAndEdges.faces.vertices,
-                normals: facesAndEdges.faces.normals,
-                indices: facesAndEdges.faces.indices
-              } : undefined,
-              edges: facesAndEdges.edges ? {
-                vertices: facesAndEdges.edges.vertices
-              } : undefined
-            };
-            
-            setShapes([newShape]);
-            console.log('✅ [useCADWorker] Shapes rendered:', newShape);
+            if (payload.meshes.length > 0) {
+              // 複数のメッシュを統合してCADShape形式に変換
+              let vertices: number[] = [], normals: number[] = [], indices: number[] = [];
+              let vertexOffset = 0;
+              
+              payload.meshes.forEach((mesh: any, index: number) => {
+                console.log(`🔧 [useCADWorker] Processing mesh ${index + 1}:`, {
+                  vertices: mesh.vertices?.length,
+                  normals: mesh.normals?.length,
+                  indices: mesh.indices?.length
+                });
+                
+                if (mesh.vertices && mesh.normals && mesh.indices) {
+                  vertices.push(...mesh.vertices);
+                  normals.push(...mesh.normals);
+                  
+                  for (let i = 0; i < mesh.indices.length; i++) {
+                    indices.push(mesh.indices[i] + vertexOffset);
+                  }
+                  
+                  vertexOffset += mesh.vertices.length / 3;
+                }
+              });
+              
+              const newShape: CADShape = {
+                hash: Date.now().toString(),
+                mesh: {
+                  vertices: new Float32Array(vertices),
+                  normals: new Float32Array(normals),
+                  indices: new Uint16Array(indices)
+                }
+              };
+              
+              setShapes([newShape]);
+              console.log('✅ [useCADWorker] Shapes rendered:', {
+                meshCount: payload.meshes.length,
+                vertexCount: vertices.length / 3,
+                triangleCount: indices.length / 3,
+                shape: newShape
+              });
+            } else {
+              console.warn('⚠️ [useCADWorker] No valid meshes received');
+              setShapes([]);
+            }
+          } else {
+            console.warn('⚠️ [useCADWorker] Invalid payload format received:', payload);
+            setShapes([]);
           }
           setIsWorking(false);
         }
@@ -521,4 +554,4 @@ export function useCADWorker(): UseCADWorkerReturn {
     clearError,
     sendToWorker
   };
-}                                                                        
+}                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                
