@@ -2,31 +2,19 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Cascade Studio specific styles */
-:root {
-  --tp-font-family: Arial, sans-serif;
-  --tp-base-background-color: #2e2e2e;
-  --tp-button-background-color: hsl(0, 0%, 25%);
-  --tp-button-background-color-active: hsl(0, 0%, 40%);
-  --tp-button-background-color-focus: hsl(0, 0%, 35%);
-  --tp-button-background-color-hover: hsl(0, 0%, 30%);
-  --tp-button-foreground-color: #eeeeee;
-  --tp-label-foreground-color: #aeb5b8;
-}
-
+/* === ベースのボディスタイル === */
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Consolas', monospace;
   overflow: hidden;
 }
 
-/* Monaco Editor styles */
+/* === Monaco Editor スタイル === */
 .monaco-editor {
-  background-color: #1e1e1e !important;
+  background-color: theme('colors.modeler.editor.bg') !important;
 }
 
-/* TweakPane styles */
+/* === TweakPane スタイル === */
 .gui-panel {
   position: absolute;
   right: 0;
@@ -36,11 +24,11 @@ body {
 
 .gui-panel::-webkit-scrollbar {
   width: 10px;
-  background: var(--tp-base-background-color);
+  background: theme('colors.modeler.control.base');
 }
 
 .gui-panel::-webkit-scrollbar-thumb {
-  background: #777;
+  background: theme('colors.modeler.control.scrollbar.thumb');
 }
 
 .tp-rotv {
@@ -51,25 +39,47 @@ body {
   text-shadow: inherit;
 }
 
-/* Golden Layout overrides */
+/* === Golden Layout overrides === */
 .lm_content {
-  background-color: #222222 !important;
+  background-color: theme('colors.modeler.background.primary') !important;
 }
 
 .lm_header {
-  background-color: #333333 !important;
+  background-color: theme('colors.modeler.control.base') !important;
 }
 
 .lm_tab {
-  background-color: #444444 !important;
-  color: #ffffff !important;
+  background-color: theme('colors.modeler.control.button.DEFAULT') !important;
+  color: theme('colors.modeler.control.text.primary') !important;
 }
 
 .lm_tab.lm_active {
-  background-color: #555555 !important;
+  background-color: theme('colors.modeler.control.button.active') !important;
 }
 
-/* Dockview のカスタムスタイル */
+/* === Dockview のカスタムスタイル（Modeler X テーマ） === */
+.dockview-theme-modeler {
+  --dv-group-view-background-color: theme('colors.modeler.background.secondary');
+  --dv-paneview-header-background-color: theme('colors.modeler.control.base');
+  --dv-tabs-container-background-color: theme('colors.modeler.control.base');
+  --dv-tabs-and-actions-container-background-color: theme('colors.modeler.control.base');
+  --dv-tab-background-color: theme('colors.modeler.control.button.DEFAULT');
+  --dv-tab-active-background-color: theme('colors.modeler.control.button.active');
+  --dv-tab-color: theme('colors.modeler.control.text.secondary');
+  --dv-tab-active-color: theme('colors.modeler.control.text.primary');
+  --dv-tab-hover-background-color: theme('colors.modeler.control.button.hover');
+  --dv-tab-active-border-color: theme('colors.modeler.accent.primary');
+  --dv-separator-border: theme('colors.modeler.control.border');
+  --dv-paneview-header-border: transparent;
+  --dv-activegroup-visiblepanel-tab-background-color: theme('colors.modeler.background.secondary');
+  --dv-group-header-background-color: theme('colors.modeler.control.base');
+  --dv-group-header-border: transparent;
+  --dv-drag-over-background-color: theme('colors.modeler.accent.primary / 18%');
+  --dv-floating-box-shadow: theme('boxShadow.modeler-modal');
+  font-family: theme('fontFamily.ui');
+}
+
+/* 既存のダークテーマも維持 */
 .dockview-theme-dark {
   --dv-group-view-background-color: #1e1e1e;
   --dv-paneview-header-background-color: #2d2d30;
@@ -92,20 +102,27 @@ body {
 }
 
 /* タブのスタイル調整 */
+.dockview-theme-modeler .tab,
 .dockview-theme-dark .tab {
   font-size: 13px;
   padding: 0 12px;
 }
 
 /* パネルヘッダーのスタイル */
+.dockview-theme-modeler .pane-header,
 .dockview-theme-dark .pane-header {
   height: 35px;
   font-size: 13px;
 }
 
 /* スプリッターのスタイル */
+.dockview-theme-modeler .split-view-view-separator,
 .dockview-theme-dark .split-view-view-separator {
-  background: #252526;
+  background: var(--dv-separator-border);
+}
+
+.dockview-theme-modeler .split-view-view-separator:hover {
+  background: theme('colors.modeler.accent.primary');
 }
 
 .dockview-theme-dark .split-view-view-separator:hover {
@@ -113,7 +130,8 @@ body {
 }
 
 /* パネルコンテンツ領域 */
+.dockview-theme-modeler .view-content,
 .dockview-theme-dark .view-content {
-  background: #1e1e1e;
+  background: var(--dv-group-view-background-color);
   overflow: hidden;
 }
