@@ -33,29 +33,41 @@ importScripts(
 var preloadedFonts = ['/fonts/Roboto.ttf',
   '/fonts/Papyrus.ttf', '/fonts/Consolas.ttf'];
 var fonts = {};
+var fontsLoaded = false;
+var fontLoadingPromise = null;
+
 async function loadFonts() {
-  console.log("Starting synchronous font loading...");
-  console.log("opentype object:", typeof opentype);
-  
-  for (const fontURL of preloadedFonts) {
-    try {
-      console.log("Fetching font:", fontURL);
-      const response = await fetch(fontURL);
-      if (!response.ok) {
-        console.log("Font fetch failed for", fontURL, ":", response.status);
-        continue;
-      }
-      const arrayBuffer = await response.arrayBuffer();
-      const font = opentype.parse(arrayBuffer);
-      let fontName = fontURL.split("/fonts/")[1].split(".ttf")[0];
-      fonts[fontName] = font;
-      console.log("Successfully loaded font:", fontName);
-    } catch (err) {
-      console.log("Font loading error for", fontURL, ":", err);
-    }
+  if (fontLoadingPromise) {
+    return fontLoadingPromise;
   }
   
-  console.log("Font loading complete. Available fonts:", Object.keys(fonts));
+  fontLoadingPromise = (async () => {
+    console.log("Starting synchronous font loading...");
+    console.log("opentype object:", typeof opentype);
+    
+    for (const fontURL of preloadedFonts) {
+      try {
+        console.log("Fetching font:", fontURL);
+        const response = await fetch(fontURL);
+        if (!response.ok) {
+          console.log("Font fetch failed for", fontURL, ":", response.status);
+          continue;
+        }
+        const arrayBuffer = await response.arrayBuffer();
+        const font = opentype.parse(arrayBuffer);
+        let fontName = fontURL.split("/fonts/")[1].split(".ttf")[0];
+        fonts[fontName] = font;
+        console.log("Successfully loaded font:", fontName);
+      } catch (err) {
+        console.log("Font loading error for", fontURL, ":", err);
+      }
+    }
+    
+    fontsLoaded = true;
+    console.log("Font loading complete. Available fonts:", Object.keys(fonts));
+  })();
+  
+  return fontLoadingPromise;
 }
 
 
@@ -188,11 +200,11 @@ new opencascade({
     }
     return path;
   }
-}).then((openCascade) => {
+}).then(async (openCascade) => {
   // Register the "OpenCascade" WebAssembly Module under the shorthand "oc"
   oc = openCascade;
   
-  loadFonts();
+  await loadFonts();
   
   // Investigate API after loading
   investigateAPI();
