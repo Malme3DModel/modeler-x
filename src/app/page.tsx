@@ -2,42 +2,32 @@
 
 import React, { useState, useCallback, useRef } from 'react';
 import MonacoEditor from '../components/MonacoEditor';
-import ThreeViewport from '../components/ThreeViewport';
+import ThreeViewport, { ThreeViewportRef } from '../components/ThreeViewport';
 import DockviewLayout from '../components/DockviewLayout';
 import CADWorkerManager from '../components/CADWorkerManager';
 
-// v0のデフォルトコード（Rotate関数無効化テスト用）
-const defaultCode = `// Welcome to Cascade Studio!   Here are some useful functions:
-//  Translate(), Scale(), Mirror(), Union(), Difference(), Intersection()
+// デフォルトコード
+const defaultCode = 
+`// Welcome to Cascade Studio!   Here are some useful functions:
+//  Translate(), Rotate(), Scale(), Mirror(), Union(), Difference(), Intersection()
 //  Box(), Sphere(), Cylinder(), Cone(), Text3D(), Polygon()
 //  Offset(), Extrude(), RotatedExtrude(), Revolve(), Pipe(), Loft(), 
 //  FilletEdges(), ChamferEdges(),
 //  Slider(), Checkbox(), TextInput(), Dropdown()
 
-// Phase 3-4: SetRotation API修正のためのテスト
-// 1. 基本形状生成のテスト（Rotate関数を使わない）
+let holeRadius = Slider("Radius", 30 , 20 , 40);
 
-console.log("=== Phase 3-4 Test: Basic Shape Generation ===");
+let sphere     = Sphere(50);
+let cylinderZ  =                     Cylinder(holeRadius, 200, true);
+let cylinderY  = Rotate([0,1,0], 90, Cylinder(holeRadius, 200, true));
+let cylinderX  = Rotate([1,0,0], 90, Cylinder(holeRadius, 200, true));
 
-// 基本的な形状を生成（回転なし）
-let sphere = Sphere(50);
-console.log("Sphere created:", sphere);
+Translate([0, 0, 50], Difference(sphere, [cylinderX, cylinderY, cylinderZ]));
 
-let box = Box(30, 30, 30, true);
-console.log("Box created:", box);
+Translate([-25, 0, 40], Text3D("Hi!", 36, 0.15, 'Consolas'));
 
-let cylinder = Cylinder(20, 60, true);
-console.log("Cylinder created:", cylinder);
+// Don't forget to push imported or oc-defined shapes into sceneShapes to add them to the workspace!`;
 
-// 位置移動のテスト（Translateは動作するはず）
-Translate([0, 0, 50], sphere);
-Translate([80, 0, 0], box);
-Translate([-80, 0, 0], cylinder);
-
-console.log("=== Shapes positioned with Translate ===");
-
-// Note: Rotate関数は現在v0.1.15のAPI制限により無効化されています
-// TODO: BRepBuilderAPI_Transformを使用した代替実装を追加予定`;
 
 export default function Home() {
   const [code, setCode] = useState(defaultCode);
@@ -48,7 +38,7 @@ export default function Home() {
     '> Welcome to Modeler X!',
     '> Loading CAD Kernel...'
   ]);
-  const threeViewportUpdateRef = useRef<((facesAndEdges: any, sceneOptions: any) => void) | null>(null);
+  const threejsViewportRef = useRef<ThreeViewportRef>(null);
 
   const handleCodeChange = useCallback((newCode: string) => {
     setCode(newCode);
@@ -74,7 +64,6 @@ export default function Home() {
     setHasUnsavedChanges(hasChanges);
   }, []);
 
-  // CADワーカーの準備完了時の処理
   const handleWorkerReady = useCallback(() => {
     setIsCADWorkerReady(true);
     setConsoleMessages(prev => [...prev, '> CAD Kernel loaded successfully!', '> Ready to evaluate code']);
@@ -82,8 +71,8 @@ export default function Home() {
 
   // CADワーカーからの形状更新を処理
   const handleShapeUpdate = useCallback((facesAndEdges: any, sceneOptions: any) => {
-    if (threeViewportUpdateRef.current) {
-      threeViewportUpdateRef.current(facesAndEdges, sceneOptions);
+    if (threejsViewportRef.current?.updateShape) {
+      threejsViewportRef.current.updateShape(facesAndEdges, sceneOptions);
     }
   }, []);
 
@@ -112,9 +101,8 @@ export default function Home() {
     setConsoleMessages(prev => [...prev, `> ERROR: ${error}`]);
   }, []);
 
-  // ThreeViewportの形状更新関数を設定
-  const handleThreeViewportReady = useCallback((updateFunction: (facesAndEdges: any, sceneOptions: any) => void) => {
-    threeViewportUpdateRef.current = updateFunction;
+  // ThreeViewportのシーン準備完了時の処理
+  const handleSceneReady = useCallback((scene: any) => {
   }, []);
 
   // エディタータイトルの生成
@@ -137,7 +125,8 @@ export default function Home() {
   // 右上パネル（3Dビューポート）
   const rightTopPanel = (
     <ThreeViewport 
-      onShapeUpdate={handleThreeViewportReady}
+      ref={threejsViewportRef}
+      onSceneReady={handleSceneReady}
     />
   );
 
@@ -166,6 +155,7 @@ export default function Home() {
         onProgress={handleProgress}
         onLog={handleLog}
         onError={handleError}
+        autoEvaluateCode={defaultCode}
       />
 
       {/* トップナビゲーション */}

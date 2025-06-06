@@ -1,15 +1,18 @@
 'use client';
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 interface ThreeViewportProps {
   onSceneReady?: (scene: THREE.Scene) => void;
-  onShapeUpdate?: (facesAndEdges: any, sceneOptions: any) => void;
 }
 
-const ThreeViewport: React.FC<ThreeViewportProps> = ({ onSceneReady, onShapeUpdate }) => {
+export interface ThreeViewportRef {
+  updateShape: (facesAndEdges: any, sceneOptions: any) => void;
+}
+
+const ThreeViewport = forwardRef<ThreeViewportRef, ThreeViewportProps>(({ onSceneReady }, ref) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -29,6 +32,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({ onSceneReady, onShapeUpda
     const scene = sceneRef.current;
     const mainObject = mainObjectRef.current;
 
+
+
     // 既存のCADオブジェクトをクリア
     while (mainObject.children.length > 0) {
       const child = mainObject.children[0];
@@ -43,8 +48,19 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({ onSceneReady, onShapeUpda
       }
     }
 
-    if (!facesAndEdges || !facesAndEdges.faceList) {
-      console.warn('No face data received from CAD worker');
+    let faceList: any[] = [];
+    let edgeList: any[] = [];
+    
+    if (Array.isArray(facesAndEdges) && facesAndEdges.length >= 2) {
+      faceList = facesAndEdges[0] || [];
+      edgeList = facesAndEdges[1] || [];
+
+    } else if (facesAndEdges && facesAndEdges.faceList) {
+      faceList = facesAndEdges.faceList || [];
+      edgeList = facesAndEdges.edgeList || [];
+
+    } else {
+      console.warn('No valid face data received from CAD worker');
       return;
     }
 
@@ -58,7 +74,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({ onSceneReady, onShapeUpda
       const indices: number[] = [];
 
       let vertexIndex = 0;
-      for (const face of facesAndEdges.faceList) {
+      for (const face of faceList) {
         if (face.vertex_coord && face.normal_coord && face.tri_indexes) {
           const faceVertices = face.vertex_coord;
           const faceNormals = face.normal_coord;
@@ -121,11 +137,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({ onSceneReady, onShapeUpda
       }
 
       // エッジの処理（オプション）
-      if (facesAndEdges.edgeList && facesAndEdges.edgeList.length > 0) {
+      if (edgeList && edgeList.length > 0) {
         const edgeGeometry = new THREE.BufferGeometry();
         const edgeVertices: number[] = [];
 
-        for (const edge of facesAndEdges.edgeList) {
+        for (const edge of edgeList) {
           if (edge.vertex_coord) {
             for (let i = 0; i < edge.vertex_coord.length; i += 3) {
               edgeVertices.push(
@@ -161,12 +177,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({ onSceneReady, onShapeUpda
     }
   }, []);
 
-  // onShapeUpdateコールバックを設定
-  useEffect(() => {
-    if (onShapeUpdate) {
-      onShapeUpdate(updateShapeFromWorker, {});
-    }
-  }, [onShapeUpdate, updateShapeFromWorker]);
+  useImperativeHandle(ref, () => ({
+    updateShape: updateShapeFromWorker
+  }), [updateShapeFromWorker]);
 
   // 初期シーンの作成
   const createInitialScene = useCallback(() => {
@@ -403,6 +416,6 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({ onSceneReady, onShapeUpda
       />
     </div>
   );
-};
+});
 
-export default ThreeViewport; 
+export default ThreeViewport;         
