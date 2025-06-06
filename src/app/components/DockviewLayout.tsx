@@ -84,47 +84,69 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
     <div className="h-full w-full" style={{ backgroundColor: '#1e1e1e' }}>
       <style jsx global>{`
         .dockview-theme-dark {
-          --dv-group-header-height: 30px;
-          --dv-group-header-font-size: 13px;
-          --dv-tabs-and-actions-container-font-size: 13px;
+          --dv-group-header-height: 26px;
+          --dv-group-header-font-size: 12px;
+          --dv-tabs-and-actions-container-font-size: 12px;
           --dv-drag-over-background-color: rgba(30, 144, 255, 0.1);
-          --dv-paneview-header-background-color: #2b2b2b;
+          --dv-paneview-header-background-color: #2d2d30;
           --dv-group-view-background-color: #1e1e1e;
-          --dv-tabs-container-background-color: #2b2b2b;
+          --dv-tabs-container-background-color: #2d2d30;
           --dv-activegroup-visiblepanel-tab-background-color: #1e1e1e;
           --dv-activegroup-visiblepanel-tab-color: #ffffff;
-          --dv-tab-background-color: #2b2b2b;
-          --dv-tab-color: #cccccc;
+          --dv-tab-background-color: #2d2d30;
+          --dv-tab-color: #969696;
           --dv-separator-border: 1px solid #464647;
+          --dv-tab-divider-color: #464647;
         }
         
         /* Golden Layoutのスタイルを再現 */
-        .dockview-theme-dark .tab {
-          border-radius: 0;
-          border: none;
+        .dockview-theme-dark .dv-default-tab {
+          height: 26px;
+          line-height: 26px;
+          padding: 0 10px;
+          border-right: 1px solid #464647;
+          font-size: 12px;
         }
         
-        .dockview-theme-dark .tab-content {
-          padding: 0 12px;
+        .dockview-theme-dark .dv-default-tab.dv-active {
+          background-color: #1e1e1e;
+          color: #ffffff;
+          border-bottom: 1px solid #1e1e1e;
+        }
+        
+        .dockview-theme-dark .dv-default-tab:not(.dv-active):hover {
+          background-color: #3e3e42;
+        }
+        
+        .dockview-theme-dark .tabs-and-actions-container {
+          background-color: #2d2d30;
+          border-bottom: 1px solid #464647;
         }
         
         .dockview-theme-dark .group-container {
-          border: 1px solid #464647;
+          border: none;
+          background-color: #1e1e1e;
         }
         
-        /* パネルのサイズ調整 */
-        .dockview-theme-dark .dv-default-tab {
-          height: 30px;
-          line-height: 30px;
+        /* タブのクローズボタン */
+        .dockview-theme-dark .dv-default-tab-action {
+          display: none;
         }
         
         /* スプリッターのスタイル */
         .dockview-theme-dark .split-view-view-separator {
           background-color: #464647;
+          width: 4px;
         }
         
         .dockview-theme-dark .split-view-view-separator:hover {
           background-color: #007acc;
+        }
+        
+        /* 垂直スプリッター */
+        .dockview-theme-dark .split-view-container-vertical > .split-view-view-separator {
+          height: 4px;
+          width: 100%;
         }
       `}</style>
       <DockviewReact

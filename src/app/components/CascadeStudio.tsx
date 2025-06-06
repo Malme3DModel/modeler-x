@@ -383,13 +383,13 @@ const CascadeStudio: React.FC = () => {
           </div>
         }
         rightBottomPanel={
-          <div className="flex flex-col h-full bg-gray-900">
-            <div className="flex-1 p-2 overflow-y-auto">
+          <div className="flex flex-col h-full bg-[#1e1e1e]">
+            <div className="flex-1 p-2 overflow-y-auto bg-[#1e1e1e]" style={{ boxShadow: 'inset 0px 0px 3px rgba(0,0,0,0.75)' }}>
               <div className="font-mono text-xs whitespace-pre-wrap text-gray-300">
                 {consoleOutput || <span className="text-gray-500">Console output will appear here...</span>}
               </div>
             </div>
-            <div className="border-t border-gray-700 p-2 flex justify-end">
+            <div className="border-t border-gray-700 p-2 flex justify-end bg-[#1e1e1e]">
               <button
                 onClick={clearConsole}
                 className="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-white"
