@@ -22,8 +22,10 @@ function CacheOp(args, cacheMiss) {
   } else {
     //console.log("MISSED " + ComputeHash(args) + ", " + ComputeHash(args, true));
     toReturn = cacheMiss();
-    toReturn.hash = curHash;
-    if (GUIState["Cache?"]) { AddToCache(curHash, toReturn); }
+    if (toReturn && typeof toReturn === 'object') {
+      toReturn.hash = curHash;
+      if (GUIState["Cache?"]) { AddToCache(curHash, toReturn); }
+    }
   }
   postMessage({ "type": "Progress", "payload": { "opNumber": opNumber, "opType": null } }); // Poor Man's Progress Indicator
   return toReturn;
