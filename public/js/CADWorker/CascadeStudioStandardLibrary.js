@@ -378,26 +378,27 @@ function Translate(offset, shapes, keepOriginal) {
 }
 
 function Rotate(axis, degrees, shapes, keepOriginal) {
-  // 一時的にSetRotation APIの問題を回避
-  // TODO: v0.1.15互換のRotate実装を後で追加
-  console.log(`Rotate function called with axis: ${axis}, degrees: ${degrees} - Currently disabled due to v0.1.15 API limitations`);
-  
+  if (!axis) { axis = [0, 0, 1]; }
+  if (!degrees) { degrees = 90; }
   let rotated = null;
   if (degrees === 0) {
     rotated = new oc.TopoDS_Shape(shapes);
   } else {
-    // 一時的に回転せずに元の形状をそのまま返す
     rotated = CacheOp(arguments, () => {
-      console.log("Rotate: Returning original shape without rotation (SetRotation not available in v0.1.15)");
+      let newRot;
+      let transformation = new oc.gp_Trsf();
+      transformation.SetRotation(
+        new oc.gp_Ax1(new oc.gp_Pnt(0, 0, 0), new oc.gp_Dir(
+          new oc.gp_Vec(axis[0], axis[1], axis[2]))), degrees * 0.0174533);
+      let rotation = new oc.TopLoc_Location(transformation);
       if (!isArrayLike(shapes)) {
-        return new oc.TopoDS_Shape(shapes);
-      } else if (shapes.length >= 1) {
-        let newShapes = [];
+        newRot = new oc.TopoDS_Shape(shapes.Moved(rotation));
+      } else if (shapes.length >= 1) {      // Do the normal rotation
         for (let shapeIndex = 0; shapeIndex < shapes.length; shapeIndex++) {
-          newShapes.push(new oc.TopoDS_Shape(shapes[shapeIndex]));
+          shapes[shapeIndex].Move(rotation);
         }
-        return newShapes;
       }
+      return newRot;
     });
   }
   if (!keepOriginal) { sceneShapes = Remove(sceneShapes, shapes); }
