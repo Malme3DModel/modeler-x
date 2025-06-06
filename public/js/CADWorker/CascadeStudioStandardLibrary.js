@@ -20,11 +20,7 @@ function Box(x, y, z, centered) {
     // Construct a Box Primitive
     let box = new oc.BRepPrimAPI_MakeBox(x, y, z).Shape();
     if (centered) {
-      // centeredの場合は直接変換を適用（Translate関数の依存を回避）
-      let transformation = new oc.gp_Trsf();
-      transformation.SetTranslation(new oc.gp_Vec(-x / 2, -y / 2, -z / 2));
-      let location = new oc.TopLoc_Location(transformation);
-      return box.Moved(location);
+      return Translate([-x / 2, -y / 2, -z / 2], box);
     } else {
       return box;
     }

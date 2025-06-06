@@ -26,7 +26,7 @@ importScripts(
   '../../node_modules/three/build/three.min.js',
   './CascadeStudioStandardLibrary.js',
   './CascadeStudioShapeToMesh.js',
-  './libs/opencascade.wasm.v015.js');
+  './libs/opencascade.wasm.v0-modified.js');
 
 // Preload the Various Fonts that are available via Text3D
 var preloadedFonts = ['../../fonts/Roboto.ttf',
