@@ -1,6 +1,15 @@
 'use client';
 
-import React, { useEffect, useRef, useCallback, useState } from 'react';
+import React, { useEffect, useRef, useCallback, useState, useMemo } from 'react';
+
+// Fast Refreshを無効化（開発時のみ）
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+  // @ts-ignore
+  if (module.hot) {
+    // @ts-ignore
+    module.hot.decline();
+  }
+}
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
@@ -32,7 +41,77 @@ interface SceneOptions {
   axesVisible: boolean;
 }
 
+// 改善されたCanvas管理システム
+const CANVAS_MANAGER = {
+  instances: new Map<string, { canvas: HTMLCanvasElement; renderer: THREE.WebGLRenderer }>(),
+  
+  createCanvas(containerId: string, container: HTMLElement): { canvas: HTMLCanvasElement; renderer: THREE.WebGLRenderer } | null {
+    // 既存のインスタンスがある場合は再利用
+    if (this.instances.has(containerId)) {
+      const existing = this.instances.get(containerId)!;
+      if (existing.canvas.parentNode !== container) {
+        container.appendChild(existing.canvas);
+      }
+      console.log('Canvas manager reusing existing canvas for:', containerId);
+      return existing;
+    }
+    
+    // コンテナ内の既存canvasを削除
+    const existingCanvases = container.querySelectorAll('canvas');
+    existingCanvases.forEach(canvas => {
+      canvas.remove();
+    });
+    
+    // 新しいcanvasを作成
+    const canvas = document.createElement('canvas');
+    canvas.id = `cascade-canvas-${containerId}`;
+    
+    const renderer = new THREE.WebGLRenderer({
+      canvas: canvas,
+      antialias: true,
+      preserveDrawingBuffer: true
+    });
+    
+    const instance = { canvas, renderer };
+    this.instances.set(containerId, instance);
+    
+    console.log('Canvas manager created new canvas for:', containerId);
+    
+    return instance;
+  },
+  
+  cleanup(containerId?: string) {
+    if (containerId) {
+      const instance = this.instances.get(containerId);
+      if (instance) {
+        console.log('Canvas manager disposing renderer for:', containerId);
+        instance.renderer.dispose();
+        if (instance.canvas.parentNode) {
+          instance.canvas.parentNode.removeChild(instance.canvas);
+        }
+        this.instances.delete(containerId);
+      }
+    } else {
+      // 全てクリーンアップ
+      console.log('Canvas manager disposing all renderers');
+      this.instances.forEach((instance, id) => {
+        instance.renderer.dispose();
+        if (instance.canvas.parentNode) {
+          instance.canvas.parentNode.removeChild(instance.canvas);
+        }
+      });
+      this.instances.clear();
+    }
+  }
+};
+
+// グローバルに公開
+(window as any).CANVAS_MANAGER = CANVAS_MANAGER;
+
 const CascadeView: React.FC<CascadeViewProps> = ({ cascadeCore }) => {
+  // コンポーネントの一意ID（デバッグ用）
+  const componentId = useMemo(() => `CascadeView-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, []);
+  
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -50,6 +129,14 @@ const CascadeView: React.FC<CascadeViewProps> = ({ cascadeCore }) => {
   const highlightedIndexRef = useRef<number>(-1);
   const transformHandlesRef = useRef<TransformControls[]>([]);
   const fogDistRef = useRef<number>(200);
+  const containerIdRef = useRef<string>(`cascade-container-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+  
+  // アンマウント時のログ
+  useEffect(() => {
+    return () => {
+      console.log(`${componentId} unmounted`);
+    };
+  }, [componentId]);
   
   const [viewDirty, setViewDirty] = useState(true);
   const [sceneOptions, setSceneOptions] = useState<SceneOptions>({
@@ -69,7 +156,7 @@ const CascadeView: React.FC<CascadeViewProps> = ({ cascadeCore }) => {
     );
   }
 
-  // Matcapマテリアルの読み込み
+  // Matcapマテリアルの読み込み（メモ化）
   const loadMatcapMaterial = useCallback(() => {
     const loader = new THREE.TextureLoader();
     loader.setCrossOrigin('');
@@ -89,9 +176,46 @@ const CascadeView: React.FC<CascadeViewProps> = ({ cascadeCore }) => {
     matcapMaterialRef.current = matcapMaterial;
   }, []);
 
-  // Three.jsシーンの初期化
-  const initializeScene = useCallback(() => {
-    if (!containerRef.current || isInitializedRef.current) return;
+  // Three.jsシーンの初期化（メモ化と最適化）
+  const initializeScene = useCallback((): (() => void) | undefined => {
+    if (!containerRef.current || isInitializedRef.current) {
+      return;
+    }
+    
+    console.log('Starting scene initialization...');
+    
+    // コンテナサイズの確認
+    const containerWidth = containerRef.current.clientWidth;
+    const containerHeight = containerRef.current.clientHeight;
+    
+    if (containerWidth === 0 || containerHeight === 0) {
+      console.log('Container size is 0, retrying...');
+      setTimeout(() => {
+        isInitializedRef.current = false;
+        initializeScene();
+      }, 100);
+      return;
+    }
+    
+    // グローバルcanvas管理システムを使用
+    const canvasResult = CANVAS_MANAGER.createCanvas(containerIdRef.current, containerRef.current);
+    if (!canvasResult) {
+      console.error('Failed to create canvas');
+      return;
+    }
+    
+    const { canvas, renderer } = canvasResult;
+    
+    // レンダラーの設定
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(containerWidth, containerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    rendererRef.current = renderer;
+
+    // DOMに追加
+    containerRef.current.appendChild(canvas);
+    
     isInitializedRef.current = true;
 
     // シーンの作成
@@ -104,23 +228,13 @@ const CascadeView: React.FC<CascadeViewProps> = ({ cascadeCore }) => {
     // カメラの作成
     const camera = new THREE.PerspectiveCamera(
       45,
-      containerRef.current.clientWidth / containerRef.current.clientHeight,
+      containerWidth / containerHeight,
       1,
       5000
     );
     camera.position.set(50, 100, 150);
     camera.lookAt(0, 45, 0);
     cameraRef.current = camera;
-
-    // レンダラーの作成
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(containerRef.current.clientWidth, containerRef.current.clientHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    rendererRef.current = renderer;
-
-    containerRef.current.appendChild(renderer.domElement);
 
     // ライティングの設定
     const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444);
@@ -139,32 +253,26 @@ const CascadeView: React.FC<CascadeViewProps> = ({ cascadeCore }) => {
     scene.add(directionalLight);
 
     // OrbitControlsの設定
-    const controls = new OrbitControls(camera, renderer.domElement);
+    const controls = new OrbitControls(camera, canvas);
     controls.target.set(0, 45, 0);
     controls.panSpeed = 2;
     controls.zoomSpeed = 1;
     controls.screenSpacePanning = true;
     controls.enabled = true;
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
+    controls.enableDamping = false;
     controls.addEventListener('change', () => {
       setViewDirty(true);
-      console.log('OrbitControls changed, enabled:', controls.enabled);
     });
     controls.update();
     controlsRef.current = controls;
 
-    // デバッグ用：OrbitControlsの初期状態を確認
-    console.log('OrbitControls initialized, enabled:', controls.enabled);
-
     // マウスイベントの設定
     const handleMouseMove = (event: MouseEvent) => {
-      const rect = renderer.domElement.getBoundingClientRect();
-      mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      mouseRef.current.x = (event.offsetX / containerRef.current!.clientWidth) * 2 - 1;
+      mouseRef.current.y = -(event.offsetY / containerRef.current!.clientHeight) * 2 + 1;
     };
 
-    renderer.domElement.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('mousemove', handleMouseMove, false);
 
     // キーボードイベントの設定
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -187,29 +295,34 @@ const CascadeView: React.FC<CascadeViewProps> = ({ cascadeCore }) => {
 
     window.addEventListener('keydown', handleKeyDown);
 
-    // グリッドヘルパーの作成
-    updateGrid(scene);
-
-    // 軸ヘルパーの作成
-    if (sceneOptions.axesVisible) {
-      const axesHelper = new THREE.AxesHelper(5);
-      scene.add(axesHelper);
-    }
+    // 初期シーン要素の作成
+    updateSceneElements(scene);
 
     // Matcapマテリアルの読み込み
     loadMatcapMaterial();
 
+    // テスト用の簡単なジオメトリを追加
+    const testGeometry = new THREE.BoxGeometry(10, 10, 10);
+    const testMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const testCube = new THREE.Mesh(testGeometry, testMaterial);
+    testCube.position.set(0, 5, 0);
+    testCube.name = "TestCube";
+    scene.add(testCube);
+    
     setViewDirty(true);
+    
+    // 初期レンダリング
+    renderer.render(scene, camera);
 
     return () => {
-      renderer.domElement.removeEventListener('mousemove', handleMouseMove);
+      canvas.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [loadMatcapMaterial]);
+  }, []); // 依存配列を空にして、一度だけ実行されるようにする
 
-  // グリッドとグラウンドプレーンの更新
-  const updateGrid = useCallback((scene: THREE.Scene) => {
-    // 既存のグリッドとグラウンドプレーンを削除
+  // シーン要素の更新（グリッド、グラウンドプレーン、軸）
+  const updateSceneElements = useCallback((scene: THREE.Scene) => {
+    // 既存の要素を削除
     if (gridHelperRef.current) {
       scene.remove(gridHelperRef.current);
       gridHelperRef.current = null;
@@ -247,9 +360,30 @@ const CascadeView: React.FC<CascadeViewProps> = ({ cascadeCore }) => {
       scene.add(grid);
       gridHelperRef.current = grid;
     }
+
+    // 軸ヘルパーの作成
+    if (sceneOptions.axesVisible) {
+      const axesHelper = new THREE.AxesHelper(5);
+      scene.add(axesHelper);
+    }
   }, [sceneOptions]);
 
-  // Transform Handlesの作成
+  // Transform Handlesのクリア（メモ化）
+  const clearTransformHandles = useCallback(() => {
+    if (!sceneRef.current) return;
+
+    transformHandlesRef.current.forEach((handle) => {
+      (handle as any).removeEventListener('dragging-changed', (handle as any).userData?.onChanged);
+      const attachedObject = (handle as any).object;
+      if (attachedObject) {
+        sceneRef.current!.remove(attachedObject);
+      }
+      sceneRef.current!.remove(handle as any);
+    });
+    transformHandlesRef.current = [];
+  }, []);
+
+  // Transform Handlesの作成（メモ化）
   const createTransformHandle = useCallback((payload: {
     lineAndColumn: [number, number];
     translation: [number, number, number];
@@ -258,18 +392,22 @@ const CascadeView: React.FC<CascadeViewProps> = ({ cascadeCore }) => {
   }) => {
     if (!sceneRef.current || !cameraRef.current || !rendererRef.current) return;
 
-    const handle = new TransformControls(cameraRef.current, rendererRef.current.domElement);
+    const canvasInstance = CANVAS_MANAGER.instances.get(containerIdRef.current);
+    if (!canvasInstance) return;
+    
+    const handle = new TransformControls(cameraRef.current, canvasInstance.canvas);
     handle.setTranslationSnap(1);
     handle.setRotationSnap(THREE.MathUtils.degToRad(1));
     handle.setScaleSnap(0.05);
     handle.setMode(gizmoMode);
     handle.setSpace(gizmoSpace);
 
-    // Transform Controlsのイベントハンドラー
+    // Transform Controlsのイベントハンドラー（v0版と同じ方式）
     const onChanged = (event: any) => {
       if (controlsRef.current) {
         // Transform Controlsがアクティブな時はOrbitControlsを無効化
         controlsRef.current.enabled = !event.value;
+        console.log('Transform Controls dragging:', event.value, 'OrbitControls enabled:', controlsRef.current.enabled);
       }
       setViewDirty(true);
 
@@ -314,24 +452,11 @@ const CascadeView: React.FC<CascadeViewProps> = ({ cascadeCore }) => {
 
     transformHandlesRef.current.push(handle);
     sceneRef.current.add(handle as any);
-  }, [gizmoMode, gizmoSpace, cascadeCore]);
+  }, [gizmoMode, gizmoSpace]);
 
-  // Transform Handlesのクリア
-  const clearTransformHandles = useCallback(() => {
-    if (!sceneRef.current) return;
 
-    transformHandlesRef.current.forEach((handle) => {
-      (handle as any).removeEventListener('dragging-changed', (handle as any).userData?.onChanged);
-      const attachedObject = (handle as any).object;
-      if (attachedObject) {
-        sceneRef.current!.remove(attachedObject);
-      }
-      sceneRef.current!.remove(handle as any);
-    });
-    transformHandlesRef.current = [];
-  }, []);
 
-  // CAD形状の表示（v0版の高度な機能を移植）
+  // CAD形状の表示（メモ化）
   const displayShapes = useCallback((facelist: FaceData[], edgelist: EdgeData[]) => {
     if (!sceneRef.current || !facelist) return;
 
@@ -496,10 +621,9 @@ const CascadeView: React.FC<CascadeViewProps> = ({ cascadeCore }) => {
     (window as any).cascadeMainObject = mainObject;
     
     setViewDirty(true);
-    console.log("Generation Complete!");
-  }, [matcapMaterialRef]);
+  }, []);
 
-  // ファイルエクスポート機能
+  // ファイルエクスポート機能（メモ化）
   const saveShapeSTL = useCallback(async () => {
     if (!mainObjectRef.current) return;
 
@@ -530,17 +654,18 @@ const CascadeView: React.FC<CascadeViewProps> = ({ cascadeCore }) => {
     URL.revokeObjectURL(url);
   }, []);
 
-  // ハイライト機能（マウスホバー）
+  // ハイライト機能（マウスホバー、メモ化）
   const updateHighlights = useCallback(() => {
     if (!mainObjectRef.current || !cameraRef.current || !controlsRef.current) return;
 
     raycasterRef.current.setFromCamera(mouseRef.current, cameraRef.current);
     const intersects = raycasterRef.current.intersectObjects(mainObjectRef.current.children);
 
-    // Transform Controlsが操作中でない場合のみハイライトを実行
+    // v0版と同じ条件：OrbitControlsの状態とTransform Controlsの状態をチェック
     const isTransformControlsActive = transformHandlesRef.current.some(handle => (handle as any).dragging);
+    const isOrbitControlsIdle = controlsRef.current && controlsRef.current.enabled;
     
-    if (!isTransformControlsActive && intersects.length > 0) {
+    if (isOrbitControlsIdle && !isTransformControlsActive && intersects.length > 0) {
       const isLine = intersects[0].object.type === 'LineSegments';
       const newIndex = isLine 
         ? (intersects[0].object as any).getEdgeMetadataAtLineIndex(intersects[0].index).localEdgeIndex
@@ -588,43 +713,19 @@ const CascadeView: React.FC<CascadeViewProps> = ({ cascadeCore }) => {
     }
   }, []);
 
-  // アニメーションループ
-  const animate = useCallback(() => {
-    animationIdRef.current = requestAnimationFrame(animate);
-
-    if (!rendererRef.current || !sceneRef.current || !cameraRef.current) return;
-
-    // OrbitControlsの更新（ダンピング用）
-    if (controlsRef.current) {
-      controlsRef.current.update();
-    }
-
-    updateHighlights();
-    
-    let handlesDragging = false;
-    transformHandlesRef.current.forEach(handle => {
-      if ((handle as any).dragging) {
-        handlesDragging = true;
-      }
-    });
-
-    if (handlesDragging) {
-      setViewDirty(true);
-    }
-
-    // 必要な時のみレンダリング（パフォーマンス最適化）
-    if (viewDirty) {
-      rendererRef.current.render(sceneRef.current, cameraRef.current);
-      setViewDirty(false);
-    }
-  }, [viewDirty, updateHighlights]);
-
-  // リサイズハンドラー
+  // リサイズハンドラー（メモ化）
   const handleResize = useCallback(() => {
     if (!containerRef.current || !rendererRef.current || !cameraRef.current) return;
 
     const width = containerRef.current.clientWidth;
     const height = containerRef.current.clientHeight;
+
+    // Canvasの属性を直接設定
+    const canvasInstance = CANVAS_MANAGER.instances.get(containerIdRef.current);
+    if (canvasInstance) {
+      canvasInstance.canvas.width = width;
+      canvasInstance.canvas.height = height;
+    }
 
     cameraRef.current.aspect = width / height;
     cameraRef.current.updateProjectionMatrix();
@@ -632,21 +733,30 @@ const CascadeView: React.FC<CascadeViewProps> = ({ cascadeCore }) => {
     setViewDirty(true);
   }, []);
 
-  // コンポーネントマウント時の初期化
+  // コンポーネントマウント時の初期化（最適化）
   useEffect(() => {
-    const cleanup = initializeScene();
+    console.log('CascadeView initialization useEffect triggered');
+    let cleanup: (() => void) | undefined;
+    let animationId: number | null = null;
     
-    const animateFunc = () => {
-      animationIdRef.current = requestAnimationFrame(animateFunc);
+    // 少し遅延させてDOMが完全にレンダリングされるのを待つ
+    const timer = setTimeout(() => {
+      cleanup = initializeScene();
       
-      if (rendererRef.current && sceneRef.current && cameraRef.current) {
-        // OrbitControlsの更新（ダンピング用）
-        if (controlsRef.current) {
+      // アニメーションループ（最適化）
+      const animateFunc = () => {
+        animationId = requestAnimationFrame(animateFunc);
+        
+        if (!rendererRef.current || !sceneRef.current || !cameraRef.current) return;
+
+        // OrbitControlsの更新
+        if (controlsRef.current && controlsRef.current.enableDamping) {
           controlsRef.current.update();
         }
 
         updateHighlights();
         
+        // Transform Handlesのドラッグ状態をチェック
         let handlesDragging = false;
         transformHandlesRef.current.forEach(handle => {
           if ((handle as any).dragging) {
@@ -658,40 +768,43 @@ const CascadeView: React.FC<CascadeViewProps> = ({ cascadeCore }) => {
           setViewDirty(true);
         }
 
+        // 遅延レンダリング
         if (viewDirty) {
-        rendererRef.current.render(sceneRef.current, cameraRef.current);
-        setViewDirty(false);
+          rendererRef.current.render(sceneRef.current, cameraRef.current);
+          setViewDirty(false);
         }
-      }
-    };
-    
-    animateFunc();
+      };
+      
+      animateFunc();
+    }, 50);
 
     window.addEventListener('resize', handleResize);
 
     return () => {
+      console.log('CascadeView cleanup triggered');
+      clearTimeout(timer);
       if (cleanup) cleanup();
-      if (animationIdRef.current) {
-        cancelAnimationFrame(animationIdRef.current);
+      if (animationId) {
+        cancelAnimationFrame(animationId);
       }
-      if (rendererRef.current) {
-        rendererRef.current.dispose();
-        if (containerRef.current && rendererRef.current.domElement.parentNode) {
-          containerRef.current.removeChild(rendererRef.current.domElement);
-        }
-      }
+      
+      // グローバルcanvas管理システムでクリーンアップ
+      CANVAS_MANAGER.cleanup(containerIdRef.current);
+      rendererRef.current = null;
+      
       if (controlsRef.current) {
         controlsRef.current.dispose();
       }
       clearTransformHandles();
       window.removeEventListener('resize', handleResize);
     };
-  }, [initializeScene, handleResize, updateHighlights, clearTransformHandles]);
+  }, []); // 依存配列を空にして、マウント時のみ実行
 
-  // CascadeStudioCoreからのメッセージハンドラー登録
+  // CascadeStudioCoreからのメッセージハンドラー登録（最適化）
   useEffect(() => {
     if (!cascadeCore) return;
 
+    // メモ化されたハンドラー関数
     const handleShapeUpdate = (payload: { facelist: FaceData[], edgelist: EdgeData[], sceneOptions: SceneOptions }) => {
       if (payload.sceneOptions) {
         setSceneOptions(prev => ({ ...prev, ...payload.sceneOptions }));
@@ -724,15 +837,15 @@ const CascadeView: React.FC<CascadeViewProps> = ({ cascadeCore }) => {
     return () => {
       // クリーンアップは必要に応じて実装
     };
-  }, [cascadeCore, displayShapes, createTransformHandle, clearTransformHandles, saveShapeSTL, saveShapeOBJ]);
+  }, [cascadeCore]); // cascadeCoreのみに依存
 
   // シーンオプションが変更された時の処理
   useEffect(() => {
     if (sceneRef.current) {
-      updateGrid(sceneRef.current);
+      updateSceneElements(sceneRef.current);
       setViewDirty(true);
     }
-  }, [sceneOptions, updateGrid]);
+  }, [sceneOptions, updateSceneElements]);
 
   // ギズモモードとスペースの更新
   useEffect(() => {
@@ -746,11 +859,19 @@ const CascadeView: React.FC<CascadeViewProps> = ({ cascadeCore }) => {
   return (
     <div 
       ref={containerRef} 
-      className="flex-1 bg-gray-700 relative"
-      style={{ width: '100%', height: '100%' }}
+      className="w-full h-full relative"
+      style={{ 
+        width: '100%', 
+        height: '100%',
+        minHeight: '400px',
+        backgroundColor: '#222222',
+        overflow: 'hidden',
+        position: 'relative',  // 子要素の絶対位置の基準点
+        display: 'block'       // 確実に表示
+      }}
     >
       {/* ツールバー */}
-      <div className="absolute top-2 left-2 z-10 bg-gray-800 bg-opacity-80 rounded p-2">
+      <div className="absolute top-2 left-2 bg-gray-800 bg-opacity-80 rounded p-2" style={{ zIndex: 10 }}>
         <div className="flex gap-2 text-xs mb-2">
           <label className="flex items-center text-white">
             <input
@@ -841,7 +962,7 @@ const CascadeView: React.FC<CascadeViewProps> = ({ cascadeCore }) => {
       </div>
 
       {/* キーボードショートカットヘルプ */}
-      <div className="absolute bottom-2 left-2 z-10 bg-gray-800 bg-opacity-80 rounded p-2 text-xs text-white">
+      <div className="absolute bottom-2 left-2 bg-gray-800 bg-opacity-80 rounded p-2 text-xs text-white" style={{ zIndex: 10 }}>
         <div>W: 移動 | E: 回転 | R: スケール | X: 座標系切替</div>
       </div>
     </div>

@@ -63,7 +63,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
       .catch(error => console.warn('Could not load CascadeStudio type definitions:', error));
 
     // StandardLibrary型定義
-    fetch(prefix + "/js/StandardLibraryIntellisense.ts")
+    fetch(prefix + "/js/StandardLibraryIntellisense.js")
       .then(response => response.text())
       .then(text => {
         extraLibs.push({ 

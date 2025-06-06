@@ -47,7 +47,7 @@ const GUIControls: React.FC<GUIControlsProps> = ({ cascadeCore, onControlChange 
   // コントロール値の変更ハンドラー
   const handleControlChange = useCallback((name: string, value: any, realTime: boolean = false) => {
     if (cascadeCore) {
-      cascadeCore.updateGUIValue(name, value);
+      cascadeCore.updateGUIState(name, value);
     }
     
     // 親コンポーネントに通知
