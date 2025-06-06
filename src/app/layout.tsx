@@ -13,10 +13,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Cascade Studio - Next.js",
+  title: "Modeler X - Next.js",
   description: "A Full Live-Scripted CAD Kernel in the Browser powered by Next.js",
   keywords: "SCAD, OpenSCAD, CAD, OpenCascade, Scripting, Next.js",
-  applicationName: "Cascade Studio",
+  applicationName: "Modeler X",
   authors: [{ name: "Johnathon Selstad" }],
   manifest: "/manifest.webmanifest",
   icons: {

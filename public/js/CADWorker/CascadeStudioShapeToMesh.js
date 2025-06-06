@@ -230,3 +230,36 @@ function ShapeToMesh(shape, maxDeviation, fullShapeEdgeHashes, fullShapeFaceHash
 
     return [facelist, edgeList];
   }
+
+// Simple potpack implementation for UV packing
+function potpack(boxes) {
+  // Sort boxes by area in descending order
+  boxes.sort((a, b) => (b.w * b.h) - (a.w * a.h));
+  
+  let totalArea = 0;
+  for (const box of boxes) {
+    totalArea += box.w * box.h;
+  }
+  
+  // Estimate initial size
+  let size = Math.ceil(Math.sqrt(totalArea));
+  
+  // Simple placement algorithm
+  let x = 0, y = 0, rowHeight = 0;
+  
+  for (const box of boxes) {
+    if (x + box.w > size) {
+      x = 0;
+      y += rowHeight;
+      rowHeight = 0;
+    }
+    
+    box.x = x;
+    box.y = y;
+    
+    x += box.w;
+    rowHeight = Math.max(rowHeight, box.h);
+  }
+  
+  return { w: size, h: y + rowHeight };
+}

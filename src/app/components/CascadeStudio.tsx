@@ -86,18 +86,31 @@ const CascadeStudio: React.FC = () => {
   const [projectName, setProjectName] = useState('Untitled.ts');
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [externalFiles, setExternalFiles] = useState<Record<string, any>>({});
+  const [isCascadeCoreReady, setIsCascadeCoreReady] = useState(false);
   const cascadeCoreRef = useRef<CascadeStudioCore | null>(null);
   const fileHandleRef = useRef<any>(null);
 
   // CascadeStudioCoreの初期化
   useEffect(() => {
     if (typeof window !== 'undefined' && !cascadeCoreRef.current) {
+      console.log('Initializing CascadeStudioCore...');
       cascadeCoreRef.current = createCascadeStudioCore(
         setIsEvaluating,
         setConsoleOutput
       );
       
-      cascadeCoreRef.current.initWorker();
+      // OpenCascade.jsを初期化
+      cascadeCoreRef.current.initOpenCascade().then(() => {
+        const worker = cascadeCoreRef.current!.initWorker();
+        if (worker) {
+          console.log('CascadeStudioCore initialized successfully');
+          setIsCascadeCoreReady(true);
+        } else {
+          console.error('Failed to initialize CascadeStudioCore');
+        }
+      }).catch((error) => {
+        console.error('Failed to initialize OpenCascade.js:', error);
+      });
     }
     
     return () => {
@@ -306,25 +319,8 @@ const CascadeStudio: React.FC = () => {
     setConsoleOutput(prev => prev + '\n外部ファイルをクリアしました');
   }, []);
 
-  // キーボードショートカット
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+S または Cmd+S でプロジェクト保存
-      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
-        e.preventDefault();
-        handleSaveProject();
-        handleCodeEvaluate();
-      }
-      // F5でコード評価（リロードを防ぐ）
-      if (e.key === 'F5') {
-        e.preventDefault();
-        handleCodeEvaluate();
-      }
-    };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleSaveProject, handleCodeEvaluate]);
+  // キーボードショートカット（MonacoEditorで処理されるため、ここでは削除）
+  // F5とCtrl+Sの処理はMonacoEditorコンポーネント内で行われます
 
   return (
     <div className="h-screen flex flex-col bg-gray-800">
@@ -340,42 +336,55 @@ const CascadeStudio: React.FC = () => {
       />
       <DockviewLayout
         leftPanel={
-          <MonacoEditor
-            value={code}
-            onChange={handleCodeChange}
-            onEvaluate={handleCodeEvaluate}
-          />
+                  <MonacoEditor
+          value={code}
+          onChange={handleCodeChange}
+          onEvaluate={handleCodeEvaluate}
+          onSaveProject={handleSaveProject}
+          hasUnsavedChanges={hasUnsavedChanges}
+          onUnsavedChangesUpdate={setHasUnsavedChanges}
+          projectName={projectName}
+          onProjectNameUpdate={setProjectName}
+        />
         }
         editorTitle={`${hasUnsavedChanges ? '* ' : ''}${projectName}`}
         rightTopPanel={
           <div className="flex-1 relative h-full">
-            <CascadeView cascadeCore={cascadeCoreRef.current} />
+            {isCascadeCoreReady ? (
+              <CascadeView cascadeCore={cascadeCoreRef.current} />
+            ) : (
+              <div className="flex-1 bg-gray-700 flex items-center justify-center text-white">
+                Initializing 3D View...
+              </div>
+            )}
             {/* GUI Controls Overlay */}
-            <GUIControls 
-              cascadeCore={cascadeCoreRef.current}
-              onControlChange={(name: string, value: any) => {
-                if (cascadeCoreRef.current) {
-                  cascadeCoreRef.current.guiState[name] = value;
-                }
-              }}
-            />
+            {isCascadeCoreReady && (
+              <GUIControls 
+                cascadeCore={cascadeCoreRef.current}
+                onControlChange={(name: string, value: any) => {
+                  if (cascadeCoreRef.current) {
+                    cascadeCoreRef.current.guiState[name] = value;
+                  }
+                }}
+              />
+            )}
             {/* ビューポートコントロール */}
             <div className="absolute top-2 right-2 flex gap-2">
               <button
                 onClick={clearScene}
                 className="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-white shadow-lg"
-                disabled={isEvaluating}
+                disabled={isEvaluating || !isCascadeCoreReady}
               >
                 Clear Scene
               </button>
               <button
                 onClick={handleCodeEvaluate}
                 className={`text-xs px-3 py-1 rounded shadow-lg text-white ${
-                  isEvaluating 
+                  isEvaluating || !isCascadeCoreReady
                     ? 'bg-yellow-600 cursor-not-allowed' 
                     : 'bg-blue-600 hover:bg-blue-500'
                 }`}
-                disabled={isEvaluating}
+                disabled={isEvaluating || !isCascadeCoreReady}
               >
                 {isEvaluating ? 'Evaluating...' : 'Run (Ctrl+Enter)'}
               </button>

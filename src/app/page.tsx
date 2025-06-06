@@ -13,7 +13,7 @@ export default function Home() {
           registration.update();
         },
         () => {
-          console.log('Could not register Cascade Studio for offline use!');
+          console.log('Could not register Modeler X for offline use!');
         }
       );
     } else {

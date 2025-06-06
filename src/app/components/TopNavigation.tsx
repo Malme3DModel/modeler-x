@@ -50,7 +50,7 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
           target="_blank"
           rel="noopener noreferrer"
         >
-          Cascade Studio {version} (Next.js)
+          Modeler X {version}
         </a>
         
         {/* ファイルメニュー */}

@@ -1,7 +1,7 @@
 'use client';
 
-import { STLExporter } from 'three-stdlib';
-import { OBJExporter } from 'three-stdlib';
+import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js';
+import { OBJExporter } from 'three/examples/jsm/exporters/OBJExporter.js';
 
 /**
  * ファイルのダウンロードユーティリティ

@@ -23,47 +23,28 @@ console.error = function (err, url, line, colno, errorObj) {
 
 // Import the set of scripts we'll need to perform all the CAD operations
 importScripts(
-  '/node_modules/three/build/three.min.js',
-  '/js/CADWorker/CascadeStudioStandardLibrary.js',
-  '/js/CADWorker/CascadeStudioShapeToMesh.js',
-  '/node_modules/opencascade.js/dist/opencascade.wasm.js',
-  '/node_modules/opentype.js/dist/opentype.min.js',
-  '/node_modules/potpack/index.js');
+  '../../node_modules/three/build/three.min.js',
+  './CascadeStudioStandardLibrary.js',
+  './CascadeStudioShapeToMesh.js');
 
 // Preload the Various Fonts that are available via Text3D
-var preloadedFonts = ['/fonts/Roboto.ttf',
-  '/fonts/Papyrus.ttf', '/fonts/Consolas.ttf'];
+// Note: Font loading temporarily disabled due to opentype.js compatibility issues
+var preloadedFonts = ['../../fonts/Roboto.ttf',
+  '../../fonts/Papyrus.ttf', '../../fonts/Consolas.ttf'];
 var fonts = {};
-preloadedFonts.forEach((fontURL) => {
-  opentype.load(fontURL, function (err, font) {
-    if (err) { console.log(err); }
-    let fontName = fontURL.split("/fonts/")[1].split(".ttf")[0];
-    fonts[fontName] = font;
-  });
-});
+console.log("Font loading temporarily disabled");
 
-// Load the full Open Cascade Web Assembly Module
+// Message handlers for worker communication
 var messageHandlers = {};
-new opencascade({
-  locateFile(path) {
-    if (path.endsWith('.wasm')) {
-      return "/node_modules/opencascade.js/dist/opencascade.wasm.wasm";
-    }
-    return path;
-  }
-}).then((openCascade) => {
-  // Register the "OpenCascade" WebAssembly Module under the shorthand "oc"
-  oc = openCascade;
 
-  // Ping Pong Messages Back and Forth based on their registration in messageHandlers
-  onmessage = function (e) {
-    let response = messageHandlers[e.data.type](e.data.payload);
-    if (response) { postMessage({ "type": e.data.type, payload: response }); };
-  }
+// Ping Pong Messages Back and Forth based on their registration in messageHandlers
+onmessage = function (e) {
+  let response = messageHandlers[e.data.type](e.data.payload);
+  if (response) { postMessage({ "type": e.data.type, payload: response }); };
+}
 
-  // Initial Evaluation after everything has been loaded...
-  postMessage({ type: "startupCallback" });
-});
+// Initial startup callback
+postMessage({ type: "startupCallback" });
 
 /** This function evaluates `payload.code` (the contents of the Editor Window)
  *  and sets the GUI State. */
@@ -135,4 +116,4 @@ function combineAndRenderShapes(payload) {
 messageHandlers["combineAndRenderShapes"] = combineAndRenderShapes;
 
 // Import the File IO Utilities
-importScripts('/js/CADWorker/CascadeStudioFileUtils.js');
+importScripts('./CascadeStudioFileUtils.js');
