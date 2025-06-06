@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import MonacoEditor from './components/MonacoEditor';
 import ThreeViewport from './components/ThreeViewport';
+import DockviewLayout from './components/DockviewLayout';
 
 // v0のデフォルトコード
 const defaultCode = `// Welcome to Cascade Studio!   Here are some useful functions:
@@ -54,10 +55,41 @@ export default function Home() {
     setHasUnsavedChanges(hasChanges);
   }, []);
 
+  // エディタータイトルの生成
+  const editorTitle = `${hasUnsavedChanges ? '* ' : ''}${projectName}.ts`;
+
+  // 左パネル（エディター）
+  const leftPanel = (
+    <MonacoEditor
+      value={code}
+      onChange={handleCodeChange}
+      onEvaluate={handleEvaluate}
+      onSaveProject={handleSaveProject}
+      hasUnsavedChanges={hasUnsavedChanges}
+      onUnsavedChangesUpdate={handleUnsavedChangesUpdate}
+      projectName={projectName}
+      onProjectNameUpdate={handleProjectNameUpdate}
+    />
+  );
+
+  // 右上パネル（3Dビューポート）
+  const rightTopPanel = <ThreeViewport />;
+
+  // 右下パネル（コンソール）
+  const rightBottomPanel = (
+    <div className="h-full bg-gray-900 flex flex-col">
+      <div className="p-4 h-full overflow-auto text-white font-mono text-sm">
+        <div className="text-gray-300">&gt; Welcome to Modeler X!</div>
+        <div className="text-gray-300">&gt; Loading CAD Kernel...</div>
+        <div className="text-gray-300">&gt; Ready to evaluate code</div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="h-screen flex flex-col bg-gray-900">
       {/* トップナビゲーション */}
-      <div className="bg-gray-800 text-white px-4 py-2 border-b border-gray-700">
+      <div className="bg-gray-800 text-white px-4 py-2 border-b border-gray-700 z-10">
         <div className="flex items-center space-x-4">
           <span className="font-semibold">Modeler X</span>
           <button 
@@ -94,44 +126,14 @@ export default function Home() {
         </div>
       </div>
 
-      {/* メインコンテンツエリア */}
-      <div className="flex-1 flex">
-        {/* 左側: コードエディター */}
-        <div className="w-1/2 flex flex-col border-r border-gray-700">
-          <div className="bg-gray-700 text-white px-4 py-1 text-xs border-b border-gray-600">
-            <span>{hasUnsavedChanges ? '* ' : ''}{projectName}</span>
-          </div>
-          <MonacoEditor
-            value={code}
-            onChange={handleCodeChange}
-            onEvaluate={handleEvaluate}
-            onSaveProject={handleSaveProject}
-            hasUnsavedChanges={hasUnsavedChanges}
-            onUnsavedChangesUpdate={handleUnsavedChangesUpdate}
-            projectName={projectName}
-            onProjectNameUpdate={handleProjectNameUpdate}
-          />
-        </div>
-
-        {/* 右側: 3Dビューポートとコンソール */}
-        <div className="w-1/2 flex flex-col">
-          {/* 3Dビューポート */}
-          <div className="flex-1">
-            <ThreeViewport />
-          </div>
-
-          {/* コンソール */}
-          <div className="h-48 bg-gray-900 border-t border-gray-700">
-            <div className="bg-gray-700 text-white px-4 py-1 text-xs border-b border-gray-600">
-              <span>Console</span>
-            </div>
-            <div className="p-4 h-full overflow-auto text-white font-mono text-sm">
-              <div className="text-gray-300">&gt; Welcome to Modeler X!</div>
-              <div className="text-gray-300">&gt; Loading CAD Kernel...</div>
-              <div className="text-gray-300">&gt; Ready to evaluate code</div>
-            </div>
-          </div>
-        </div>
+      {/* メインコンテンツエリア - Dockview */}
+      <div className="flex-1 overflow-hidden">
+        <DockviewLayout
+          leftPanel={leftPanel}
+          rightTopPanel={rightTopPanel}
+          rightBottomPanel={rightBottomPanel}
+          editorTitle={editorTitle}
+        />
       </div>
     </div>
   );

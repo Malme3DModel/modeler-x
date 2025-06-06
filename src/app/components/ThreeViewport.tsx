@@ -223,7 +223,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({ onSceneReady }) => {
   }, [createInitialScene]);
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="h-full flex flex-col">
       <div className="bg-gray-700 text-white px-4 py-1 text-xs border-b border-gray-600 flex justify-between">
         <span>CAD View</span>
         <span className="text-gray-400">
