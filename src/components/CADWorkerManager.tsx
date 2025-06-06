@@ -28,8 +28,7 @@ const CADWorkerManager: React.FC<CADWorkerManagerProps> = ({
   const workerRef = useRef<Worker | null>(null);
   const messageHandlersRef = useRef<{ [key: string]: (payload: any) => any }>({});
   const isWorkingRef = useRef(false);
-  const workerReadyPromiseRef = useRef<Promise<CADWorkerInterface> | null>(null);
-  const workerReadyResolveRef = useRef<((worker: CADWorkerInterface) => void) | null>(null);
+
 
   const createWorkerInterface = useCallback((): CADWorkerInterface => {
     return {
@@ -66,50 +65,20 @@ const CADWorkerManager: React.FC<CADWorkerManagerProps> = ({
     };
   }, []);
 
-  const createWorkerReadyPromise = useCallback((): Promise<CADWorkerInterface> => {
-    if (workerReadyPromiseRef.current) {
-      return workerReadyPromiseRef.current;
-    }
-
-    workerReadyPromiseRef.current = new Promise<CADWorkerInterface>((resolve, reject) => {
-      workerReadyResolveRef.current = resolve;
-      
-      const timeoutId = setTimeout(() => {
-        reject(new Error('CAD Worker initialization timeout after 30 seconds'));
-      }, 30000);
-
-      const originalResolve = resolve;
-      workerReadyResolveRef.current = (worker: CADWorkerInterface) => {
-        clearTimeout(timeoutId);
-        originalResolve(worker);
-      };
-    });
-
-    return workerReadyPromiseRef.current;
-  }, []);
-
-  const executeAutoEvaluation = useCallback(async () => {
+  const executeAutoEvaluation = useCallback((cadWorkerInterface: CADWorkerInterface) => {
     if (!autoEvaluateCode) return;
 
-    try {
-      const cadWorkerInterface = await createWorkerReadyPromise();
-      
-      if (onLog) {
-        onLog('Auto-evaluating startup code...');
-      }
-
-      cadWorkerInterface.evaluateCode(autoEvaluateCode, {});
-      cadWorkerInterface.combineAndRenderShapes();
-
-      if (onLog) {
-        onLog('Startup code evaluation completed');
-      }
-    } catch (error) {
-      if (onError) {
-        onError(`Auto-evaluation failed: ${error}`);
-      }
+    if (onLog) {
+      onLog('Auto-evaluating startup code...');
     }
-  }, [autoEvaluateCode, onLog, onError, createWorkerReadyPromise]);
+
+    cadWorkerInterface.evaluateCode(autoEvaluateCode, {});
+    cadWorkerInterface.combineAndRenderShapes();
+
+    if (onLog) {
+      onLog('Startup code evaluation completed');
+    }
+  }, [autoEvaluateCode, onLog]);
 
   // ワーカーの初期化
   useEffect(() => {
@@ -126,11 +95,7 @@ const CADWorkerManager: React.FC<CADWorkerManagerProps> = ({
           const cadWorkerInterface = createWorkerInterface();
           (window as any).cadWorker = cadWorkerInterface;
           
-          if (workerReadyResolveRef.current) {
-            workerReadyResolveRef.current(cadWorkerInterface);
-          }
-          
-          executeAutoEvaluation();
+          executeAutoEvaluation(cadWorkerInterface);
           
           if (onWorkerReady) {
             onWorkerReady();
@@ -230,4 +195,4 @@ const CADWorkerManager: React.FC<CADWorkerManagerProps> = ({
   return null; // このコンポーネントは何もレンダリングしない
 };
 
-export default CADWorkerManager;          
+export default CADWorkerManager;            
