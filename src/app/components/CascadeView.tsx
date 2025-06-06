@@ -223,6 +223,10 @@ const CascadeView: React.FC<CascadeViewProps> = ({ cascadeCore }) => {
 
     sceneRef.current.add(mainObject);
     mainObjectRef.current = mainObject;
+    
+    // グローバルに公開（ファイルエクスポート用）
+    (window as any).cascadeMainObject = mainObject;
+    
     setViewDirty(true);
   }, []);
 

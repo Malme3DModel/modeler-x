@@ -35,9 +35,15 @@ export function createCascadeStudioCore(
           (window as any).cascadeStudioWorker.terminate();
         }
 
-        // Web Workerの作成
-        const workerUrl = '/js/CADWorker/CascadeStudioMainWorker.js';
-        const worker = new Worker(new URL(workerUrl, window.location.origin));
+        // Web Workerの作成 - 絶対URLを使用
+        let worker: Worker;
+        if (typeof window !== 'undefined') {
+          // クライアントサイドでのみ実行
+          const workerUrl = `${window.location.origin}/js/CADWorker/CascadeStudioMainWorker.js`;
+          worker = new Worker(workerUrl);
+        } else {
+          return null;
+        }
 
         // Web Workerからのメッセージを処理するハンドラーを登録
         worker.onmessage = (e) => {

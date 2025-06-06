@@ -23,7 +23,6 @@ export default function Home() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-800">
-      <TopNavigation />
       <CascadeStudio />
     </div>
   );

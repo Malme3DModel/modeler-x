@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 
 interface TopNavigationProps {
   onSaveProject?: () => void;
@@ -10,6 +10,8 @@ interface TopNavigationProps {
   onSaveOBJ?: () => void;
   onLoadFiles?: (files: FileList) => void;
   onClearFiles?: () => void;
+  version?: string;
+  isWorking?: boolean;
 }
 
 const TopNavigation: React.FC<TopNavigationProps> = ({
@@ -20,8 +22,12 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
   onSaveOBJ,
   onLoadFiles,
   onClearFiles,
+  version = '0.0.7',
+  isWorking = false,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showFileMenu, setShowFileMenu] = useState(false);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   const handleFileClick = () => {
     fileInputRef.current?.click();
@@ -35,53 +41,136 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
   };
 
   return (
-    <nav className="bg-gray-900 text-white overflow-hidden">
+    <nav className="bg-gray-900 text-white z-10">
       <div className="flex">
+        {/* ロゴ */}
         <a
           href="https://github.com/zalo/CascadeStudio"
-          className="float-left text-gray-200 text-center px-4 py-1 text-sm font-mono hover:bg-gray-600 hover:text-black"
+          className="text-gray-200 text-center px-4 py-1 text-sm font-mono hover:bg-gray-700"
+          target="_blank"
+          rel="noopener noreferrer"
         >
-          Cascade Studio 0.0.7 (Next.js)
+          Cascade Studio {version} (Next.js)
         </a>
-        <button
-          title="Save Project to .json"
-          onClick={onSaveProject}
-          className="float-left text-gray-200 text-center px-4 py-1 text-sm font-mono hover:bg-gray-600 hover:text-black"
-        >
-          Save Project
-        </button>
-        <button
-          title="Load Project from .json"
-          onClick={onLoadProject}
-          className="float-left text-gray-200 text-center px-4 py-1 text-sm font-mono hover:bg-gray-600 hover:text-black"
-        >
-          Load Project
-        </button>
-        <button
-          onClick={onSaveSTEP}
-          className="float-left text-gray-200 text-center px-4 py-1 text-sm font-mono hover:bg-gray-600 hover:text-black"
-        >
-          Save STEP
-        </button>
-        <button
-          onClick={onSaveSTL}
-          className="float-left text-gray-200 text-center px-4 py-1 text-sm font-mono hover:bg-gray-600 hover:text-black"
-        >
-          Save STL
-        </button>
-        <button
-          onClick={onSaveOBJ}
-          className="float-left text-gray-200 text-center px-4 py-1 text-sm font-mono hover:bg-gray-600 hover:text-black"
-        >
-          Save OBJ
-        </button>
-        <button
-          title="Import STEP, IGES, or (ASCII) STL from File"
-          onClick={handleFileClick}
-          className="float-left text-gray-200 text-center px-4 py-1 text-sm font-mono hover:bg-gray-600 hover:text-black"
-        >
-          Import STEP/IGES/STL
-        </button>
+        
+        {/* ファイルメニュー */}
+        <div className="relative">
+          <button
+            className="text-gray-200 text-center px-4 py-1 text-sm font-mono hover:bg-gray-700"
+            onClick={() => {
+              setShowFileMenu(!showFileMenu);
+              setShowExportMenu(false);
+            }}
+          >
+            ファイル
+          </button>
+          {showFileMenu && (
+            <div className="absolute left-0 mt-1 w-48 bg-gray-800 shadow-lg rounded border border-gray-600 z-20">
+              <button
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-700 text-gray-200"
+                onClick={() => {
+                  if (onSaveProject) {
+                    onSaveProject();
+                    setShowFileMenu(false);
+                  }
+                }}
+                disabled={isWorking}
+              >
+                プロジェクトを保存...
+              </button>
+              <button
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-700 text-gray-200"
+                onClick={() => {
+                  if (onLoadProject) {
+                    onLoadProject();
+                    setShowFileMenu(false);
+                  }
+                }}
+                disabled={isWorking}
+              >
+                プロジェクトを開く...
+              </button>
+              <div className="border-t border-gray-600 my-1"></div>
+              <button
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-700 text-gray-200"
+                onClick={() => {
+                  handleFileClick();
+                  setShowFileMenu(false);
+                }}
+                disabled={isWorking}
+              >
+                CADファイルをインポート...
+              </button>
+              <button
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-700 text-gray-200"
+                onClick={() => {
+                  if (onClearFiles) {
+                    onClearFiles();
+                    setShowFileMenu(false);
+                  }
+                }}
+                disabled={isWorking}
+              >
+                インポートファイルをクリア
+              </button>
+            </div>
+          )}
+        </div>
+        
+        {/* エクスポートメニュー */}
+        <div className="relative">
+          <button
+            className="text-gray-200 text-center px-4 py-1 text-sm font-mono hover:bg-gray-700"
+            onClick={() => {
+              setShowExportMenu(!showExportMenu);
+              setShowFileMenu(false);
+            }}
+            disabled={isWorking}
+          >
+            エクスポート
+          </button>
+          {showExportMenu && (
+            <div className="absolute left-0 mt-1 w-48 bg-gray-800 shadow-lg rounded border border-gray-600 z-20">
+              <button
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-700 text-gray-200"
+                onClick={() => {
+                  if (onSaveSTEP) {
+                    onSaveSTEP();
+                    setShowExportMenu(false);
+                  }
+                }}
+                disabled={isWorking}
+              >
+                STEPとして保存...
+              </button>
+              <button
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-700 text-gray-200"
+                onClick={() => {
+                  if (onSaveSTL) {
+                    onSaveSTL();
+                    setShowExportMenu(false);
+                  }
+                }}
+                disabled={isWorking}
+              >
+                STLとして保存...
+              </button>
+              <button
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-700 text-gray-200"
+                onClick={() => {
+                  if (onSaveOBJ) {
+                    onSaveOBJ();
+                    setShowExportMenu(false);
+                  }
+                }}
+                disabled={isWorking}
+              >
+                OBJとして保存...
+              </button>
+            </div>
+          )}
+        </div>
+
         <input
           ref={fileInputRef}
           type="file"
@@ -89,14 +178,17 @@ const TopNavigation: React.FC<TopNavigationProps> = ({
           multiple
           style={{ display: 'none' }}
           onChange={handleFileChange}
+          aria-label="CADファイルをインポート"
+          title="CADファイルをインポート"
         />
-        <button
-          title="Clears the external step/iges/stl files stored in the project."
-          onClick={onClearFiles}
-          className="float-left text-gray-200 text-center px-4 py-1 text-sm font-mono hover:bg-gray-600 hover:text-black"
-        >
-          Clear Imported Files
-        </button>
+        
+        {/* ステータス表示 */}
+        {isWorking && (
+          <div className="ml-auto flex items-center px-4">
+            <div className="animate-spin h-4 w-4 border-t-2 border-blue-500 rounded-full mr-2"></div>
+            <span className="text-xs text-gray-400">処理中...</span>
+          </div>
+        )}
       </div>
     </nav>
   );

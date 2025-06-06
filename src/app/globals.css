@@ -68,3 +68,52 @@ body {
 .lm_tab.lm_active {
   background-color: #555555 !important;
 }
+
+/* Dockview のカスタムスタイル */
+.dockview-theme-dark {
+  --dv-group-view-background-color: #1e1e1e;
+  --dv-paneview-header-background-color: #2d2d30;
+  --dv-tabs-container-background-color: #252526;
+  --dv-tabs-and-actions-container-background-color: #252526;
+  --dv-tab-background-color: #2d2d30;
+  --dv-tab-active-background-color: #1e1e1e;
+  --dv-tab-color: #cccccc;
+  --dv-tab-active-color: #ffffff;
+  --dv-tab-hover-background-color: #2a2d2e;
+  --dv-tab-active-border-color: #007acc;
+  --dv-separator-border: #303031;
+  --dv-paneview-header-border: transparent;
+  --dv-activegroup-visiblepanel-tab-background-color: #1e1e1e;
+  --dv-group-header-background-color: #2d2d30;
+  --dv-group-header-border: transparent;
+  --dv-drag-over-background-color: rgba(38, 119, 203, 0.18);
+  --dv-floating-box-shadow: 0 8px 16px rgba(0, 0, 0, 0.45);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+/* タブのスタイル調整 */
+.dockview-theme-dark .tab {
+  font-size: 13px;
+  padding: 0 12px;
+}
+
+/* パネルヘッダーのスタイル */
+.dockview-theme-dark .pane-header {
+  height: 35px;
+  font-size: 13px;
+}
+
+/* スプリッターのスタイル */
+.dockview-theme-dark .split-view-view-separator {
+  background: #252526;
+}
+
+.dockview-theme-dark .split-view-view-separator:hover {
+  background: #007acc;
+}
+
+/* パネルコンテンツ領域 */
+.dockview-theme-dark .view-content {
+  background: #1e1e1e;
+  overflow: hidden;
+}

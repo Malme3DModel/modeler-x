@@ -47,6 +47,18 @@ const GUIControls = dynamic(() => import('./GUIControls').catch(() => ({ default
   ssr: false
 }) as any;
 
+// ResizableLayoutをClient-sideでのみロード
+const ResizableLayout = dynamic(() => import('./ResizableLayout'), {
+  ssr: false,
+  loading: () => <div className="flex-1 bg-gray-800 flex items-center justify-center text-white">Loading Layout...</div>
+});
+
+// DockviewLayoutをClient-sideでのみロード
+const DockviewLayout = dynamic(() => import('./DockviewLayout'), {
+  ssr: false,
+  loading: () => <div className="flex-1 bg-gray-800 flex items-center justify-center text-white">Loading Layout...</div>
+});
+
 const starterCode = `// Welcome to Cascade Studio!   Here are some useful functions:
 //  Translate(), Rotate(), Scale(), Mirror(), Union(), Difference(), Intersection()
 //  Box(), Sphere(), Cylinder(), Cone(), Text3D(), Polygon()
@@ -96,6 +108,7 @@ const CascadeStudio: React.FC = () => {
   // コード変更ハンドラー
   const handleCodeChange = useCallback((newCode: string) => {
     setCode(newCode);
+    setHasUnsavedChanges(true);
   }, []);
 
   // コード評価ハンドラー
@@ -117,56 +130,226 @@ const CascadeStudio: React.FC = () => {
     }
   }, []);
 
+  // プロジェクト保存
+  const handleSaveProject = useCallback(async () => {
+    const projectData = {
+      code,
+      guiState: cascadeCoreRef.current?.guiState || {},
+      externalFiles,
+      version: '0.0.7'
+    };
+    
+    const jsonData = JSON.stringify(projectData, null, 2);
+    const filename = await saveFileWithPicker(
+      jsonData,
+      projectName.replace('.ts', '.json'),
+      'Cascade Studio プロジェクトファイル',
+      'application/json',
+      'json'
+    );
+    
+    if (filename) {
+      setProjectName(filename.replace('.json', '.ts'));
+      setHasUnsavedChanges(false);
+      setConsoleOutput(prev => prev + `\nプロジェクトを保存しました: ${filename}`);
+    }
+  }, [code, externalFiles, projectName]);
+
+  // プロジェクト読み込み
+  const handleLoadProject = useCallback(async () => {
+    if (isEvaluating) return;
+    
+    const result = await loadFileWithPicker(
+      'Cascade Studio プロジェクトファイル',
+      { 'application/json': ['.json'] }
+    );
+    
+    if (result) {
+      try {
+        const projectData = JSON.parse(result.content);
+        setCode(projectData.code || '');
+        setExternalFiles(projectData.externalFiles || {});
+        if (cascadeCoreRef.current) {
+          cascadeCoreRef.current.guiState = projectData.guiState || {};
+        }
+        fileHandleRef.current = result.handle;
+        setProjectName(result.name.replace('.json', '.ts'));
+        setHasUnsavedChanges(false);
+        setConsoleOutput(prev => prev + `\nプロジェクトを読み込みました: ${result.name}`);
+        
+        // 外部ファイルを再読み込み
+        if (Object.keys(projectData.externalFiles || {}).length > 0) {
+          const worker = (window as any).cascadeStudioWorker;
+          if (worker) {
+            worker.postMessage({
+              type: 'loadPrexistingExternalFiles',
+              payload: projectData.externalFiles
+            });
+          }
+        }
+        
+        // コードを評価
+        handleCodeEvaluate();
+      } catch (error) {
+        console.error('プロジェクトの読み込みに失敗しました:', error);
+        setConsoleOutput(prev => prev + `\nプロジェクトの読み込みに失敗しました: ${error}`);
+      }
+    }
+  }, [isEvaluating, handleCodeEvaluate]);
+
+  // STEPファイルのエクスポート
+  const handleSaveSTEP = useCallback(() => {
+    const worker = (window as any).cascadeStudioWorker;
+    if (!worker) return;
+    
+    // STEPファイル生成をWorkerにリクエスト
+    worker.postMessage({ type: 'saveShapeSTEP' });
+    
+    // 一時的なハンドラーを登録
+    if (cascadeCoreRef.current) {
+      cascadeCoreRef.current.registerMessageHandler('saveShapeSTEP', async (stepContent: string) => {
+        const filename = await saveFileWithPicker(
+          stepContent,
+          'CascadeStudioPart.step',
+          'STEPファイル',
+          'text/plain',
+          'step'
+        );
+        if (filename) {
+          setConsoleOutput(prev => prev + `\nSTEPファイルを保存しました: ${filename}`);
+        }
+      });
+    }
+  }, []);
+
+  // STLファイルのエクスポート（Three.jsを使用）
+  const handleSaveSTL = useCallback(async () => {
+    // CascadeViewコンポーネントからmainObjectを取得する必要がある
+    // 現在の実装では、グローバル変数経由でアクセス
+    const mainObject = (window as any).cascadeMainObject;
+    if (!mainObject) {
+      setConsoleOutput(prev => prev + '\nエクスポートする形状がありません');
+      return;
+    }
+    
+    try {
+      const { exportSTL } = await import('../lib/fileUtils');
+      const stlContent = exportSTL(mainObject);
+      const filename = await saveFileWithPicker(
+        stlContent,
+        'CascadeStudioPart.stl',
+        'STLファイル',
+        'text/plain',
+        'stl'
+      );
+      if (filename) {
+        setConsoleOutput(prev => prev + `\nSTLファイルを保存しました: ${filename}`);
+      }
+    } catch (error) {
+      setConsoleOutput(prev => prev + `\nSTLエクスポートエラー: ${error}`);
+    }
+  }, []);
+
+  // OBJファイルのエクスポート（Three.jsを使用）
+  const handleSaveOBJ = useCallback(async () => {
+    const mainObject = (window as any).cascadeMainObject;
+    if (!mainObject) {
+      setConsoleOutput(prev => prev + '\nエクスポートする形状がありません');
+      return;
+    }
+    
+    try {
+      const { exportOBJ } = await import('../lib/fileUtils');
+      const objContent = exportOBJ(mainObject);
+      const filename = await saveFileWithPicker(
+        objContent,
+        'CascadeStudioPart.obj',
+        'OBJファイル',
+        'text/plain',
+        'obj'
+      );
+      if (filename) {
+        setConsoleOutput(prev => prev + `\nOBJファイルを保存しました: ${filename}`);
+      }
+    } catch (error) {
+      setConsoleOutput(prev => prev + `\nOBJエクスポートエラー: ${error}`);
+    }
+  }, []);
+
+  // ファイルインポート
+  const handleLoadFiles = useCallback(async (files: FileList) => {
+    const worker = (window as any).cascadeStudioWorker;
+    if (!worker) return;
+    
+    // ファイルをWorkerに送信
+    worker.postMessage({
+      type: 'loadFiles',
+      payload: files
+    });
+    
+    // インポート結果を受け取るハンドラー
+    if (cascadeCoreRef.current) {
+      cascadeCoreRef.current.registerMessageHandler('loadFiles', (extFiles: any) => {
+        setExternalFiles(extFiles);
+        setConsoleOutput(prev => prev + '\n外部ファイルを読み込みました');
+      });
+    }
+  }, []);
+
+  // インポートファイルのクリア
+  const handleClearFiles = useCallback(() => {
+    const worker = (window as any).cascadeStudioWorker;
+    if (worker) {
+      worker.postMessage({ type: 'clearExternalFiles' });
+    }
+    setExternalFiles({});
+    setConsoleOutput(prev => prev + '\n外部ファイルをクリアしました');
+  }, []);
+
+  // キーボードショートカット
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+S または Cmd+S でプロジェクト保存
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        handleSaveProject();
+        handleCodeEvaluate();
+      }
+      // F5でコード評価（リロードを防ぐ）
+      if (e.key === 'F5') {
+        e.preventDefault();
+        handleCodeEvaluate();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleSaveProject, handleCodeEvaluate]);
+
   return (
     <div className="h-screen flex flex-col bg-gray-800">
-      <TopNavigation />
-      <div className="flex-1 flex">
-        {/* Left Panel - Code Editor */}
-        <div className="w-1/2 flex flex-col border-r border-gray-600">
-          <div className="bg-gray-800 text-white px-4 py-2 text-sm border-b border-gray-600 flex justify-between items-center">
-            <span>* Untitled.ts</span>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-gray-400">
-                GUI: {Object.keys(cascadeCoreRef.current?.guiState || {}).length} | Pending: {isEvaluating ? '1' : '0'}
-              </span>
-            </div>
-          </div>
+      <TopNavigation 
+        onSaveProject={handleSaveProject}
+        onLoadProject={handleLoadProject}
+        onSaveSTEP={handleSaveSTEP}
+        onSaveSTL={handleSaveSTL}
+        onSaveOBJ={handleSaveOBJ}
+        onLoadFiles={handleLoadFiles}
+        onClearFiles={handleClearFiles}
+        isWorking={isEvaluating}
+      />
+      <DockviewLayout
+        leftPanel={
           <MonacoEditor
             value={code}
             onChange={handleCodeChange}
             onEvaluate={handleCodeEvaluate}
           />
-        </div>
-
-        {/* Right Panel - 3D View and Console */}
-        <div className="w-1/2 flex flex-col relative">
-          {/* 3D View */}
-          <div className="flex-1 relative">
-            <div className="bg-gray-800 text-white px-4 py-2 text-sm border-b border-gray-600 flex justify-between items-center">
-              <span>CAD View</span>
-              <div className="flex gap-2">
-                <button
-                  onClick={clearScene}
-                  className="text-xs bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded"
-                  disabled={isEvaluating}
-                >
-                  Clear Scene
-                </button>
-                <button
-                  onClick={handleCodeEvaluate}
-                  className={`text-xs px-2 py-1 rounded ${
-                    isEvaluating 
-                      ? 'bg-yellow-600 cursor-not-allowed' 
-                      : 'bg-blue-600 hover:bg-blue-500'
-                  }`}
-                  disabled={isEvaluating}
-                >
-                  {isEvaluating ? 'Evaluating...' : 'Run (Ctrl+Enter)'}
-                </button>
-              </div>
-            </div>
+        }
+        editorTitle={`${hasUnsavedChanges ? '* ' : ''}${projectName}`}
+        rightTopPanel={
+          <div className="flex-1 relative h-full">
             <CascadeView cascadeCore={cascadeCoreRef.current} />
-            
             {/* GUI Controls Overlay */}
             <GUIControls 
               cascadeCore={cascadeCoreRef.current}
@@ -176,27 +359,47 @@ const CascadeStudio: React.FC = () => {
                 }
               }}
             />
+            {/* ビューポートコントロール */}
+            <div className="absolute top-2 right-2 flex gap-2">
+              <button
+                onClick={clearScene}
+                className="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-white shadow-lg"
+                disabled={isEvaluating}
+              >
+                Clear Scene
+              </button>
+              <button
+                onClick={handleCodeEvaluate}
+                className={`text-xs px-3 py-1 rounded shadow-lg text-white ${
+                  isEvaluating 
+                    ? 'bg-yellow-600 cursor-not-allowed' 
+                    : 'bg-blue-600 hover:bg-blue-500'
+                }`}
+                disabled={isEvaluating}
+              >
+                {isEvaluating ? 'Evaluating...' : 'Run (Ctrl+Enter)'}
+              </button>
+            </div>
           </div>
-
-          {/* Console */}
-          <div className="h-48 flex flex-col border-t border-gray-600">
-            <div className="bg-gray-800 text-white px-4 py-2 text-sm border-b border-gray-600 flex justify-between">
-              <span>Console</span>
+        }
+        rightBottomPanel={
+          <div className="flex flex-col h-full bg-gray-900">
+            <div className="flex-1 p-2 overflow-y-auto">
+              <div className="font-mono text-xs whitespace-pre-wrap text-gray-300">
+                {consoleOutput || <span className="text-gray-500">Console output will appear here...</span>}
+              </div>
+            </div>
+            <div className="border-t border-gray-700 p-2 flex justify-end">
               <button
                 onClick={clearConsole}
-                className="text-xs bg-gray-600 hover:bg-gray-500 px-2 py-1 rounded"
+                className="text-xs bg-gray-700 hover:bg-gray-600 px-2 py-1 rounded text-white"
               >
                 Clear
               </button>
             </div>
-            <div className="flex-1 bg-gray-900 p-2 overflow-y-auto">
-              <div className="font-mono text-xs whitespace-pre-wrap">
-                {consoleOutput || <span className="text-gray-500">Console output will appear here...</span>}
-              </div>
-            </div>
           </div>
-        </div>
-      </div>
+        }
+      />
     </div>
   );
 };

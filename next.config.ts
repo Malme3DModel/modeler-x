@@ -1,6 +1,15 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Turbopack の設定
+  turbopack: {
+    rules: {
+      '*.worker.js': {
+        loaders: ['worker-loader'],
+      },
+    },
+  },
+
   webpack: (config, { isServer }) => {
     // WebWorkerのサポート
     if (!isServer) {

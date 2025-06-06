@@ -1,5 +1,8 @@
 'use client';
 
+import { STLExporter } from 'three-stdlib';
+import { OBJExporter } from 'three-stdlib';
+
 /**
  * ファイルのダウンロードユーティリティ
  */
@@ -152,22 +155,14 @@ export function decompressData(compressed: string): string {
  * Three.jsのSTLExporter互換のエクスポート関数
  */
 export function exportSTL(mesh: any): string {
-  // STLExporterが利用可能であることを前提
-  if (typeof window !== 'undefined' && (window as any).THREE?.STLExporter) {
-    const exporter = new (window as any).THREE.STLExporter();
-    return exporter.parse(mesh);
-  }
-  throw new Error('STLExporter not available');
+  const exporter = new STLExporter();
+  return exporter.parse(mesh) as string;
 }
 
 /**
  * Three.jsのOBJExporter互換のエクスポート関数
  */
 export function exportOBJ(mesh: any): string {
-  // OBJExporterが利用可能であることを前提
-  if (typeof window !== 'undefined' && (window as any).THREE?.OBJExporter) {
-    const exporter = new (window as any).THREE.OBJExporter();
-    return exporter.parse(mesh);
-  }
-  throw new Error('OBJExporter not available');
+  const exporter = new OBJExporter();
+  return exporter.parse(mesh);
 } 
