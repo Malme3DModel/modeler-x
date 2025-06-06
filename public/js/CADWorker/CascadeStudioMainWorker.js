@@ -22,39 +22,35 @@ console.error = function (err, url, line, colno, errorObj) {
 }; // This is actually accessed via worker.onerror in the main thread
 
 // Import the set of scripts we'll need to perform all the CAD operations
-console.log("Loading CAD Worker scripts...");
 importScripts(
-  '/node_modules/three.min.js',
+  '../../node_modules/three/build/three.min.js',
   './CascadeStudioStandardLibrary.js',
   './CascadeStudioShapeToMesh.js',
-  './libs/opencascade.wasm.v015.js',
-  '/node_modules/opentype.js/dist/opentype.min.js');
-console.log("CAD Worker scripts loaded successfully!");
+  './libs/opencascade.wasm.v015.js');
 
 // Preload the Various Fonts that are available via Text3D
-var preloadedFonts = ['/fonts/Roboto.ttf',
-  '/fonts/Papyrus.ttf', '/fonts/Consolas.ttf'];
+var preloadedFonts = ['../../fonts/Roboto.ttf',
+  '../../fonts/Papyrus.ttf', '../../fonts/Consolas.ttf'];
 var fonts = {};
-preloadedFonts.forEach((fontURL) => {
-  opentype.load(fontURL, function (err, font) {
-    if (err) { console.log(err); }
-    let fontName = fontURL.split("/fonts/")[1].split(".ttf")[0];
-    fonts[fontName] = font;
-  });
-});
+// Temporarily comment out font loading to avoid require() issues
+// preloadedFonts.forEach((fontURL) => {
+//   opentype.load(fontURL, function (err, font) {
+//     if (err) { console.log(err); }
+//     let fontName = fontURL.split("../../fonts/")[1].split(".ttf")[0];
+//     fonts[fontName] = font;
+//   });
+// });
 
 // Load the full Open Cascade Web Assembly Module
 var messageHandlers = {};
-console.log("Initializing OpenCascade...");
 new opencascade({
   locateFile(path) {
     if (path.endsWith('.wasm')) {
-      return "/node_modules/opencascade.js/dist/opencascade.wasm.wasm";
+      return "./libs/opencascade.wasm.wasm";
     }
     return path;
   }
 }).then((openCascade) => {
-  console.log("OpenCascade initialized successfully!");
   // Register the "OpenCascade" WebAssembly Module under the shorthand "oc"
   oc = openCascade;
 
@@ -65,7 +61,6 @@ new opencascade({
   }
 
   // Initial Evaluation after everything has been loaded...
-  console.log("Sending startup callback...");
   postMessage({ type: "startupCallback" });
 });
 
