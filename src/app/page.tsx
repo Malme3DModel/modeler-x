@@ -74,23 +74,9 @@ export default function Home() {
     setHasUnsavedChanges(hasChanges);
   }, []);
 
-  // CADワーカーの準備完了時の処理
   const handleWorkerReady = useCallback(() => {
     setIsCADWorkerReady(true);
     setConsoleMessages(prev => [...prev, '> CAD Kernel loaded successfully!', '> Ready to evaluate code']);
-    
-    setTimeout(() => {
-      const cadWorker = (window as any).cadWorker;
-      if (cadWorker && cadWorker.evaluateCode) {
-        setConsoleMessages(prev => [...prev, '> Auto-evaluating startup code...']);
-        cadWorker.evaluateCode(defaultCode, {});
-        setTimeout(() => {
-          if (cadWorker.combineAndRenderShapes) {
-            cadWorker.combineAndRenderShapes();
-          }
-        }, 50);
-      }
-    }, 100);
   }, []);
 
   // CADワーカーからの形状更新を処理
@@ -179,6 +165,7 @@ export default function Home() {
         onProgress={handleProgress}
         onLog={handleLog}
         onError={handleError}
+        autoEvaluateCode={defaultCode}
       />
 
       {/* トップナビゲーション */}

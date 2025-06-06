@@ -8,6 +8,7 @@ interface CADWorkerManagerProps {
   onProgress?: (progress: { opNumber: number; opType: string }) => void;
   onLog?: (message: string) => void;
   onError?: (error: string) => void;
+  autoEvaluateCode?: string;
 }
 
 export interface CADWorkerInterface {
@@ -21,13 +22,14 @@ const CADWorkerManager: React.FC<CADWorkerManagerProps> = ({
   onShapeUpdate,
   onProgress,
   onLog,
-  onError
+  onError,
+  autoEvaluateCode
 }) => {
   const workerRef = useRef<Worker | null>(null);
   const messageHandlersRef = useRef<{ [key: string]: (payload: any) => any }>({});
   const isWorkingRef = useRef(false);
 
-  // ワーカーインターフェースを作成
+
   const createWorkerInterface = useCallback((): CADWorkerInterface => {
     return {
       evaluateCode: (code: string, guiState: any) => {
@@ -63,6 +65,21 @@ const CADWorkerManager: React.FC<CADWorkerManagerProps> = ({
     };
   }, []);
 
+  const executeAutoEvaluation = useCallback((cadWorkerInterface: CADWorkerInterface) => {
+    if (!autoEvaluateCode) return;
+
+    if (onLog) {
+      onLog('Auto-evaluating startup code...');
+    }
+
+    cadWorkerInterface.evaluateCode(autoEvaluateCode, {});
+    cadWorkerInterface.combineAndRenderShapes();
+
+    if (onLog) {
+      onLog('Startup code evaluation completed');
+    }
+  }, [autoEvaluateCode, onLog]);
+
   // ワーカーの初期化
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -71,15 +88,18 @@ const CADWorkerManager: React.FC<CADWorkerManagerProps> = ({
     try {
       workerRef.current = new Worker('/js/CascadeStudioMainWorker.js');
       
-      // メッセージハンドラーの設定
       messageHandlersRef.current = {
         startupCallback: () => {
           console.log('CAD Kernel loaded successfully!');
+          
+          const cadWorkerInterface = createWorkerInterface();
+          (window as any).cadWorker = cadWorkerInterface;
+          
+          executeAutoEvaluation(cadWorkerInterface);
+          
           if (onWorkerReady) {
             onWorkerReady();
           }
-          // ワーカーインターフェースをグローバルに公開
-          (window as any).cadWorker = createWorkerInterface();
           return null;
         },
         
@@ -170,9 +190,9 @@ const CADWorkerManager: React.FC<CADWorkerManagerProps> = ({
       delete (window as any).cadWorker;
       delete (window as any).workerWorking;
     };
-  }, [onWorkerReady, onShapeUpdate, onProgress, onLog, onError, createWorkerInterface]);
+  }, [onWorkerReady, onShapeUpdate, onProgress, onLog, onError, executeAutoEvaluation, createWorkerInterface]);
 
   return null; // このコンポーネントは何もレンダリングしない
 };
 
-export default CADWorkerManager;    
+export default CADWorkerManager;            
