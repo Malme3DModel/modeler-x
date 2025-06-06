@@ -6,26 +6,38 @@ import ThreeViewport from './components/ThreeViewport';
 import DockviewLayout from './components/DockviewLayout';
 import CADWorkerManager from './components/CADWorkerManager';
 
-// v0のデフォルトコード
+// v0のデフォルトコード（Rotate関数無効化テスト用）
 const defaultCode = `// Welcome to Cascade Studio!   Here are some useful functions:
-//  Translate(), Rotate(), Scale(), Mirror(), Union(), Difference(), Intersection()
+//  Translate(), Scale(), Mirror(), Union(), Difference(), Intersection()
 //  Box(), Sphere(), Cylinder(), Cone(), Text3D(), Polygon()
 //  Offset(), Extrude(), RotatedExtrude(), Revolve(), Pipe(), Loft(), 
 //  FilletEdges(), ChamferEdges(),
 //  Slider(), Checkbox(), TextInput(), Dropdown()
 
-let holeRadius = Slider("Radius", 30 , 20 , 40);
+// Phase 3-4: SetRotation API修正のためのテスト
+// 1. 基本形状生成のテスト（Rotate関数を使わない）
 
-let sphere     = Sphere(50);
-let cylinderZ  =                     Cylinder(holeRadius, 200, true);
-let cylinderY  = Rotate([0,1,0], 90, Cylinder(holeRadius, 200, true));
-let cylinderX  = Rotate([1,0,0], 90, Cylinder(holeRadius, 200, true));
+console.log("=== Phase 3-4 Test: Basic Shape Generation ===");
 
-Translate([0, 0, 50], Difference(sphere, [cylinderX, cylinderY, cylinderZ]));
+// 基本的な形状を生成（回転なし）
+let sphere = Sphere(50);
+console.log("Sphere created:", sphere);
 
-Translate([-25, 0, 40], Text3D("Hi!", 36, 0.15, 'Consolas'));
+let box = Box(30, 30, 30, true);
+console.log("Box created:", box);
 
-// Don't forget to push imported or oc-defined shapes into sceneShapes to add them to the workspace!`;
+let cylinder = Cylinder(20, 60, true);
+console.log("Cylinder created:", cylinder);
+
+// 位置移動のテスト（Translateは動作するはず）
+Translate([0, 0, 50], sphere);
+Translate([80, 0, 0], box);
+Translate([-80, 0, 0], cylinder);
+
+console.log("=== Shapes positioned with Translate ===");
+
+// Note: Rotate関数は現在v0.1.15のAPI制限により無効化されています
+// TODO: BRepBuilderAPI_Transformを使用した代替実装を追加予定`;
 
 export default function Home() {
   const [code, setCode] = useState(defaultCode);

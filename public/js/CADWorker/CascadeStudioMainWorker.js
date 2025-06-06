@@ -41,6 +41,126 @@ var fonts = {};
 //   });
 // });
 
+// Debug function to investigate v0.1.15 API
+function investigateAPI() {
+  console.log("=== OpenCascade.js v0.1.15 API Investigation ===");
+  
+  // Check gp_Trsf methods
+  if (oc.gp_Trsf) {
+    const trsf = new oc.gp_Trsf();
+    console.log("gp_Trsf methods:");
+    const trsfMethods = Object.getOwnPropertyNames(oc.gp_Trsf.prototype);
+    const rotationMethods = trsfMethods.filter(method => method.toLowerCase().includes('rot'));
+    console.log("Rotation-related methods:", rotationMethods);
+    
+    // Check all methods with 'Set' prefix
+    const setMethods = trsfMethods.filter(method => method.startsWith('Set'));
+    console.log("Set methods:", setMethods);
+    
+    // Check all available methods
+    console.log("All gp_Trsf methods:", trsfMethods);
+    
+    // Send detailed info to main thread
+    postMessage({ 
+      type: "apiInvestigation", 
+      payload: {
+        trsfMethods: trsfMethods,
+        rotationMethods: rotationMethods,
+        setMethods: setMethods
+      }
+    });
+  }
+  
+  // Check primitive creation APIs
+  const primitiveAPIs = [
+    'BRepPrimAPI_MakeBox',
+    'BRepPrimAPI_MakeSphere', 
+    'BRepPrimAPI_MakeCylinder',
+    'BRepPrimAPI_MakeCone'
+  ];
+  
+  console.log("=== Primitive Creation APIs ===");
+  primitiveAPIs.forEach(apiName => {
+    if (oc[apiName]) {
+      console.log(`${apiName}: Available`);
+      try {
+        // Test the constructor signature
+        if (apiName === 'BRepPrimAPI_MakeBox') {
+          console.log("Testing BRepPrimAPI_MakeBox constructor...");
+          const testBox = new oc.BRepPrimAPI_MakeBox(10, 10, 10);
+          console.log("BRepPrimAPI_MakeBox object:", testBox);
+          console.log("BRepPrimAPI_MakeBox methods:", Object.getOwnPropertyNames(testBox.constructor.prototype));
+          
+          // Check if Shape method exists
+          if (typeof testBox.Shape === 'function') {
+            console.log("testBox.Shape() method exists");
+            try {
+              const shape = testBox.Shape();
+              console.log("testBox.Shape() returned:", shape);
+            } catch (e) {
+              console.log("testBox.Shape() error:", e.message);
+            }
+          } else {
+            console.log("testBox.Shape() method NOT exists");
+            console.log("Available methods on testBox:", Object.getOwnPropertyNames(testBox));
+          }
+        }
+      } catch (e) {
+        console.log(`${apiName} constructor error:`, e.message);
+      }
+    } else {
+      console.log(`${apiName}: Not available`);
+    }
+  });
+  
+  // Check alternative transformation classes
+  const transformClasses = [
+    'BRepBuilderAPI_Transform',
+    'TopLoc_Location', 
+    'gp_Ax1',
+    'gp_Ax2',
+    'gp_Dir',
+    'gp_Vec',
+    'gp_Pnt',
+    'gp_Quaternion',
+    'gp_Mat'
+  ];
+  
+  console.log("=== Available transformation classes ===");
+  transformClasses.forEach(className => {
+    if (oc[className]) {
+      console.log(`${className}: Available`);
+      try {
+        const methods = Object.getOwnPropertyNames(oc[className].prototype);
+        const rotMethods = methods.filter(m => m.toLowerCase().includes('rot'));
+        if (rotMethods.length > 0) {
+          console.log(`  - Rotation methods: ${rotMethods}`);
+        }
+      } catch (e) {
+        console.log(`  - Error checking methods: ${e.message}`);
+      }
+    } else {
+      console.log(`${className}: Not available`);
+    }
+  });
+  
+  // Check BRepMesh_IncrementalMesh
+  if (oc.BRepMesh_IncrementalMesh) {
+    console.log("BRepMesh_IncrementalMesh is available");
+    // Try to see constructor signature
+    try {
+      const testShape = new oc.TopoDS_Shape();
+      console.log("Testing BRepMesh_IncrementalMesh constructor...");
+    } catch (e) {
+      console.log("BRepMesh_IncrementalMesh constructor error:", e.message);
+    }
+  } else {
+    console.log("BRepMesh_IncrementalMesh not found");
+  }
+  
+  console.log("=== End API Investigation ===");
+}
+
 // Load the full Open Cascade Web Assembly Module
 var messageHandlers = {};
 new opencascade({
@@ -53,6 +173,9 @@ new opencascade({
 }).then((openCascade) => {
   // Register the "OpenCascade" WebAssembly Module under the shorthand "oc"
   oc = openCascade;
+  
+  // Investigate API after loading
+  investigateAPI();
 
   // Ping Pong Messages Back and Forth based on their registration in messageHandlers
   onmessage = function (e) {

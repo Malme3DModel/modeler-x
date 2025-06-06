@@ -118,6 +118,15 @@ const CADWorkerManager: React.FC<CADWorkerManagerProps> = ({
           isWorkingRef.current = false;
           (window as any).workerWorking = false;
           return null;
+        },
+        
+        apiInvestigation: (payload: any) => {
+          console.log('=== API Investigation Results ===');
+          console.log('All gp_Trsf methods:', payload.trsfMethods);
+          console.log('Rotation-related methods:', payload.rotationMethods);
+          console.log('Set methods:', payload.setMethods);
+          console.log('=== End API Investigation ===');
+          return null;
         }
       };
 
