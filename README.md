@@ -93,20 +93,22 @@ sceneShapes.push(result);
 ```
 ./
 ├── src/
-│   └── app/
-│       ├── components/          # Reactコンポーネント
-│       │   ├── CascadeStudio.tsx
-│       │   ├── CascadeView.tsx
-│       │   ├── MonacoEditor.tsx
-│       │   └── TopNavigation.tsx
-│       ├── lib/                 # ライブラリとユーティリティ
-│       │   └── CascadeStudioCore.ts
-│       ├── globals.css          # グローバルスタイル
-│       ├── layout.tsx           # レイアウト
-│       └── page.tsx             # メインページ
+│   ├── app/                     # Next.jsアプリディレクトリ
+│   │   ├── globals.css          # グローバルスタイル
+│   │   ├── layout.tsx           # レイアウト
+│   │   ├── page.tsx             # メインページ
+│   │   └── favicon.ico          # ファビコン
+│   ├── components/              # Reactコンポーネント
+│   │   ├── CADWorkerManager.tsx
+│   │   ├── DockviewLayout.tsx
+│   │   ├── MonacoEditor.tsx
+│   │   └── ThreeViewport.tsx
+│   ├── lib/                     # ライブラリとユーティリティ
+│   │   └── CascadeStudioCore.ts
+│   └── types/                   # 型定義
 ├── public/                      # 静的ファイル
 │   ├── js/                      # 元のJavaScriptファイル
-│   ├── css/                     # 元のCSSファイル
+│   ├── fonts/                   # フォントファイル
 │   ├── icon/                    # アイコン
 │   └── textures/                # テクスチャ
 ├── package.json

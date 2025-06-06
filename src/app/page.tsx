@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useState, useCallback, useRef } from 'react';
-import MonacoEditor from './components/MonacoEditor';
-import ThreeViewport from './components/ThreeViewport';
-import DockviewLayout from './components/DockviewLayout';
-import CADWorkerManager from './components/CADWorkerManager';
+import MonacoEditor from '../components/MonacoEditor';
+import ThreeViewport from '../components/ThreeViewport';
+import DockviewLayout from '../components/DockviewLayout';
+import CADWorkerManager from '../components/CADWorkerManager';
 
 // v0のデフォルトコード（Rotate関数無効化テスト用）
 const defaultCode = `// Welcome to Cascade Studio!   Here are some useful functions:
