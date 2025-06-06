@@ -175,4 +175,4 @@ const CADWorkerManager: React.FC<CADWorkerManagerProps> = ({
   return null; // このコンポーネントは何もレンダリングしない
 };
 
-export default CADWorkerManager; 
+export default CADWorkerManager;    
