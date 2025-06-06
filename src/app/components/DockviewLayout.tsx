@@ -19,17 +19,17 @@ interface DockviewLayoutProps {
 // パネルコンポーネントのラッパー
 const EditorPanel: React.FC<IDockviewPanelProps> = (props) => {
   const content = (props.params as any)?.content;
-  return <div className="h-full w-full overflow-hidden">{content}</div>;
+  return <div className="h-full w-full flex flex-col overflow-hidden">{content}</div>;
 };
 
 const ViewportPanel: React.FC<IDockviewPanelProps> = (props) => {
   const content = (props.params as any)?.content;
-  return <div className="h-full w-full overflow-hidden">{content}</div>;
+  return <div className="h-full w-full flex flex-col overflow-hidden">{content}</div>;
 };
 
 const ConsolePanel: React.FC<IDockviewPanelProps> = (props) => {
   const content = (props.params as any)?.content;
-  return <div className="h-full w-full overflow-auto">{content}</div>;
+  return <div className="h-full w-full flex flex-col overflow-auto">{content}</div>;
 };
 
 const DockviewLayout: React.FC<DockviewLayoutProps> = ({

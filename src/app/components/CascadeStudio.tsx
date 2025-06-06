@@ -48,10 +48,10 @@ const GUIControls = dynamic(() => import('./GUIControls').catch(() => ({ default
 }) as any;
 
 // ResizableLayoutをClient-sideでのみロード
-const ResizableLayout = dynamic(() => import('./ResizableLayout'), {
-  ssr: false,
-  loading: () => <div className="flex-1 bg-gray-800 flex items-center justify-center text-white">Loading Layout...</div>
-});
+// const ResizableLayout = dynamic(() => import('./ResizableLayout'), {
+//   ssr: false,
+//   loading: () => <div className="flex-1 bg-gray-800 flex items-center justify-center text-white">Loading Layout...</div>
+// });
 
 // DockviewLayoutをClient-sideでのみロード
 const DockviewLayout = dynamic(() => import('./DockviewLayout'), {
