@@ -15,6 +15,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({ onSceneReady }) => {
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const animationIdRef = useRef<number | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   // 初期シーンの作成
@@ -130,6 +131,24 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({ onSceneReady }) => {
     }
   }, [onSceneReady]);
 
+  // リサイズハンドラー
+  const handleResize = useCallback(() => {
+    if (!mountRef.current || !cameraRef.current || !rendererRef.current) return;
+    
+    const mount = mountRef.current;
+    const newWidth = mount.clientWidth;
+    const newHeight = mount.clientHeight;
+    
+    // カメラのアスペクト比を更新
+    cameraRef.current.aspect = newWidth / newHeight;
+    cameraRef.current.updateProjectionMatrix();
+    
+    // レンダラーのサイズを更新
+    rendererRef.current.setSize(newWidth, newHeight);
+    
+    console.log(`Three.js viewport resized to: ${newWidth}x${newHeight}`);
+  }, []);
+
   // Three.jsの初期化
   useEffect(() => {
     if (!mountRef.current) return;
@@ -182,21 +201,35 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({ onSceneReady }) => {
 
     setIsLoaded(true);
 
-    // リサイズハンドラー
-    const handleResize = () => {
-      if (!mount || !camera || !renderer) return;
-      const newWidth = mount.clientWidth;
-      const newHeight = mount.clientHeight;
-      camera.aspect = newWidth / newHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(newWidth, newHeight);
-    };
+    // ResizeObserverを設定してdockviewのパネルリサイズに対応
+    if (window.ResizeObserver) {
+      resizeObserverRef.current = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          // contentBoxSizeが利用可能な場合はそれを使用、そうでなければcontentRectを使用
+          const { width: newWidth, height: newHeight } = entry.contentBoxSize 
+            ? { width: entry.contentBoxSize[0].inlineSize, height: entry.contentBoxSize[0].blockSize }
+            : entry.contentRect;
+          
+          if (newWidth > 0 && newHeight > 0) {
+            handleResize();
+          }
+        }
+      });
+      
+      resizeObserverRef.current.observe(mount);
+    }
 
+    // フォールバック: windowリサイズイベント
     window.addEventListener('resize', handleResize);
 
     // クリーンアップ
     return () => {
       window.removeEventListener('resize', handleResize);
+      
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      }
       
       if (animationIdRef.current) {
         cancelAnimationFrame(animationIdRef.current);
@@ -220,7 +253,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({ onSceneReady }) => {
       
       renderer.dispose();
     };
-  }, [createInitialScene]);
+  }, [createInitialScene, handleResize]);
 
   return (
     <div className="h-full flex flex-col">
