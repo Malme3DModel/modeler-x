@@ -22,12 +22,14 @@ console.error = function (err, url, line, colno, errorObj) {
 }; // This is actually accessed via worker.onerror in the main thread
 
 // Import the set of scripts we'll need to perform all the CAD operations
+console.log("Loading CAD Worker scripts...");
 importScripts(
   '/node_modules/three.min.js',
   './CascadeStudioStandardLibrary.js',
   './CascadeStudioShapeToMesh.js',
-  '/node_modules/opentype.js/dist/opentype.min.js',
-  './libs/opencascade.wasm.js'); // 修正版のopencascade.jsを使用
+  './libs/opencascade.wasm.v015.js',
+  '/node_modules/opentype.js/dist/opentype.min.js');
+console.log("CAD Worker scripts loaded successfully!");
 
 // Preload the Various Fonts that are available via Text3D
 var preloadedFonts = ['/fonts/Roboto.ttf',
@@ -43,46 +45,29 @@ preloadedFonts.forEach((fontURL) => {
 
 // Load the full Open Cascade Web Assembly Module
 var messageHandlers = {};
-
-// OpenCascadeの初期化
 console.log("Initializing OpenCascade...");
-try {
-  // opencascadeはライブラリ読み込みによってグローバルに定義されている
-  if (typeof self.opencascade !== 'undefined') {
-    console.log("Creating OpenCascade instance...");
-    
-    new self.opencascade({
-      locateFile(path) {
-        if (path.endsWith('.wasm')) {
-          return "./libs/opencascade.wasm.wasm";
-        }
-        return path;
-      }
-    }).then((openCascade) => {
-      // Register the "OpenCascade" WebAssembly Module under the shorthand "oc"
-      oc = openCascade;
-      console.log("OpenCascade.js loaded successfully!");
-      
-      // Ping Pong Messages Back and Forth based on their registration in messageHandlers
-      onmessage = function (e) {
-        let response = messageHandlers[e.data.type](e.data.payload);
-        if (response) { postMessage({ "type": e.data.type, payload: response }); };
-      }
-      
-      // Initial Evaluation after everything has been loaded...
-      postMessage({ type: "startupCallback" });
-    }).catch(error => {
-      console.error("Failed to initialize OpenCascade:", error);
-      postMessage({ type: "error", payload: `Failed to initialize OpenCascade: ${error.message}` });
-    });
-  } else {
-    console.error("OpenCascade.js module not found in global scope");
-    postMessage({ type: "error", payload: "OpenCascade.js module not found in global scope" });
+new opencascade({
+  locateFile(path) {
+    if (path.endsWith('.wasm')) {
+      return "/node_modules/opencascade.js/dist/opencascade.wasm.wasm";
+    }
+    return path;
   }
-} catch (error) {
-  console.error("Error in OpenCascade initialization:", error);
-  postMessage({ type: "error", payload: `Error in OpenCascade initialization: ${error.message}` });
-}
+}).then((openCascade) => {
+  console.log("OpenCascade initialized successfully!");
+  // Register the "OpenCascade" WebAssembly Module under the shorthand "oc"
+  oc = openCascade;
+
+  // Ping Pong Messages Back and Forth based on their registration in messageHandlers
+  onmessage = function (e) {
+    let response = messageHandlers[e.data.type](e.data.payload);
+    if (response) { postMessage({ "type": e.data.type, payload: response }); };
+  }
+
+  // Initial Evaluation after everything has been loaded...
+  console.log("Sending startup callback...");
+  postMessage({ type: "startupCallback" });
+});
 
 /** This function evaluates `payload.code` (the contents of the Editor Window)
  *  and sets the GUI State. */
