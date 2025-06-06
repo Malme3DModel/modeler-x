@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useRef } from 'react';
 import MonacoEditor from '../components/MonacoEditor';
-import ThreeViewport from '../components/ThreeViewport';
+import ThreeViewport, { ThreeViewportRef } from '../components/ThreeViewport';
 import DockviewLayout from '../components/DockviewLayout';
 import CADWorkerManager from '../components/CADWorkerManager';
 
@@ -48,7 +48,7 @@ export default function Home() {
     '> Welcome to Modeler X!',
     '> Loading CAD Kernel...'
   ]);
-  const threeViewportUpdateRef = useRef<((facesAndEdges: any, sceneOptions: any) => void) | null>(null);
+  const threejsViewportRef = useRef<ThreeViewportRef>(null);
 
   const handleCodeChange = useCallback((newCode: string) => {
     setCode(newCode);
@@ -82,8 +82,8 @@ export default function Home() {
 
   // CADワーカーからの形状更新を処理
   const handleShapeUpdate = useCallback((facesAndEdges: any, sceneOptions: any) => {
-    if (threeViewportUpdateRef.current) {
-      threeViewportUpdateRef.current(facesAndEdges, sceneOptions);
+    if (threejsViewportRef.current?.updateShape) {
+      threejsViewportRef.current.updateShape(facesAndEdges, sceneOptions);
     }
   }, []);
 
@@ -112,9 +112,8 @@ export default function Home() {
     setConsoleMessages(prev => [...prev, `> ERROR: ${error}`]);
   }, []);
 
-  // ThreeViewportの形状更新関数を設定
-  const handleThreeViewportReady = useCallback((updateFunction: (facesAndEdges: any, sceneOptions: any) => void) => {
-    threeViewportUpdateRef.current = updateFunction;
+  // ThreeViewportのシーン準備完了時の処理
+  const handleSceneReady = useCallback((scene: any) => {
   }, []);
 
   // エディタータイトルの生成
@@ -137,7 +136,8 @@ export default function Home() {
   // 右上パネル（3Dビューポート）
   const rightTopPanel = (
     <ThreeViewport 
-      onShapeUpdate={handleThreeViewportReady}
+      ref={threejsViewportRef}
+      onSceneReady={handleSceneReady}
     />
   );
 
