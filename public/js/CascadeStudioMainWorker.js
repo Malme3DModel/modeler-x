@@ -26,20 +26,38 @@ importScripts(
   './three/build/three.min.js',
   './CascadeStudioStandardLibrary.js',
   './CascadeStudioShapeToMesh.js',
-  './libs/opencascade.wasm.v0-modified.js');
+  './libs/opencascade.wasm.v0-modified.js',
+  './opentype.js/dist/opentype.min.js');
 
 // Preload the Various Fonts that are available via Text3D
-var preloadedFonts = ['../../fonts/Roboto.ttf',
-  '../../fonts/Papyrus.ttf', '../../fonts/Consolas.ttf'];
+var preloadedFonts = ['/fonts/Roboto.ttf',
+  '/fonts/Papyrus.ttf', '/fonts/Consolas.ttf'];
 var fonts = {};
-// Temporarily comment out font loading to avoid require() issues
-// preloadedFonts.forEach((fontURL) => {
-//   opentype.load(fontURL, function (err, font) {
-//     if (err) { console.log(err); }
-//     let fontName = fontURL.split("../../fonts/")[1].split(".ttf")[0];
-//     fonts[fontName] = font;
-//   });
-// });
+async function loadFonts() {
+  console.log("Starting synchronous font loading...");
+  console.log("opentype object:", typeof opentype);
+  
+  for (const fontURL of preloadedFonts) {
+    try {
+      console.log("Fetching font:", fontURL);
+      const response = await fetch(fontURL);
+      if (!response.ok) {
+        console.log("Font fetch failed for", fontURL, ":", response.status);
+        continue;
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      const font = opentype.parse(arrayBuffer);
+      let fontName = fontURL.split("/fonts/")[1].split(".ttf")[0];
+      fonts[fontName] = font;
+      console.log("Successfully loaded font:", fontName);
+    } catch (err) {
+      console.log("Font loading error for", fontURL, ":", err);
+    }
+  }
+  
+  console.log("Font loading complete. Available fonts:", Object.keys(fonts));
+}
+
 
 // Debug function to investigate v0.1.15 API
 function investigateAPI() {
@@ -173,6 +191,8 @@ new opencascade({
 }).then((openCascade) => {
   // Register the "OpenCascade" WebAssembly Module under the shorthand "oc"
   oc = openCascade;
+  
+  loadFonts();
   
   // Investigate API after loading
   investigateAPI();
