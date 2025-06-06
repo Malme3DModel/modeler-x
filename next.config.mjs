@@ -1,6 +1,4 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+const nextConfig = {
   // ESLintを一時的に無効化（開発用）
   eslint: {
     ignoreDuringBuilds: true,
