@@ -6,9 +6,10 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 interface ThreeViewportProps {
   onSceneReady?: (scene: THREE.Scene) => void;
+  onShapeUpdate?: (facesAndEdges: any, sceneOptions: any) => void;
 }
 
-const ThreeViewport: React.FC<ThreeViewportProps> = ({ onSceneReady }) => {
+const ThreeViewport: React.FC<ThreeViewportProps> = ({ onSceneReady, onShapeUpdate }) => {
   const mountRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -17,6 +18,155 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({ onSceneReady }) => {
   const animationIdRef = useRef<number | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
+  const mainObjectRef = useRef<THREE.Group | null>(null);
+  const groundPlaneRef = useRef<THREE.Mesh | null>(null);
+  const gridRef = useRef<THREE.GridHelper | null>(null);
+
+  // CADワーカーからのメッシュデータを処理する関数
+  const updateShapeFromWorker = useCallback((facesAndEdges: any, sceneOptions: any) => {
+    if (!sceneRef.current || !mainObjectRef.current) return;
+
+    const scene = sceneRef.current;
+    const mainObject = mainObjectRef.current;
+
+    // 既存のCADオブジェクトをクリア
+    while (mainObject.children.length > 0) {
+      const child = mainObject.children[0];
+      mainObject.remove(child);
+      if (child instanceof THREE.Mesh) {
+        child.geometry.dispose();
+        if (Array.isArray(child.material)) {
+          child.material.forEach(material => material.dispose());
+        } else {
+          child.material.dispose();
+        }
+      }
+    }
+
+    if (!facesAndEdges || !facesAndEdges.faceList) {
+      console.warn('No face data received from CAD worker');
+      return;
+    }
+
+    try {
+      // フェイスデータからジオメトリを作成
+      const geometry = new THREE.BufferGeometry();
+      
+      // 頂点データの処理
+      const vertices: number[] = [];
+      const normals: number[] = [];
+      const indices: number[] = [];
+
+      let vertexIndex = 0;
+      for (const face of facesAndEdges.faceList) {
+        if (face.vertex_coord && face.normal_coord && face.tri_indexes) {
+          const faceVertices = face.vertex_coord;
+          const faceNormals = face.normal_coord;
+          const faceIndices = face.tri_indexes;
+
+          // 頂点座標を追加
+          for (let i = 0; i < faceVertices.length; i += 3) {
+            vertices.push(faceVertices[i], faceVertices[i + 1], faceVertices[i + 2]);
+          }
+
+          // 法線ベクトルを追加
+          for (let i = 0; i < faceNormals.length; i += 3) {
+            normals.push(faceNormals[i], faceNormals[i + 1], faceNormals[i + 2]);
+          }
+
+          // インデックスを追加
+          for (let i = 0; i < faceIndices.length; i++) {
+            indices.push(faceIndices[i] + vertexIndex);
+          }
+
+          vertexIndex += faceVertices.length / 3;
+        }
+      }
+
+      if (vertices.length > 0) {
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+        geometry.setIndex(indices);
+        geometry.computeBoundingSphere();
+
+        // マテリアルの作成
+        const matcapMaterial = new THREE.MeshMatcapMaterial({
+          color: new THREE.Color(0xf5f5f5),
+          polygonOffset: true,
+          polygonOffsetFactor: 2.0,
+          polygonOffsetUnits: 1.0
+        });
+
+        // matcapテクスチャの読み込み
+        const loader = new THREE.TextureLoader();
+        loader.load(
+          '/textures/dullFrontLitMetal.png',
+          (texture) => {
+            matcapMaterial.matcap = texture;
+            matcapMaterial.needsUpdate = true;
+          },
+          undefined,
+          () => {
+            console.warn('Could not load matcap texture, using basic material');
+          }
+        );
+
+        // メッシュの作成
+        const mesh = new THREE.Mesh(geometry, matcapMaterial);
+        mesh.castShadow = true;
+        mesh.name = "Model Faces";
+        mainObject.add(mesh);
+
+        console.log(`Rendered CAD model with ${vertices.length / 3} vertices and ${indices.length / 3} triangles`);
+      }
+
+      // エッジの処理（オプション）
+      if (facesAndEdges.edgeList && facesAndEdges.edgeList.length > 0) {
+        const edgeGeometry = new THREE.BufferGeometry();
+        const edgeVertices: number[] = [];
+
+        for (const edge of facesAndEdges.edgeList) {
+          if (edge.vertex_coord) {
+            for (let i = 0; i < edge.vertex_coord.length; i += 3) {
+              edgeVertices.push(
+                edge.vertex_coord[i],
+                edge.vertex_coord[i + 1],
+                edge.vertex_coord[i + 2]
+              );
+            }
+          }
+        }
+
+        if (edgeVertices.length > 0) {
+          edgeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(edgeVertices, 3));
+          const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 1 });
+          const edgeLines = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+          edgeLines.name = "Model Edges";
+          mainObject.add(edgeLines);
+        }
+      }
+
+      // シーンオプションの適用
+      if (sceneOptions) {
+        if (groundPlaneRef.current) {
+          groundPlaneRef.current.visible = sceneOptions.groundPlaneVisible !== false;
+        }
+        if (gridRef.current) {
+          gridRef.current.visible = sceneOptions.gridVisible !== false;
+        }
+      }
+
+    } catch (error) {
+      console.error('Error processing CAD mesh data:', error);
+    }
+  }, []);
+
+  // onShapeUpdateコールバックを設定
+  useEffect(() => {
+    if (onShapeUpdate) {
+      onShapeUpdate(updateShapeFromWorker, {});
+    }
+  }, [onShapeUpdate, updateShapeFromWorker]);
 
   // 初期シーンの作成
   const createInitialScene = useCallback(() => {
@@ -69,6 +219,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({ onSceneReady }) => {
     groundMesh.rotation.x = -Math.PI / 2;
     groundMesh.receiveShadow = true;
     scene.add(groundMesh);
+    groundPlaneRef.current = groundMesh;
 
     // グリッドの作成
     const grid = new THREE.GridHelper(2000, 20, 0xcccccc, 0xcccccc);
@@ -76,55 +227,14 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({ onSceneReady }) => {
     grid.material.opacity = 0.3;
     grid.material.transparent = true;
     scene.add(grid);
+    gridRef.current = grid;
 
     // メインオブジェクトグループの作成
     const mainObject = new THREE.Group();
     mainObject.name = "shape";
     mainObject.rotation.x = -Math.PI / 2;
-
-    // 球体の作成（半径50）
-    const sphereGeometry = new THREE.SphereGeometry(50, 32, 32);
-    
-    // 球体マテリアル
-    const matcapMaterial = new THREE.MeshMatcapMaterial({
-      color: new THREE.Color(0xf5f5f5),
-      polygonOffset: true,
-      polygonOffsetFactor: 2.0,
-      polygonOffsetUnits: 1.0
-    });
-
-    // matcapテクスチャの読み込み（フォールバック用の基本マテリアル）
-    const loader = new THREE.TextureLoader();
-    loader.load(
-      '/textures/dullFrontLitMetal.png',
-      (texture) => {
-        matcapMaterial.matcap = texture;
-        matcapMaterial.needsUpdate = true;
-      },
-      undefined,
-      () => {
-        // テクスチャ読み込み失敗時は基本的なマテリアルを使用
-        console.warn('Could not load matcap texture, using basic material');
-      }
-    );
-
-    // 球体メッシュの作成
-    const sphereMesh = new THREE.Mesh(sphereGeometry, matcapMaterial);
-    sphereMesh.castShadow = true;
-    sphereMesh.name = "Model Faces";
-    
-    // 球体の位置を調整（Z軸方向に50移動）
-    sphereMesh.position.set(0, 0, 50);
-    mainObject.add(sphereMesh);
-
-    // 3Dテキストの代替（簡易版ボックス）
-    const textGeometry = new THREE.BoxGeometry(20, 10, 3);
-    const textMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
-    const textMesh = new THREE.Mesh(textGeometry, textMaterial);
-    textMesh.position.set(-25, 0, 40);
-    mainObject.add(textMesh);
-
     scene.add(mainObject);
+    mainObjectRef.current = mainObject;
 
     if (onSceneReady) {
       onSceneReady(scene);
@@ -254,6 +364,29 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({ onSceneReady }) => {
       renderer.dispose();
     };
   }, [createInitialScene, handleResize]);
+
+  // グローバルにThreeViewportインターフェースを公開
+  useEffect(() => {
+    (window as any).threejsViewport = {
+      updateShape: updateShapeFromWorker,
+      clearTransformHandles: () => {
+        // Transform handles clearing logic (if needed)
+      },
+      saveShapeSTEP: () => {
+        console.log('Save STEP functionality not yet implemented');
+      },
+      saveShapeSTL: () => {
+        console.log('Save STL functionality not yet implemented');
+      },
+      saveShapeOBJ: () => {
+        console.log('Save OBJ functionality not yet implemented');
+      }
+    };
+
+    return () => {
+      delete (window as any).threejsViewport;
+    };
+  }, [updateShapeFromWorker]);
 
   return (
     <div className="h-full flex flex-col">

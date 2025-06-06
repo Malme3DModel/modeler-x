@@ -23,28 +23,66 @@ console.error = function (err, url, line, colno, errorObj) {
 
 // Import the set of scripts we'll need to perform all the CAD operations
 importScripts(
-  '../../node_modules/three/build/three.min.js',
+  '/node_modules/three.min.js',
   './CascadeStudioStandardLibrary.js',
-  './CascadeStudioShapeToMesh.js');
+  './CascadeStudioShapeToMesh.js',
+  '/node_modules/opentype.js/dist/opentype.min.js',
+  './libs/opencascade.wasm.js'); // 修正版のopencascade.jsを使用
 
 // Preload the Various Fonts that are available via Text3D
-// Note: Font loading temporarily disabled due to opentype.js compatibility issues
-var preloadedFonts = ['../../fonts/Roboto.ttf',
-  '../../fonts/Papyrus.ttf', '../../fonts/Consolas.ttf'];
+var preloadedFonts = ['/fonts/Roboto.ttf',
+  '/fonts/Papyrus.ttf', '/fonts/Consolas.ttf'];
 var fonts = {};
-console.log("Font loading temporarily disabled");
+preloadedFonts.forEach((fontURL) => {
+  opentype.load(fontURL, function (err, font) {
+    if (err) { console.log(err); }
+    let fontName = fontURL.split("/fonts/")[1].split(".ttf")[0];
+    fonts[fontName] = font;
+  });
+});
 
-// Message handlers for worker communication
+// Load the full Open Cascade Web Assembly Module
 var messageHandlers = {};
 
-// Ping Pong Messages Back and Forth based on their registration in messageHandlers
-onmessage = function (e) {
-  let response = messageHandlers[e.data.type](e.data.payload);
-  if (response) { postMessage({ "type": e.data.type, payload: response }); };
+// OpenCascadeの初期化
+console.log("Initializing OpenCascade...");
+try {
+  // opencascadeはライブラリ読み込みによってグローバルに定義されている
+  if (typeof self.opencascade !== 'undefined') {
+    console.log("Creating OpenCascade instance...");
+    
+    new self.opencascade({
+      locateFile(path) {
+        if (path.endsWith('.wasm')) {
+          return "./libs/opencascade.wasm.wasm";
+        }
+        return path;
+      }
+    }).then((openCascade) => {
+      // Register the "OpenCascade" WebAssembly Module under the shorthand "oc"
+      oc = openCascade;
+      console.log("OpenCascade.js loaded successfully!");
+      
+      // Ping Pong Messages Back and Forth based on their registration in messageHandlers
+      onmessage = function (e) {
+        let response = messageHandlers[e.data.type](e.data.payload);
+        if (response) { postMessage({ "type": e.data.type, payload: response }); };
+      }
+      
+      // Initial Evaluation after everything has been loaded...
+      postMessage({ type: "startupCallback" });
+    }).catch(error => {
+      console.error("Failed to initialize OpenCascade:", error);
+      postMessage({ type: "error", payload: `Failed to initialize OpenCascade: ${error.message}` });
+    });
+  } else {
+    console.error("OpenCascade.js module not found in global scope");
+    postMessage({ type: "error", payload: "OpenCascade.js module not found in global scope" });
+  }
+} catch (error) {
+  console.error("Error in OpenCascade initialization:", error);
+  postMessage({ type: "error", payload: `Error in OpenCascade initialization: ${error.message}` });
 }
-
-// Initial startup callback
-postMessage({ type: "startupCallback" });
 
 /** This function evaluates `payload.code` (the contents of the Editor Window)
  *  and sets the GUI State. */

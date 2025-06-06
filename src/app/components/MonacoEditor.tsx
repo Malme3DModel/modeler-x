@@ -111,6 +111,12 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
         return; 
       }
 
+      // CADワーカーが利用可能かチェック
+      if (!(window as any).cadWorker) {
+        console.error('CAD Worker is not ready yet. Please wait for initialization.');
+        return;
+      }
+
       // ワーカー動作フラグを設定
       (window as any).workerWorking = true;
       setIsWorking(true);
@@ -124,16 +130,47 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
       // エラーハイライトをクリア
       monaco.editor.setModelMarkers(editor.getModel(), 'test', []);
 
-      // コード評価を実行
-      onEvaluate();
+      // GUIStateの初期化（必要に応じて）
+      const guiState = {
+        "Radius": 30,
+        "MeshRes": 0.1,
+        "Cache?": true,
+        "GroundPlane?": true,
+        "Grid?": true
+      };
+
+      try {
+        // CADワーカーでコードを評価
+        (window as any).cadWorker.evaluateCode(newCode, guiState);
+        
+        // 形状の結合とレンダリングを要求
+        setTimeout(() => {
+          if ((window as any).cadWorker) {
+            (window as any).cadWorker.combineAndRenderShapes(
+              guiState["MeshRes"], 
+              { 
+                groundPlaneVisible: guiState["GroundPlane?"], 
+                gridVisible: guiState["Grid?"] 
+              }
+            );
+          }
+        }, 100);
+
+        // コード評価を実行（従来の処理も維持）
+        onEvaluate();
+
+        console.log("Generating Model with OpenCascade.js");
+      } catch (error) {
+        console.error('Error evaluating code:', error);
+        (window as any).workerWorking = false;
+        setIsWorking(false);
+      }
 
       // URLに保存（必要に応じて）
       if (saveToURL) {
         console.log("Saved to URL!");
         // URLエンコード処理は必要に応じて実装
       }
-
-      console.log("Generating Model");
     };
 
     // キーボードショートカットの設定

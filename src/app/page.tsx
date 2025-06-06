@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import MonacoEditor from './components/MonacoEditor';
 import ThreeViewport from './components/ThreeViewport';
 import DockviewLayout from './components/DockviewLayout';
+import CADWorkerManager from './components/CADWorkerManager';
 
 // v0のデフォルトコード
 const defaultCode = `// Welcome to Cascade Studio!   Here are some useful functions:
@@ -30,16 +31,22 @@ export default function Home() {
   const [code, setCode] = useState(defaultCode);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [projectName, setProjectName] = useState('Untitled');
+  const [isCADWorkerReady, setIsCADWorkerReady] = useState(false);
+  const [consoleMessages, setConsoleMessages] = useState<string[]>([
+    '> Welcome to Modeler X!',
+    '> Loading CAD Kernel...'
+  ]);
+  const threeViewportUpdateRef = useRef<((facesAndEdges: any, sceneOptions: any) => void) | null>(null);
 
   const handleCodeChange = useCallback((newCode: string) => {
     setCode(newCode);
   }, []);
 
   const handleEvaluate = useCallback(() => {
-    // TODO: CADワーカーでコードを評価する処理を実装
-    console.log('Evaluating code:', code);
-    // 現在は簡易的にログ出力のみ
-  }, [code]);
+    // この関数は現在MonacoEditorコンポーネント内でCADワーカーを直接呼び出しているため、
+    // 追加の処理が必要な場合はここに実装
+    console.log('Code evaluation triggered');
+  }, []);
 
   const handleSaveProject = useCallback(() => {
     // TODO: プロジェクト保存機能を実装
@@ -53,6 +60,49 @@ export default function Home() {
 
   const handleUnsavedChangesUpdate = useCallback((hasChanges: boolean) => {
     setHasUnsavedChanges(hasChanges);
+  }, []);
+
+  // CADワーカーの準備完了時の処理
+  const handleWorkerReady = useCallback(() => {
+    setIsCADWorkerReady(true);
+    setConsoleMessages(prev => [...prev, '> CAD Kernel loaded successfully!', '> Ready to evaluate code']);
+  }, []);
+
+  // CADワーカーからの形状更新を処理
+  const handleShapeUpdate = useCallback((facesAndEdges: any, sceneOptions: any) => {
+    if (threeViewportUpdateRef.current) {
+      threeViewportUpdateRef.current(facesAndEdges, sceneOptions);
+    }
+  }, []);
+
+  // CADワーカーからの進捗更新を処理
+  const handleProgress = useCallback((progress: { opNumber: number; opType: string }) => {
+    const progressMessage = `> Generating Model${'.' .repeat(progress.opNumber)}${progress.opType ? ` (${progress.opType})` : ''}`;
+    setConsoleMessages(prev => {
+      const newMessages = [...prev];
+      // 最後のメッセージが進捗メッセージの場合は置き換え、そうでなければ追加
+      if (newMessages.length > 0 && newMessages[newMessages.length - 1].startsWith('> Generating Model')) {
+        newMessages[newMessages.length - 1] = progressMessage;
+      } else {
+        newMessages.push(progressMessage);
+      }
+      return newMessages;
+    });
+  }, []);
+
+  // CADワーカーからのログメッセージを処理
+  const handleLog = useCallback((message: string) => {
+    setConsoleMessages(prev => [...prev, `> ${message}`]);
+  }, []);
+
+  // CADワーカーからのエラーメッセージを処理
+  const handleError = useCallback((error: string) => {
+    setConsoleMessages(prev => [...prev, `> ERROR: ${error}`]);
+  }, []);
+
+  // ThreeViewportの形状更新関数を設定
+  const handleThreeViewportReady = useCallback((updateFunction: (facesAndEdges: any, sceneOptions: any) => void) => {
+    threeViewportUpdateRef.current = updateFunction;
   }, []);
 
   // エディタータイトルの生成
@@ -73,21 +123,39 @@ export default function Home() {
   );
 
   // 右上パネル（3Dビューポート）
-  const rightTopPanel = <ThreeViewport />;
+  const rightTopPanel = (
+    <ThreeViewport 
+      onShapeUpdate={handleThreeViewportReady}
+    />
+  );
 
   // 右下パネル（コンソール）
   const rightBottomPanel = (
     <div className="h-full bg-gray-900 flex flex-col">
       <div className="p-4 h-full overflow-auto text-white font-mono text-sm">
-        <div className="text-gray-300">&gt; Welcome to Modeler X!</div>
-        <div className="text-gray-300">&gt; Loading CAD Kernel...</div>
-        <div className="text-gray-300">&gt; Ready to evaluate code</div>
+                 {consoleMessages.map((message, index) => (
+           <div key={index} className="text-gray-300">{message}</div>
+         ))}
+         {isCADWorkerReady && (
+           <div className="text-green-400 mt-2">
+             &gt; CAD Worker Status: Ready
+           </div>
+         )}
       </div>
     </div>
   );
 
   return (
     <div className="h-screen flex flex-col bg-gray-900">
+      {/* CADワーカーマネージャー（非表示コンポーネント） */}
+      <CADWorkerManager
+        onWorkerReady={handleWorkerReady}
+        onShapeUpdate={handleShapeUpdate}
+        onProgress={handleProgress}
+        onLog={handleLog}
+        onError={handleError}
+      />
+
       {/* トップナビゲーション */}
       <div className="bg-gray-800 text-white px-4 py-2 border-b border-gray-700 z-10">
         <div className="flex items-center space-x-4">
@@ -123,6 +191,16 @@ export default function Home() {
           >
             Save OBJ
           </button>
+          {!isCADWorkerReady && (
+            <span className="text-yellow-400 text-sm">
+              • Loading CAD Kernel...
+            </span>
+          )}
+          {isCADWorkerReady && (
+            <span className="text-green-400 text-sm">
+              • CAD Kernel Ready
+            </span>
+          )}
         </div>
       </div>
 
