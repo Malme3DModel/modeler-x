@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   DockviewReact,
   DockviewReadyEvent,
   IDockviewPanelProps,
   DockviewApi,
-  themeAbyss,
   themeDark,
 } from 'dockview';
 import 'dockview/dist/styles/dockview.css';
@@ -18,35 +17,61 @@ interface DockviewLayoutProps {
   editorTitle?: string;
 }
 
-// パネルコンポーネントのラッパー
-const EditorPanel: React.FC<IDockviewPanelProps> = (props) => {
-  const content = (props.params as any)?.content;
-  return <div className="h-full w-full flex flex-col overflow-hidden">{content}</div>;
+// パネル設定の定数
+const LAYOUT_CONFIG = {
+  LEFT_PANEL_RATIO: 0.7,
+  RIGHT_PANEL_RATIO: 0.3,
+  TOTAL_PANELS: 3,
+  ANIMATION_FRAMES: 2,
+} as const;
+
+// パネルタイプの定義
+type PanelType = 'viewport' | 'editor' | 'console';
+
+interface PanelConfig {
+  id: PanelType;
+  component: string;
+  title: string;
+  position?: {
+    referencePanel: string;
+    direction: 'within' | 'right';
+  };
+}
+
+// パネルコンポーネントのファクトリー関数
+const createPanelComponent = (
+  baseClassName: string = "h-full w-full flex flex-col overflow-hidden",
+  additionalProps?: React.CSSProperties
+) => {
+  return React.memo<IDockviewPanelProps>(({ params }) => {
+    const content = (params as { content?: React.ReactNode })?.content;
+    
+    return (
+      <div 
+        className={baseClassName}
+        style={additionalProps}
+        data-panel-initialized="true"
+      >
+        {content}
+      </div>
+    );
+  });
 };
 
-const ViewportPanel: React.FC<IDockviewPanelProps> = (props) => {
-  const content = (props.params as any)?.content;
-   
-  return (
-    <div 
-      className="h-full w-full flex flex-col overflow-hidden" 
-      data-panel-type="viewport"
-      style={{
-        pointerEvents: 'auto',
-        touchAction: 'auto',
-        position: 'relative',
-        zIndex: 1
-      }}
-    >
-      {content}
-    </div>
-  );
-};
+// 最適化されたパネルコンポーネント
+const EditorPanel = createPanelComponent();
 
-const ConsolePanel: React.FC<IDockviewPanelProps> = (props) => {
-  const content = (props.params as any)?.content;
-  return <div className="h-full w-full flex flex-col overflow-auto">{content}</div>;
-};
+const ViewportPanel = createPanelComponent(
+  "h-full w-full flex flex-col overflow-hidden",
+  {
+    pointerEvents: 'auto',
+    touchAction: 'auto',
+    position: 'relative',
+    zIndex: 1
+  }
+);
+
+const ConsolePanel = createPanelComponent("h-full w-full flex flex-col overflow-auto");
 
 const DockviewLayout: React.FC<DockviewLayoutProps> = ({
   editorPanel,
@@ -56,105 +81,127 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
 }) => {
   const apiRef = useRef<DockviewApi | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
-  const onReady = (event: DockviewReadyEvent) => {
-    apiRef.current = event.api;
+  // パネル設定の定義（メモ化）
+  const panelConfigs = useMemo<PanelConfig[]>(() => [
+    {
+      id: 'viewport',
+      component: 'viewport',
+      title: 'CAD View',
+    },
+    {
+      id: 'editor',
+      component: 'editor',
+      title: editorTitle,
+      position: { referencePanel: 'viewport', direction: 'within' },
+    },
+    {
+      id: 'console',
+      component: 'console',
+      title: 'Console',
+      position: { referencePanel: 'viewport', direction: 'right' },
+    },
+  ], [editorTitle]);
 
-    // 左右の比率を設定する関数
-    const setLayoutProportions = () => {
-      try {
-        const viewportPanel = event.api.getPanel('viewport');
-        const consolePanel = event.api.getPanel('console');
+  // パネルコンテンツのマッピング（メモ化）
+  const panelContentMap = useMemo(() => ({
+    viewport: cadViewPanel,
+    editor: editorPanel,
+    console: consolePanel,
+  }), [cadViewPanel, editorPanel, consolePanel]);
+
+  // レイアウト比率設定関数（最適化・メモ化）
+  const setLayoutProportions = useCallback(() => {
+    if (!apiRef.current || !containerRef.current) return;
+
+    try {
+      const viewportPanel = apiRef.current.getPanel('viewport');
+      const consolePanel = apiRef.current.getPanel('console');
+      
+      if (viewportPanel?.group && consolePanel?.group) {
+        const totalWidth = containerRef.current.clientWidth;
+        const leftWidth = Math.floor(totalWidth * LAYOUT_CONFIG.LEFT_PANEL_RATIO);
+        const rightWidth = totalWidth - leftWidth;
         
-        if (viewportPanel && consolePanel && viewportPanel.group && consolePanel.group && containerRef.current) {
-          // 全体の幅を取得
-          const totalWidth = containerRef.current.clientWidth;
-          const leftWidth = Math.floor(totalWidth * 0.7);
-          const rightWidth = totalWidth - leftWidth;
-          
-          // 左側グループ（CADView + Editor）を70%に設定
-          viewportPanel.group.api.setSize({ width: leftWidth });
-          // 右側グループ（Console）を30%に設定
-          consolePanel.group.api.setSize({ width: rightWidth });
-        }
-      } catch (error) {
-        console.error('Error setting layout proportions:', error);
+        viewportPanel.group.api.setSize({ width: leftWidth });
+        consolePanel.group.api.setSize({ width: rightWidth });
       }
-    };
+    } catch (error) {
+      console.error('Layout proportion error:', error);
+    }
+  }, []);
 
-    // 初期レイアウト設定関数
-    const initializeLayout = () => {
-      try {
-        // CADViewをアクティブにする
-        const viewportPanel = event.api.getPanel('viewport');
-        if (viewportPanel) {
-          viewportPanel.api.setActive();
-        }
+  // 初期化関数（最適化・メモ化）
+  const initializeLayout = useCallback(() => {
+    if (!apiRef.current) return;
 
-        // リサイズイベントリスナーを追加
-        const resizeObserver = new ResizeObserver(() => {
+    try {
+      // アクティブパネル設定
+      const viewportPanel = apiRef.current.getPanel('viewport');
+      viewportPanel?.api.setActive();
+
+      // リサイズオブザーバーの設定（重複防止）
+      if (containerRef.current && !resizeObserverRef.current) {
+        resizeObserverRef.current = new ResizeObserver(setLayoutProportions);
+        resizeObserverRef.current.observe(containerRef.current);
+      }
+
+      // 最適化されたアニメーションフレーム処理
+      const setProportionsWithFrames = (framesLeft: number) => {
+        if (framesLeft > 0) {
+          requestAnimationFrame(() => setProportionsWithFrames(framesLeft - 1));
+        } else {
           setLayoutProportions();
-        });
-        
-        if (containerRef.current) {
-          resizeObserver.observe(containerRef.current);
         }
+      };
+      
+      setProportionsWithFrames(LAYOUT_CONFIG.ANIMATION_FRAMES);
+      
+    } catch (error) {
+      console.error('Layout initialization error:', error);
+    }
+  }, [setLayoutProportions]);
 
-        // レイアウトが完全に構築された後に比率を設定
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            setLayoutProportions();
-          });
-        });
-        
-      } catch (error) {
-        console.error('Error initializing layout:', error);
-      }
-    };
-
-    // パネル追加完了を追跡するカウンター
+  // パネル追加管理（最適化・メモ化）
+  const createPanelTracker = useCallback(() => {
     let panelsAdded = 0;
-    const totalPanels = 3;
-
-    const onPanelAdded = () => {
+    
+    return () => {
       panelsAdded++;
-      if (panelsAdded === totalPanels) {
-        // すべてのパネルが追加された後に初期設定を実行
+      if (panelsAdded === LAYOUT_CONFIG.TOTAL_PANELS) {
         initializeLayout();
       }
     };
+  }, [initializeLayout]);
 
-    // CADビューパネルを最初に追加（左側のアクティブパネル）
-    event.api.addPanel({
-      id: 'viewport',
-      component: 'viewport',
-      params: { content: cadViewPanel },
-      title: 'CAD View',
+  // Dockview準備完了ハンドラー（最適化・メモ化）
+  const onReady = useCallback((event: DockviewReadyEvent) => {
+    apiRef.current = event.api;
+    const onPanelAdded = createPanelTracker();
+
+    // パネルを効率的に追加
+    panelConfigs.forEach((config) => {
+      event.api.addPanel({
+        id: config.id,
+        component: config.component,
+        params: { content: panelContentMap[config.id] },
+        title: config.title,
+        ...(config.position && { position: config.position }),
+      });
+      onPanelAdded();
     });
-    onPanelAdded();
+  }, [panelConfigs, panelContentMap, createPanelTracker]);
 
-    // エディタパネルを同じグループに追加（左側の非アクティブパネル）
-    event.api.addPanel({
-      id: 'editor',
-      component: 'editor',
-      params: { content: editorPanel },
-      title: editorTitle,
-      position: { referencePanel: 'viewport', direction: 'within' },
-    });
-    onPanelAdded();
-
-    // コンソールパネルを右側に追加
-    event.api.addPanel({
-      id: 'console',
-      component: 'console',
-      params: { content: consolePanel },
-      title: 'Console',
-      position: { referencePanel: 'viewport', direction: 'right' },
-    });
-    onPanelAdded();
-
-
-  };
+  // クリーンアップ処理
+  useEffect(() => {
+    return () => {
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+        resizeObserverRef.current = null;
+      }
+    };
+  }, []);
 
   // タイトルの更新
   useEffect(() => {
@@ -166,15 +213,18 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
     }
   }, [editorTitle]);
 
+  // コンポーネントマップ（メモ化）
+  const components = useMemo(() => ({
+    editor: EditorPanel,
+    viewport: ViewportPanel,
+    console: ConsolePanel,
+  }), []);
+
   return (
     <div ref={containerRef} className="h-full w-full">
       <DockviewReact
         onReady={onReady}
-        components={{
-          editor: EditorPanel,
-          viewport: ViewportPanel,
-          console: ConsolePanel,
-        }}
+        components={components}
         className="h-full w-full"
         theme={themeDark}
         disableFloatingGroups={true}
