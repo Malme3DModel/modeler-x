@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, Copy, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Send, User, Bot, Copy, ThumbsUp, ThumbsDown, AlertCircle } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
@@ -19,12 +19,13 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ className = '' }) => {
     {
       id: '1',
       type: 'assistant',
-      content: 'こんにちは！CADモデリングについて何でもお聞きください。コードの改善提案や3Dモデリングのヘルプができます。',
+      content: 'こんにちは！CADモデリングについて何でもお聞きください。OpenCascade.jsを使用したコードの改善提案や3Dモデリングのヘルプができます。',
       timestamp: new Date()
     }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -54,71 +55,51 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ className = '' }) => {
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsLoading(true);
+    setError(null);
 
-    // シミュレートされたAI応答（実際のAI統合時に置き換え）
-    setTimeout(() => {
+    try {
+      // OpenAI APIを呼び出し
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: [...messages, userMessage]
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: generateMockResponse(userMessage.content),
+        content: data.message,
         timestamp: new Date()
       };
+      
       setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('チャットエラー:', error);
+      const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました';
+      setError(errorMessage);
+      
+      // エラーメッセージをチャットに表示
+      const errorAssistantMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: `申し訳ございません。エラーが発生しました: ${errorMessage}`,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorAssistantMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1000 + Math.random() * 2000);
-  };
-
-  const generateMockResponse = (userInput: string): string => {
-    const input = userInput.toLowerCase();
-    
-    // キーワードベースの応答
-    if (input.includes('box') || input.includes('立方体') || input.includes('ボックス')) {
-      return `立方体を作成するには、以下のようなコードを使用できます：
-
-\`\`\`javascript
-let box = new oc.BRepPrimAPI_MakeBox(10, 10, 10).Shape();
-\`\`\`
-
-このコードは10x10x10のサイズの立方体を作成します。サイズは必要に応じて調整してください。`;
     }
-    
-    if (input.includes('sphere') || input.includes('球') || input.includes('スフィア')) {
-      return `球体を作成するには、以下のコードを使用します：
-
-\`\`\`javascript
-let sphere = new oc.BRepPrimAPI_MakeSphere(5).Shape();
-\`\`\`
-
-この例では半径5の球体を作成しています。`;
-    }
-    
-    if (input.includes('cylinder') || input.includes('円柱') || input.includes('シリンダー')) {
-      return `円柱を作成するには、以下のようにします：
-
-\`\`\`javascript
-let cylinder = new oc.BRepPrimAPI_MakeCylinder(5, 10).Shape();
-\`\`\`
-
-この例では半径5、高さ10の円柱を作成しています。`;
-    }
-    
-    if (input.includes('error') || input.includes('エラー') || input.includes('問題')) {
-      return 'エラーが発生している場合は、以下を確認してください：\n\n1. OpenCascadeライブラリが正しく読み込まれているか\n2. 変数名のスペルミスがないか\n3. 必要なモジュールがインポートされているか\n\n具体的なエラーメッセージを教えていただければ、より詳細なサポートができます。';
-    }
-    
-    if (input.includes('help') || input.includes('ヘルプ') || input.includes('使い方')) {
-      return 'CADモデリングの基本的な使い方：\n\n• 基本形状：Box、Sphere、Cylinder\n• ブール演算：Union、Intersection、Difference\n• 変換：Translation、Rotation、Scaling\n• エクスポート：STEP、STL、OBJ形式\n\n何か特定の機能について知りたいことがあれば、お気軽にお聞きください！';
-    }
-    
-    // デフォルトの応答
-    const responses = [
-      'そのアイデアは素晴らしいですね！CADモデリングでは、まず基本的な形状から始めて、徐々に複雑な形状を作成することをお勧めします。',
-      'コードを確認させていただきました。より効率的な実装方法をご提案できます。具体的にはどの部分を改善したいですか？',
-      '3Dモデリングにおいて、その手法は非常に有効です。パフォーマンスを向上させるために、いくつかの最適化を提案させていただきます。',
-      'OpenCascadeを使用したCADモデリングでは、その機能を活用できます。詳細な実装例をお見せしましょうか？',
-      'より具体的な質問をしていただければ、詳細なサポートができます。例えば、「立方体を作りたい」「エラーが出ている」などです。'
-    ];
-    return responses[Math.floor(Math.random() * responses.length)];
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -141,6 +122,21 @@ let cylinder = new oc.BRepPrimAPI_MakeCylinder(5, 10).Shape();
 
   return (
     <div className={`h-full flex flex-col bg-gray-50 ${className}`}>
+      {/* エラー表示 */}
+      {error && (
+        <div className="flex-shrink-0 p-2 bg-red-50 border-b border-red-200">
+          <div className="flex items-center space-x-2 text-red-700 text-xs">
+            <AlertCircle size={14} />
+            <span>{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="ml-auto text-red-500 hover:text-red-700"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* メッセージエリア */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
@@ -251,7 +247,7 @@ let cylinder = new oc.BRepPrimAPI_MakeCylinder(5, 10).Shape();
           </div>
         </div>
         <div className="mt-1 text-xs text-gray-500">
-          AI Assistant は開発中の機能です。実際のAI統合は今後実装予定です。
+          ChatGPT (GPT-3.5-turbo) を使用しています。CADモデリングについてお気軽にご質問ください。
         </div>
       </div>
     </div>
