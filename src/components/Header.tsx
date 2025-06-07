@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 
 interface HeaderProps {
-  isCADWorkerReady: boolean;
   onSaveProject: () => void;
   onLoadProject?: () => void;
   onSaveSTEP?: () => void;
@@ -41,7 +40,6 @@ const ChevronDownIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
 );
 
 const Header: React.FC<HeaderProps> = ({
-  isCADWorkerReady,
   onSaveProject,
   onLoadProject,
   onSaveSTEP,
@@ -145,26 +143,7 @@ const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* 右側: ステータス */}
-      <div className="flex items-center space-x-3">
-        <div className="flex items-center space-x-2">
-          {!isCADWorkerReady ? (
-            <>
-              <div className="flex items-center space-x-1">
-                <StatusIcon className="w-2 h-2 text-modeler-accent-warning animate-pulse" />
-                <span className="text-xs text-modeler-accent-warning">Initializing CAD Kernel</span>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center space-x-1">
-                <StatusIcon className="w-2 h-2 text-modeler-accent-success" />
-                <span className="text-xs text-modeler-accent-success">CAD Kernel Ready</span>
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+
 
       {/* ドロップダウンメニューのクリック外しの処理 */}
       {showExportMenu && (

@@ -6,9 +6,11 @@ import ThreeViewport, { ThreeViewportRef } from '../components/ThreeViewport';
 import DockviewLayout from '../components/DockviewLayout';
 import CADWorkerManager from '../components/CADWorkerManager';
 import Header from '../components/Header';
+import Footer from '../components/Footer';
 import { ProjectProvider } from '../context/ProjectContext';
 import { useProjectState } from '../hooks/useProjectState';
 import { useProjectActions } from '../hooks/useProjectActions';
+import { useCADWorker } from '../hooks/useCADWorker';
 import { DEFAULT_CAD_CODE } from '../constants/defaultCode';
 
 
@@ -39,6 +41,9 @@ function HomeContent() {
     isLoading: isProjectActionLoading,
     lastError: projectActionError
   } = useProjectActions();
+
+  // CADワーカーの状態を取得（フッター用）
+  const { isWorking, isWorkerReady, error } = useCADWorker();
   
   const threejsViewportRef = useRef<ThreeViewportRef>(null);
 
@@ -133,7 +138,6 @@ function HomeContent() {
       {/* トップナビゲーション */}
       <div className="shrink-0 z-10">
         <Header 
-          isCADWorkerReady={isCADWorkerReady} 
           onSaveProject={handleSaveProjectAction}
           onLoadProject={handleLoadProject}
           onSaveSTEP={handleExportSTEP}
@@ -151,6 +155,15 @@ function HomeContent() {
           editorTitle={editorTitle}
         />
       </div>
+
+      {/* フッター */}
+      <Footer
+        isCADWorkerReady={isCADWorkerReady}
+        isWorking={isWorking}
+        isWorkerReady={isWorkerReady}
+        hasUnsavedChanges={hasUnsavedChanges}
+        error={error || undefined}
+      />
     </div>
   );
 }
