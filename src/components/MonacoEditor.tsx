@@ -100,13 +100,18 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
 
     // evaluateCode関数をエディターに追加（新しいフックを使用）
     editor.evaluateCode = async (saveToURL = false) => {
+      // 動的にワーカー状態をチェック（キャプチャされた値ではなく）
+      const currentWorker = typeof window !== 'undefined' ? (window as any).cadWorker : null;
+      const currentlyWorking = typeof window !== 'undefined' ? (window as any).workerWorking : false;
+      
       // ワーカーが動作中の場合は実行しない
-      if (isWorking) { 
+      if (currentlyWorking) { 
+        console.log('CAD Worker is currently working. Please wait...');
         return; 
       }
 
       // CADワーカーが利用可能かチェック
-      if (!isWorkerReady) {
+      if (!currentWorker) {
         console.error('CAD Worker is not ready yet. Please wait for initialization.');
         return;
       }

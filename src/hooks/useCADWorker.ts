@@ -44,7 +44,8 @@ export const useCADWorker = (): UseCADWorkerReturn => {
   // ワーカー準備状態の監視
   useEffect(() => {
     const checkWorkerReady = () => {
-      const worker = cadWorkerService.getWorkerInstance();
+      // 直接 window.cadWorker をチェック（実際のワーカーインスタンス）
+      const worker = typeof window !== 'undefined' ? (window as any).cadWorker : null;
       setIsWorkerReady(!!worker);
     };
 

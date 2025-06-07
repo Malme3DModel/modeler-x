@@ -56,7 +56,7 @@ class CADWorkerServiceImpl implements CADWorkerService {
   };
 
   isWorking = (): boolean => {
-    return this.isWorkingState && (window as any).workerWorking;
+    return this.isWorkingState || (typeof window !== 'undefined' && (window as any).workerWorking);
   };
 
   setWorking = (working: boolean): void => {

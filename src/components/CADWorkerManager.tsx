@@ -66,8 +66,12 @@ const CADWorkerManager: React.FC<CADWorkerManagerProps> = ({
     };
   }, []);
 
+  const hasAutoEvaluatedRef = useRef(false);
+  
   const executeAutoEvaluation = useCallback((cadWorkerInterface: CADWorkerInterface) => {
-    if (!autoEvaluateCode) return;
+    if (!autoEvaluateCode || hasAutoEvaluatedRef.current) return;
+
+    hasAutoEvaluatedRef.current = true; // 1回だけ実行されるように制御
 
     if (onLog) {
       onLog('Auto-evaluating startup code...');
