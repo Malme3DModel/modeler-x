@@ -84,6 +84,28 @@ const config: Config = {
             warning: '#ffbb33',     // 警告状態
             error: '#ff4444',       // エラー状態
             info: '#33b5e5',        // 情報状態
+            link: '#007acc',        // リンク・フォーカス色
+          },
+
+          // Dockview テーマ色（既存のdarkテーマ互換）
+          dockview: {
+            dark: {
+              header: '#2d2d30',          // ヘッダー背景
+              tab: '#2d2d30',             // 非アクティブタブ
+              tabText: '#969696',         // 非アクティブタブテキスト
+              tabHover: '#3e3e42',        // タブホバー
+              border: '#464647',          // ボーダー色
+              textWhite: '#ffffff',       // 白文字
+              textGray: '#cccccc',        // グレー文字
+              separator: '#303031',       // セパレーター
+              tabContainer: '#252526',    // タブコンテナ
+              tabHoverAlt: '#2a2d2e',     // 代替ホバー色
+            },
+          },
+
+          // テキストシャドウ用
+          shadow: {
+            text: '#000000',              // テキストシャドウ色
           },
         },
       },
@@ -137,10 +159,80 @@ const config: Config = {
           },
         },
         '.text-shadow-modeler': {
-          textShadow: '1px 1px 2px rgba(0, 0, 0, 0.5)',
+          textShadow: `1px 1px 2px ${theme('colors.modeler.shadow.text')}`,
         },
       }
       addUtilities(newUtilities)
+    },
+    
+    // Dockview用CSS変数生成プラグイン
+    function({ addBase, theme }) {
+      const modelerColors = theme('colors.modeler');
+      
+      addBase({
+        ':root': {
+          // Modeler X テーマ - Dockview CSS変数
+          '--dv-modeler-group-view-background-color': modelerColors.background.secondary,
+          '--dv-modeler-paneview-header-background-color': modelerColors.control.base,
+          '--dv-modeler-tabs-container-background-color': modelerColors.control.base,
+          '--dv-modeler-tabs-and-actions-container-background-color': modelerColors.control.base,
+          '--dv-modeler-tab-background-color': modelerColors.control.button.DEFAULT,
+          '--dv-modeler-tab-active-background-color': modelerColors.control.button.active,
+          '--dv-modeler-tab-color': modelerColors.control.text.secondary,
+          '--dv-modeler-tab-active-color': modelerColors.control.text.primary,
+          '--dv-modeler-tab-hover-background-color': modelerColors.control.button.hover,
+          '--dv-modeler-tab-active-border-color': modelerColors.accent.primary,
+          '--dv-modeler-separator-border': modelerColors.control.border,
+          '--dv-modeler-activegroup-visiblepanel-tab-background-color': modelerColors.background.secondary,
+          '--dv-modeler-group-header-background-color': modelerColors.control.base,
+          '--dv-modeler-drag-over-background-color': `${modelerColors.accent.primary}2e`, // 18% opacity
+          '--dv-modeler-floating-box-shadow': theme('boxShadow.modeler-modal'),
+          '--dv-modeler-font-family': theme('fontFamily.ui').join(', '),
+          
+          // Monaco Editor用
+          '--monaco-editor-background': modelerColors.editor.bg,
+          '--monaco-editor-line-color': modelerColors.editor.line,
+          '--monaco-editor-selection': modelerColors.editor.selection,
+          '--monaco-editor-cursor': modelerColors.editor.cursor,
+          
+          // TweakPane用
+          '--gui-panel-background': modelerColors.control.base,
+          '--gui-scrollbar-track': modelerColors.control.base,
+          '--gui-scrollbar-thumb': modelerColors.control.scrollbar.thumb,
+          
+          // Golden Layout用
+          '--golden-content-background': modelerColors.background.primary,
+          '--golden-header-background': modelerColors.control.base,
+          '--golden-tab-background': modelerColors.control.button.DEFAULT,
+          '--golden-tab-color': modelerColors.control.text.primary,
+          '--golden-tab-active-background': modelerColors.control.button.active,
+
+          // Dockview Dark テーマ用（後方互換性）
+          '--dv-dark-header-background': modelerColors.dockview.dark.header,
+          '--dv-dark-tab-background': modelerColors.dockview.dark.tab,
+          '--dv-dark-tab-text': modelerColors.dockview.dark.tabText,
+          '--dv-dark-tab-hover': modelerColors.dockview.dark.tabHover,
+          '--dv-dark-border': modelerColors.dockview.dark.border,
+          '--dv-dark-text-white': modelerColors.dockview.dark.textWhite,
+          '--dv-dark-text-gray': modelerColors.dockview.dark.textGray,
+          '--dv-dark-separator': modelerColors.dockview.dark.separator,
+          '--dv-dark-tab-container': modelerColors.dockview.dark.tabContainer,
+          '--dv-dark-tab-hover-alt': modelerColors.dockview.dark.tabHoverAlt,
+
+          // 汎用色
+          '--color-accent-link': modelerColors.accent.link,
+          '--color-shadow-text': modelerColors.shadow.text,
+
+          // Three.js ビューポート用
+          '--threejs-viewport-background': modelerColors.viewport.bg,
+          '--threejs-viewport-face': modelerColors.viewport.face,
+          '--threejs-viewport-wireframe': modelerColors.viewport.wireframe,
+          '--threejs-viewport-grid': modelerColors.viewport.grid,
+          '--threejs-viewport-axis-x': modelerColors.viewport.axis.x,
+          '--threejs-viewport-axis-y': modelerColors.viewport.axis.y,
+          '--threejs-viewport-axis-z': modelerColors.viewport.axis.z,
+        },
+      })
     }
   ],
 } satisfies Config

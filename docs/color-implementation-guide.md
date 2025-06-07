@@ -1,4 +1,4 @@
-# Modeler X 色設定実装ガイド
+# Modeler X 色設定実装ガイド - 完全集約完了 ✅
 
 ## 📋 実装完了状況（2024年1月更新）
 
@@ -6,15 +6,20 @@
 
 ### ✅ 完全実装済み
 
-- **tailwind.config.ts** - 色設定の完全集約
-- **src/app/globals.css** - theme()関数による色参照
-- **重複排除** - src/lib/colors.ts削除完了
-- **v0互換性** - 既存デザインの完全保持
-- **サンプル実装** - TopNavigation、テストページ
+- **tailwind.config.ts** - 色設定の完全集約 ✅ **完了**
+- **Tailwindカスタムプラグイン** - 自動CSS変数生成 ✅ **完了**
+- **src/app/globals.css** - CSS変数参照による設定 ✅ **完了**
+- **重複排除** - 直接色指定の除去完了 ✅ **完了**
+- **v0互換性** - 既存デザインの完全保持 ✅ **完了**
+- **サンプル実装** - TopNavigation、テストページ ✅ **完了**
+- **Three.js統合** - ThreeViewportコンポーネント内の色指定 ✅ **完了**
+- **DockviewLayout統合** - Dockviewコンポーネント内の色指定 ✅ **完了**
 
 ## 🎨 現在の色システム構成
 
 ### 1. tailwind.config.ts（メイン設定ファイル）
+
+色設定がすべて`tailwind.config.ts`に集約され、Tailwindカスタムプラグインにより自動的にCSS変数が生成されます。
 
 ```typescript
 export default {
@@ -117,20 +122,34 @@ export default {
   
   plugins: [
     // カスタムスクロールバープラグイン（実装済み）
-    plugin(function({ addUtilities, theme }) {
-      addUtilities({
-        '.scrollbar-modeler': {
-          '&::-webkit-scrollbar': {
-            width: '10px',
-            background: theme('colors.modeler.control.base'),
-          },
-          '&::-webkit-scrollbar-thumb': {
-            background: theme('colors.modeler.control.scrollbar.thumb'),
-            borderRadius: '4px',
-          },
+    function({ addUtilities, theme }) { /* ... */ },
+    
+    // ✅ 新機能：自動CSS変数生成プラグイン
+    function({ addBase, theme }) {
+      const modelerColors = theme('colors.modeler');
+      
+      addBase({
+        ':root': {
+          // Dockview用CSS変数（自動生成）
+          '--dv-modeler-group-view-background-color': modelerColors.background.secondary,
+          '--dv-modeler-tab-background-color': modelerColors.control.button.DEFAULT,
+          '--dv-modeler-tab-active-border-color': modelerColors.accent.primary,
+          // ... その他すべての変数が自動生成
+          
+          // Monaco Editor用
+          '--monaco-editor-background': modelerColors.editor.bg,
+          '--monaco-editor-selection': modelerColors.editor.selection,
+          
+          // TweakPane用
+          '--gui-panel-background': modelerColors.control.base,
+          '--gui-scrollbar-thumb': modelerColors.control.scrollbar.thumb,
+          
+          // Golden Layout用
+          '--golden-content-background': modelerColors.background.primary,
+          '--golden-tab-color': modelerColors.control.text.primary,
         },
       })
-    }),
+    }
   ],
 }
 ```
@@ -149,41 +168,28 @@ body {
   overflow: hidden;
 }
 
-/* === Monaco Editor スタイル === */
+/* === Monaco Editor スタイル（CSS変数使用） === */
 .monaco-editor {
-  background-color: theme('colors.modeler.editor.bg') !important;
+  background-color: var(--monaco-editor-background) !important;
 }
 
-/* === TweakPane スタイル === */
-.gui-panel {
-  position: absolute;
-  right: 0;
-  max-height: 100%;
-  overflow-y: auto;
-}
-
+/* === TweakPane スタイル（CSS変数使用） === */
 .gui-panel::-webkit-scrollbar {
   width: 10px;
-  background: theme('colors.modeler.control.base');
+  background: var(--gui-scrollbar-track);
 }
 
 .gui-panel::-webkit-scrollbar-thumb {
-  background: theme('colors.modeler.control.scrollbar.thumb');
+  background: var(--gui-scrollbar-thumb);
 }
 
-/* === dockview テーマ（Modeler X完全対応） === */
+/* === Dockview テーマ（CSS変数使用） === */
 .dockview-theme-modeler {
-  --dv-group-view-background-color: theme('colors.modeler.background.secondary');
-  --dv-paneview-header-background-color: theme('colors.modeler.control.base');
-  --dv-tabs-container-background-color: theme('colors.modeler.control.base');
-  --dv-tab-background-color: theme('colors.modeler.control.button.DEFAULT');
-  --dv-tab-active-background-color: theme('colors.modeler.control.button.active');
-  --dv-tab-color: theme('colors.modeler.control.text.secondary');
-  --dv-tab-active-color: theme('colors.modeler.control.text.primary');
-  --dv-tab-hover-background-color: theme('colors.modeler.control.button.hover');
-  --dv-tab-active-border-color: theme('colors.modeler.accent.primary');
-  --dv-separator-border: theme('colors.modeler.control.border');
-  font-family: theme('fontFamily.ui');
+  --dv-group-view-background-color: var(--dv-modeler-group-view-background-color);
+  --dv-tab-background-color: var(--dv-modeler-tab-background-color);
+  --dv-tab-active-border-color: var(--dv-modeler-tab-active-border-color);
+  /* すべての変数がTailwindプラグインからの参照 */
+  font-family: var(--dv-modeler-font-family);
 }
 ```
 
@@ -198,218 +204,193 @@ body {
 </div>
 
 // ナビゲーション
-<nav className="bg-modeler-nav-bg">
-  <a className="text-modeler-nav-text hover:bg-modeler-nav-hover-bg hover:text-modeler-nav-hover-text">
-    Home
-  </a>
-  <a className="text-modeler-nav-text bg-modeler-nav-active-bg text-modeler-nav-active-text">
-    Active Item
-  </a>
+<nav className="bg-modeler-nav-bg text-modeler-nav-text">
+  <button className="bg-modeler-control-button-DEFAULT hover:bg-modeler-control-button-hover">
+    Button
+  </button>
 </nav>
 
-// ボタン
-<button className="bg-modeler-control-button-DEFAULT text-modeler-control-text-primary 
-                   hover:bg-modeler-control-button-hover 
-                   focus:bg-modeler-control-button-focus 
-                   active:bg-modeler-control-button-active">
-  Click Me
-</button>
+// エディター関連
+<div className="bg-modeler-editor-bg font-console">
+  Code Editor
+</div>
 
-// スクロールバー
-<div className="scrollbar-modeler overflow-y-auto">
-  Scrollable content
+// 3Dビューポート
+<div className="bg-modeler-viewport-bg">
+  <div style={{ color: 'var(--dv-modeler-tab-active-border-color)' }}>
+    Highlighted Element
+  </div>
 </div>
 ```
 
-### 2. cn()関数による条件付きスタイリング
+### 2. CSS変数として使用（外部ライブラリ用）
 
 ```tsx
-import { cn } from '@/lib/utils'
+// Dockviewコンポーネント
+<DockviewReact className="dockview-theme-modeler" />
 
-const Button = ({ isActive, disabled, children }) => (
-  <button className={cn(
-    // ベースクラス
-    'bg-modeler-control-button-DEFAULT',
-    'text-modeler-control-text-primary',
-    'px-4 py-2 rounded-modeler',
-    
-    // 条件付きクラス
-    {
-      'bg-modeler-accent-primary text-white': isActive,
-      'opacity-50 cursor-not-allowed': disabled,
-      'hover:bg-modeler-control-button-hover': !disabled,
+// Monaco Editor
+<MonacoEditor
+  theme="modeler-dark"
+  options={{
+    theme: {
+      base: 'vs-dark',
+      colors: {
+        'editor.background': 'var(--monaco-editor-background)',
+        'editor.selectionBackground': 'var(--monaco-editor-selection)',
+      }
     }
-  )}>
-    {children}
-  </button>
-)
+  }}
+/>
+
+// カスタムコンポーネント
+<div style={{
+  backgroundColor: 'var(--dv-modeler-group-view-background-color)',
+  borderColor: 'var(--dv-modeler-separator-border)',
+}}>
+  Custom Panel
+</div>
 ```
 
-### 3. CSSでtheme()関数として使用
-
-```css
-.custom-component {
-  background-color: theme('colors.modeler.background.primary');
-  color: theme('colors.modeler.control.text.primary');
-  border: 1px solid theme('colors.modeler.control.border');
-}
-
-.custom-button:hover {
-  background-color: theme('colors.modeler.control.button.hover');
-}
-```
-
-### 4. Three.js での色使用
-
-```typescript
-import { Color } from 'three'
-import resolveConfig from 'tailwindcss/resolveConfig'
-import tailwindConfig from '../../tailwind.config'
-
-const fullConfig = resolveConfig(tailwindConfig)
-const colors = fullConfig.theme.colors.modeler
-
-// Three.js シーン設定
-scene.background = new Color(colors.viewport.bg)
-
-// マテリアル設定
-const material = new MeshBasicMaterial({
-  color: new Color(colors.viewport.face)
-})
-
-// 軸ヘルパー
-const axesHelper = new AxesHelper(5)
-axesHelper.setColors(
-  new Color(colors.viewport.axis.x),
-  new Color(colors.viewport.axis.y), 
-  new Color(colors.viewport.axis.z)
-)
-```
-
-## 🎯 実装済みコンポーネント例
-
-### TopNavigation（完成済み）
+### 3. JavaScript/TypeScriptで動的に使用
 
 ```tsx
-// src/components/Navigation/TopNavigation.tsx
-import { cn } from '@/lib/utils'
+import { useEffect, useState } from 'react';
 
-export default function TopNavigation() {
+function DynamicColorComponent() {
+  const [primaryColor, setPrimaryColor] = useState('');
+  
+  useEffect(() => {
+    // CSS変数の値を取得
+    const rootStyles = getComputedStyle(document.documentElement);
+    const color = rootStyles.getPropertyValue('--dv-modeler-tab-active-border-color');
+    setPrimaryColor(color);
+  }, []);
+  
   return (
-    <nav className="bg-modeler-nav-bg px-6 py-3 flex items-center justify-between">
-      <div className="flex items-center space-x-6">
-        <h1 className="text-modeler-nav-text text-xl font-bold">Modeler X</h1>
-        
-        <div className="flex items-center space-x-4">
-          {['New', 'Open', 'Save', 'Export'].map((item) => (
-            <button
-              key={item}
-              className={cn(
-                'text-modeler-nav-text px-3 py-1 rounded transition-colors',
-                'hover:bg-modeler-nav-hover-bg hover:text-modeler-nav-hover-text'
-              )}
-            >
-              {item}
-            </button>
-          ))}
-        </div>
-      </div>
-      
-      <div className="flex items-center space-x-4">
-        <button className="bg-modeler-nav-active-bg text-modeler-nav-active-text px-4 py-2 rounded">
-          Run Code
-        </button>
-      </div>
-    </nav>
-  )
-}
-```
-
-### 色システムテストページ（完成済み）
-
-```tsx
-// src/app/page.tsx - 色の動作確認用
-export default function HomePage() {
-  return (
-    <div className="min-h-screen bg-modeler-background-primary text-modeler-control-text-primary">
-      <TopNavigation />
-      
-      <div className="p-8 space-y-6">
-        <h2 className="text-2xl font-bold text-modeler-accent-primary">
-          Modeler X Color System Demo
-        </h2>
-        
-        {/* 色パレット表示 */}
-        <div className="grid grid-cols-4 gap-4">
-          {Object.entries(colorPalette).map(([name, color]) => (
-            <div key={name} className="space-y-2">
-              <div 
-                className="w-20 h-20 rounded border border-modeler-control-border"
-                style={{ backgroundColor: color }}
-              />
-              <div className="text-sm">
-                <div className="font-mono">{name}</div>
-                <div className="text-modeler-control-text-secondary">{color}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-        
-        {/* インタラクティブ要素 */}
-        <div className="space-y-4">
-          <button className="bg-modeler-control-button-DEFAULT hover:bg-modeler-control-button-hover text-modeler-control-text-primary px-6 py-3 rounded-modeler">
-            Hover Button
-          </button>
-          
-          <div className="bg-modeler-background-surface p-4 rounded-modeler border border-modeler-control-border">
-            <p className="text-modeler-control-text-primary">Panel Content</p>
-            <p className="text-modeler-control-text-secondary">Secondary text</p>
-          </div>
-        </div>
-      </div>
+    <div style={{ borderColor: primaryColor }}>
+      Dynamic Colored Border
     </div>
-  )
+  );
 }
 ```
 
-## 🔧 TweakPane互換性の確保
+## 🔧 カスタマイズ
 
-TweakPaneの既存CSS変数も引き続き動作します：
+### 色の変更
+
+色を変更する場合は、`tailwind.config.ts`の該当部分のみを修正します：
 
 ```typescript
-// TweakPaneを使用する既存コード（無変更で動作）
-const pane = new Pane({
-  container: document.getElementById('tweakpane-container')
-})
-
-// CSS変数は自動的にtailwind.config.tsの値を参照
-// --tp-base-background-color → theme('colors.modeler.control.base')
-// --tp-button-background-color → theme('colors.modeler.control.button.DEFAULT')
-```
-
-## 📦 必要な依存関係（インストール済み）
-
-```json
-{
-  "dependencies": {
-    "clsx": "^2.0.0",
-    "tailwind-merge": "^2.0.0"
+// tailwind.config.ts
+colors: {
+  modeler: {
+    accent: {
+      primary: '#FF5722',  // 変更例：オレンジに変更
+    }
   }
 }
 ```
 
-## 🚀 次の実装段階
+変更は自動的に以下に反映されます：
+- Tailwindクラス：`bg-modeler-accent-primary`
+- CSS変数：`var(--dv-modeler-tab-active-border-color)`
+- すべての関連コンポーネント
 
-### 未実装項目
-1. **Monaco Editorテーマ統合**
-2. **Three.js ビューポート完全統合**
-3. **モーダル・ダイアログシステム**
-4. **アクセシビリティ対応**
+### 新しい色の追加
 
-### 拡張予定
-1. **ライトモードテーマ**
-2. **カスタムテーマ機能**
-3. **色設定UI**
+```typescript
+// tailwind.config.ts
+colors: {
+  modeler: {
+    // 新しいカテゴリ追加
+    animation: {
+      glow: '#00ffff',
+      pulse: '#ff00ff',
+    }
+  }
+}
+```
+
+```tsx
+// 使用例
+<div className="bg-modeler-animation-glow animate-pulse">
+  Animated Element
+</div>
+```
+
+## 🎯 メリット
+
+### ✅ 実現できたこと
+
+1. **完全な色設定集約**：
+   - すべての色定義が`tailwind.config.ts`に統一
+   - 重複なし、単一の信頼できるソース
+
+2. **自動CSS変数生成**：
+   - Tailwindプラグインにより自動でCSS変数を生成
+   - 外部ライブラリでも同じ色を使用可能
+
+3. **型安全性**：
+   - TypeScriptによる色名の型チェック
+   - IDEでの自動補完とエラー検出
+
+4. **保守性**：
+   - 色変更時は一箇所のみ修正
+   - 影響範囲の把握が容易
+
+5. **拡張性**：
+   - 新しい色の追加が簡単
+   - プラグインによる自動変数生成
+
+6. **パフォーマンス**：
+   - Tailwindの最適化恩恵
+   - 未使用CSSの自動削除
+
+## 🚀 実装完了と成果
+
+### ✅ フェーズ 3: エディター・ビューポート統合
+- ✅ Monaco エディターテーマの完全統合
+- ✅ Three.js ビューポートの色設定
+- ✅ TweakPane の完全CSS変数化
+
+### 🎨 Three.js色設定の実装方法
+
+Three.jsでの色設定は、CSS変数から値を取得して使用：
+
+```typescript
+// 背景色を設定（CSS変数から）
+const bgColor = getComputedStyle(document.documentElement)
+  .getPropertyValue('--golden-content-background').trim() || '#222222';
+scene.background = new THREE.Color(bgColor);
+
+// フェイス色（CSS変数から）
+const faceColor = getComputedStyle(document.documentElement)
+  .getPropertyValue('--monaco-editor-background') || '#f5f5f5';
+const matcapMaterial = new THREE.MeshMatcapMaterial({
+  color: new THREE.Color(faceColor),
+  // その他のプロパティ
+});
+
+// ワイヤーフレーム色
+const wireframeColor = getComputedStyle(document.documentElement)
+  .getPropertyValue('--dv-dark-border').trim() || '#000000';
+const edgeMaterial = new THREE.LineBasicMaterial({ 
+  color: wireframeColor, 
+  linewidth: 1 
+});
+```
+
+### 🔲 フェーズ 4: 高度な機能
+- ダークモード/ライトモードの切り替え
+- ユーザーカスタムテーマ機能
+- カラーバリアフリー対応
+
+## 📚 参考資料
+
+- [Tailwind CSS カスタムプラグイン](https://tailwindcss.com/docs/plugins)
+- [CSS カスタムプロパティ](https://developer.mozilla.org/ja/docs/Web/CSS/--*)
+- [Dockview API リファレンス](https://dockview.dev/)
 
 ## 🎉 実装成果
 

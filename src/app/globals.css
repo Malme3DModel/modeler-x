@@ -9,12 +9,42 @@ body {
   overflow: hidden;
 }
 
-/* === Monaco Editor スタイル === */
-.monaco-editor {
-  background-color: theme('colors.modeler.editor.bg') !important;
+/* === Three.js ビューポートスタイル === */
+[data-panel-type="viewport"] {
+  pointer-events: auto !important;
 }
 
-/* === TweakPane スタイル === */
+[data-panel-type="viewport"] canvas {
+  pointer-events: auto !important;
+  touch-action: none !important;
+  z-index: 10;
+}
+
+[data-panel-type="viewport"] > div,
+[data-panel-type="viewport"] > div > div {
+  pointer-events: auto !important;
+}
+
+.threejs-viewport-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto !important;
+}
+
+/* OrbitControlsが機能するためのスタイル */
+canvas {
+  outline: none;
+  pointer-events: auto !important;
+  touch-action: none !important;
+}
+
+/* === Monaco Editor スタイル（CSS変数使用） === */
+.monaco-editor {
+  background-color: var(--monaco-editor-background) !important;
+}
+
+/* === TweakPane スタイル（CSS変数使用） === */
 .gui-panel {
   position: absolute;
   right: 0;
@@ -24,77 +54,77 @@ body {
 
 .gui-panel::-webkit-scrollbar {
   width: 10px;
-  background: theme('colors.modeler.control.base');
+  background: var(--gui-scrollbar-track);
 }
 
 .gui-panel::-webkit-scrollbar-thumb {
-  background: theme('colors.modeler.control.scrollbar.thumb');
+  background: var(--gui-scrollbar-thumb);
 }
 
 .tp-rotv {
-  text-shadow: 1px 1px #000;
+  text-shadow: 1px 1px var(--color-shadow-text);
 }
 
 .tp-rotv button {
   text-shadow: inherit;
 }
 
-/* === Golden Layout overrides === */
+/* === Golden Layout overrides（CSS変数使用） === */
 .lm_content {
-  background-color: theme('colors.modeler.background.primary') !important;
+  background-color: var(--golden-content-background) !important;
 }
 
 .lm_header {
-  background-color: theme('colors.modeler.control.base') !important;
+  background-color: var(--golden-header-background) !important;
 }
 
 .lm_tab {
-  background-color: theme('colors.modeler.control.button.DEFAULT') !important;
-  color: theme('colors.modeler.control.text.primary') !important;
+  background-color: var(--golden-tab-background) !important;
+  color: var(--golden-tab-color) !important;
 }
 
 .lm_tab.lm_active {
-  background-color: theme('colors.modeler.control.button.active') !important;
+  background-color: var(--golden-tab-active-background) !important;
 }
 
-/* === Dockview のカスタムスタイル（Modeler X テーマ） === */
+/* === Dockview テーマ（CSS変数使用） === */
 .dockview-theme-modeler {
-  --dv-group-view-background-color: theme('colors.modeler.background.secondary');
-  --dv-paneview-header-background-color: theme('colors.modeler.control.base');
-  --dv-tabs-container-background-color: theme('colors.modeler.control.base');
-  --dv-tabs-and-actions-container-background-color: theme('colors.modeler.control.base');
-  --dv-tab-background-color: theme('colors.modeler.control.button.DEFAULT');
-  --dv-tab-active-background-color: theme('colors.modeler.control.button.active');
-  --dv-tab-color: theme('colors.modeler.control.text.secondary');
-  --dv-tab-active-color: theme('colors.modeler.control.text.primary');
-  --dv-tab-hover-background-color: theme('colors.modeler.control.button.hover');
-  --dv-tab-active-border-color: theme('colors.modeler.accent.primary');
-  --dv-separator-border: theme('colors.modeler.control.border');
+  --dv-group-view-background-color: var(--dv-modeler-group-view-background-color);
+  --dv-paneview-header-background-color: var(--dv-modeler-paneview-header-background-color);
+  --dv-tabs-container-background-color: var(--dv-modeler-tabs-container-background-color);
+  --dv-tabs-and-actions-container-background-color: var(--dv-modeler-tabs-and-actions-container-background-color);
+  --dv-tab-background-color: var(--dv-modeler-tab-background-color);
+  --dv-tab-active-background-color: var(--dv-modeler-tab-active-background-color);
+  --dv-tab-color: var(--dv-modeler-tab-color);
+  --dv-tab-active-color: var(--dv-modeler-tab-active-color);
+  --dv-tab-hover-background-color: var(--dv-modeler-tab-hover-background-color);
+  --dv-tab-active-border-color: var(--dv-modeler-tab-active-border-color);
+  --dv-separator-border: var(--dv-modeler-separator-border);
   --dv-paneview-header-border: transparent;
-  --dv-activegroup-visiblepanel-tab-background-color: theme('colors.modeler.background.secondary');
-  --dv-group-header-background-color: theme('colors.modeler.control.base');
+  --dv-activegroup-visiblepanel-tab-background-color: var(--dv-modeler-activegroup-visiblepanel-tab-background-color);
+  --dv-group-header-background-color: var(--dv-modeler-group-header-background-color);
   --dv-group-header-border: transparent;
-  --dv-drag-over-background-color: theme('colors.modeler.accent.primary / 18%');
-  --dv-floating-box-shadow: theme('boxShadow.modeler-modal');
-  font-family: theme('fontFamily.ui');
+  --dv-drag-over-background-color: var(--dv-modeler-drag-over-background-color);
+  --dv-floating-box-shadow: var(--dv-modeler-floating-box-shadow);
+  font-family: var(--dv-modeler-font-family);
 }
 
-/* 既存のダークテーマも維持 */
+/* 既存のダークテーマも維持（後方互換性） */
 .dockview-theme-dark {
-  --dv-group-view-background-color: #1e1e1e;
-  --dv-paneview-header-background-color: #2d2d30;
-  --dv-tabs-container-background-color: #252526;
-  --dv-tabs-and-actions-container-background-color: #252526;
-  --dv-tab-background-color: #2d2d30;
-  --dv-tab-active-background-color: #1e1e1e;
-  --dv-tab-color: #cccccc;
-  --dv-tab-active-color: #ffffff;
-  --dv-tab-hover-background-color: #2a2d2e;
-  --dv-tab-active-border-color: #007acc;
-  --dv-separator-border: #303031;
+  --dv-group-view-background-color: var(--dv-modeler-group-view-background-color);
+  --dv-paneview-header-background-color: var(--dv-dark-header-background);
+  --dv-tabs-container-background-color: var(--dv-dark-tab-container);
+  --dv-tabs-and-actions-container-background-color: var(--dv-dark-tab-container);
+  --dv-tab-background-color: var(--dv-dark-tab-background);
+  --dv-tab-active-background-color: var(--dv-modeler-group-view-background-color);
+  --dv-tab-color: var(--dv-dark-text-gray);
+  --dv-tab-active-color: var(--dv-dark-text-white);
+  --dv-tab-hover-background-color: var(--dv-dark-tab-hover-alt);
+  --dv-tab-active-border-color: var(--color-accent-link);
+  --dv-separator-border: var(--dv-dark-separator);
   --dv-paneview-header-border: transparent;
-  --dv-activegroup-visiblepanel-tab-background-color: #1e1e1e;
-  --dv-group-header-background-color: #2d2d30;
+  --dv-activegroup-visiblepanel-tab-background-color: var(--dv-modeler-group-view-background-color);
+  --dv-group-header-background-color: var(--dv-dark-header-background);
   --dv-group-header-border: transparent;
   --dv-drag-over-background-color: rgba(38, 119, 203, 0.18);
   --dv-floating-box-shadow: 0 8px 16px rgba(0, 0, 0, 0.45);
@@ -122,11 +152,11 @@ body {
 }
 
 .dockview-theme-modeler .split-view-view-separator:hover {
-  background: theme('colors.modeler.accent.primary');
+  background: var(--dv-modeler-tab-active-border-color);
 }
 
 .dockview-theme-dark .split-view-view-separator:hover {
-  background: #007acc;
+  background: var(--color-accent-link);
 }
 
 /* パネルコンテンツ領域 */
