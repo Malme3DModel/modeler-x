@@ -7,7 +7,13 @@
     "dev:turbo": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "electron": "cross-env NODE_ENV=development electron electron/main.js",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && npm run electron\"",
+    "build:electron": "cross-env NODE_ENV=production npm run build && electron-builder",
+    "build:win": "cross-env NODE_ENV=production npm run build && electron-builder --win",
+    "build:mac": "cross-env NODE_ENV=production npm run build && electron-builder --mac",
+    "build:linux": "cross-env NODE_ENV=production npm run build && electron-builder --linux"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
@@ -37,9 +43,44 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^36.4.0",
+    "electron-builder": "^26.0.12",
     "eslint": "^9",
     "eslint-config-next": "15.3.3",
     "tailwindcss": "^4.1.8",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^8.0.3"
+  },
+  "main": "electron/main.js",
+  "homepage": "./",
+  "build": {
+    "appId": "com.modelerx.app",
+    "productName": "Modeler X",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "electron/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "public/icon/favicon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "public/icon/apple-touch-icon.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "public/icon/android-chrome-192x192.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }

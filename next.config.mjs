@@ -1,4 +1,11 @@
 const nextConfig = {
+  // Electron用の静的エクスポート設定
+  output: process.env.NODE_ENV === 'production' ? 'export' : undefined,
+  trailingSlash: true,
+  images: {
+    unoptimized: true,
+  },
+  
   // ESLintを一時的に無効化（開発用）
   eslint: {
     ignoreDuringBuilds: true,
