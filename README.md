@@ -66,6 +66,16 @@ VSCodeライクなモダンなヘッダーメニューで以下の操作が可�
   - **STL**: 3Dプリンタ向けメッシュフォーマット
   - **OBJ**: 汎用3Dモデルフォーマット
 
+### フッターステータス表示
+
+画面下部のフッターで以下の情報をリアルタイム監視：
+
+- **CAD Kernel**: カーネルの初期化/準備状態
+- **Worker**: ワーカープロセスの状態
+- **Status**: 実行状態（Working/Idle）
+- **未保存変更**: プロジェクトの変更状態
+- **キーボードショートカット**: 操作ヘルプ表示
+
 ```typescript
 // 基本的な形状
 let sphere = Sphere(50);
@@ -116,6 +126,7 @@ modeler-x/
 │   ├── app/                 # Next.js App Router
 │   ├── components/          # UIコンポーネント
 │   │   ├── Header.tsx       # 🎨 VSCodeライクなモダンヘッダー
+│   │   ├── Footer.tsx       # 🆕 ステータス表示統合フッター
 │   │   ├── MonacoEditor.tsx # Monaco エディター
 │   │   ├── ThreeViewport.tsx # 3D ビューポート
 │   │   └── DockviewLayout.tsx # レイアウト管理

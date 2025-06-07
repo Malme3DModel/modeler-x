@@ -66,6 +66,7 @@ Modeler XはNext.js 14・TypeScript・React 18を基盤とした、モダンで�
 ```typescript
 components/
 ├── Header.tsx              # 🎨 VSCodeライクなモダンヘッダー（Save/Load/Export）
+├── Footer.tsx              # 🆕 ステータス表示統合フッター（リアルタイム監視）
 ├── MonacoEditor.tsx        # コードエディター（Monaco Editor・TypeScript）
 ├── ThreeViewport.tsx       # 3Dビューポート（Three.js・WebGL）
 ├── DockviewLayout.tsx      # レイアウト管理（パネル・ドッキング）

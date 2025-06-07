@@ -481,6 +481,71 @@ interface CADWorkerManagerProps {
 const CADWorkerManager: React.FC<CADWorkerManagerProps>
 ```
 
+### Footer
+
+アプリケーション下部のステータス表示フッターコンポーネント。各種状態をリアルタイムで監視・表示。
+
+```typescript
+interface FooterProps {
+  // CADワーカー関連の状態
+  isCADWorkerReady: boolean;
+  isWorking: boolean;
+  isWorkerReady: boolean;
+  
+  // プロジェクト関連の状態
+  hasUnsavedChanges: boolean;
+  
+  // エラー状態
+  error?: string;
+}
+
+const Footer: React.FC<FooterProps>
+```
+
+#### 使用例
+
+```typescript
+function ApplicationLayout() {
+  const { isCADWorkerReady, hasUnsavedChanges } = useProjectState();
+  const { isWorking, isWorkerReady, error } = useCADWorker();
+
+  return (
+    <div className="app-layout">
+      {/* メインコンテンツ */}
+      <main>...</main>
+      
+      {/* フッター */}
+      <Footer
+        isCADWorkerReady={isCADWorkerReady}
+        isWorking={isWorking}
+        isWorkerReady={isWorkerReady}
+        hasUnsavedChanges={hasUnsavedChanges}
+        error={error}
+      />
+    </div>
+  );
+}
+```
+
+#### プロパティ詳細
+
+| プロパティ | 型 | 説明 |
+|------------|----|----|
+| `isCADWorkerReady` | `boolean` | CADカーネルが準備完了かどうか |
+| `isWorking` | `boolean` | 現在処理中かどうか |
+| `isWorkerReady` | `boolean` | ワーカープロセスが準備完了かどうか |
+| `hasUnsavedChanges` | `boolean` | 未保存の変更があるかどうか |
+| `error` | `string \| undefined` | エラーメッセージ（オプション） |
+
+#### ステータス表示
+
+- **CAD Kernel**: `⏳ Initializing...` → `✅ Ready`
+- **Worker**: `⏳ Loading...` → `✅ Ready`  
+- **Status**: `🔄 Working...` → `✅ Idle`
+- **未保存変更**: `● Unsaved changes` (条件付き表示)
+- **エラー**: `⚠️ Error` (条件付き表示)
+- **ショートカットヘルプ**: `Ctrl+Enter: evaluate • F5: update • Ctrl+S: save`
+
 ## 📊 Types Reference
 
 ### 基本型定義
