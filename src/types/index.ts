@@ -44,6 +44,22 @@ export interface MonacoEditorProps {
   onProjectNameUpdate?: (name: string) => void;
 }
 
+export interface MonacoEditorEvaluationParams {
+  editor: any;
+  monaco: any;
+  evaluateAndRender: (params: any) => Promise<void>;
+  extraLibs?: any[];
+  saveToURL?: boolean;
+  onEvaluate?: () => void;
+}
+
+export interface EvaluationOptions {
+  code: string;
+  meshRes: number;
+  sceneOptions: SceneOptions;
+  delay: number;
+}
+
 // ===== 3Dビューポート関連 =====
 export interface ThreeViewportRef {
   updateShape: (facesAndEdges: any, sceneOptions: any) => void;
