@@ -1,75 +1,75 @@
 # Three.js r177 + OpenCascade.js v1.1.1 アップグレード指示書
 
-## 概要
+## ⚠️ 重要: 段階的アプローチが必要
 
-現在のプロジェクトを以下のバージョンにアップグレードする必要があります：
-- **Three.js**: v0.129.0 → r177
-- **OpenCascade.js**: v0.1.15 → v1.1.1
+**実際の検証結果により、同時アップグレードは困難であることが判明しました。**
+以下の段階的アプローチを強く推奨します。
 
-主な課題は以下の3点です：
-1. **WASMの呼び出し方法の変更**
-2. **ESMへの対応**
-3. **WebWorker内での新しいモジュール読み込み**
+## 発見された重大な問題
 
-## 現在の構成分析
+### 1. **Sphere関数の名前空間衝突**
+- Three.js r177 と CascadeStudioStandardLibrary.js の両方で `Sphere` が定義
+- WebWorkerで "Identifier 'Sphere' has already been declared" エラー
 
-### WebWorkerの現在の構成
-- メインファイル: `public/js/CascadeStudioMainWorker.js`
-- 読み込み方法: `importScripts()`を使用
-- WASM初期化: 古いv0.1.15の方法を使用
+### 2. **OpenCascade.js WASM互換性問題**
+- 現在のv0-modifiedファイルで "LinkError: WebAssembly.instantiate(): Import #832 "a" "a": memory import must be a WebAssembly.Memory object" エラー
+- Three.js r177との互換性問題
 
-### Three.jsの現在の使用状況
-- メインアプリ: ESMインポート (`import * as THREE from 'three'`)
-- WebWorker: グローバル変数として使用 (`importScripts('./three/build/three.min.js')`)
+### 3. **ESM vs importScripts問題**
+- OpenCascade.js v1.1.1はESM exportを使用
+- 現在のWebWorkerのimportScriptsと非互換
 
-### OpenCascade.jsの現在の使用状況
-- WebWorker内で`new opencascade()`で初期化
-- WASMファイル: `public/js/libs/opencascade.wasm.wasm` (33MB)
+## 推奨される段階的アップグレード戦略
 
-## アップグレード手順
+### 🎯 Phase 1: Three.js単独アップグレード（優先実施）
 
-### Phase 1: 依存関係の更新
+#### 1.1 WebWorkerからThree.jsを完全除去
+```javascript
+// public/js/CascadeStudioMainWorker.js
+// Three.jsのimportScriptsを削除
+// importScripts('./three/build/three.min.js'); // ← この行を削除
 
-#### 1.1 package.jsonの更新
-```json
-{
-  "dependencies": {
-    "three": "^0.177.0",
-    "opencascade.js": "^1.1.1",
-    "@types/three": "^0.177.0"
-  }
+// Three.jsを使用している箇所を代替実装に変更
+// 例: Vector3の代わりに独自の実装を使用
+function createVector3(x, y, z) {
+  return { x: x || 0, y: y || 0, z: z || 0 };
 }
 ```
 
-#### 1.2 新しいファイル構成の準備
-```
-public/js/
-├── CascadeStudioMainWorker.mjs  # ESM対応の新しいWorker（現在の場所に配置）
-├── libs/
-│   ├── opencascade.wasm            # 新しいWASMファイル
-│   └── opencascade.mjs             # 新しいESMモジュール
-└── three/
-    └── (削除予定 - npmから直接使用)
+#### 1.2 メインアプリでのThree.js r177使用
+```typescript
+// src/components/ThreeViewport.tsx
+import * as THREE from 'three'; // r177を使用
+
+// WebWorkerとの通信では、Three.jsオブジェクトではなく
+// プレーンなJavaScriptオブジェクトを使用
 ```
 
-### Phase 2: WebWorkerのESM対応
-
-#### 2.1 新しいWorkerファイルの作成
-`public/js/CascadeStudioMainWorker.mjs`を作成：
-
+#### 1.3 名前空間衝突の解決
 ```javascript
-// ESMインポートに変更
-import * as THREE from 'three';
+// CascadeStudioStandardLibrary.js内で
+// Sphereなどの関数名を明確に区別
+function CAD_Sphere(radius) {
+  // 既存のSphere実装
+}
+
+// または、名前空間オブジェクトを使用
+const CADPrimitives = {
+  Sphere: function(radius) { /* 実装 */ },
+  Box: function(x, y, z) { /* 実装 */ },
+  // ...
+};
+```
+
+### 🎯 Phase 2: OpenCascade.js v1.1.1への移行（Phase 1完了後）
+
+#### 2.1 WebWorkerのESM対応
+```javascript
+// public/js/CascadeStudioMainWorker.mjs（新規作成）
 import { initOpenCascade } from 'opencascade.js';
 
-// グローバル変数の定義
 let oc = null;
-let externalShapes = {};
-let sceneShapes = [];
-let GUIState, fullShapeEdgeHashes = {}, fullShapeFaceHashes = {};
-let currentShape;
 
-// OpenCascade.js v1.1.1の新しい初期化方法
 async function initializeOpenCascade() {
   try {
     oc = await initOpenCascade({
@@ -89,43 +89,18 @@ async function initializeOpenCascade() {
   }
 }
 
-// フォント読み込み（既存のコードを維持）
-async function loadFonts() {
-  // 既存のフォント読み込みロジックをそのまま使用
-}
-
-// メッセージハンドラー
-const messageHandlers = {
-  Evaluate: function(payload) {
-    // 既存のEvaluate関数をそのまま使用
-  },
-  
-  combineAndRenderShapes: function(payload) {
-    // 既存のcombineAndRenderShapes関数をそのまま使用
-  }
-};
+// 既存の関数をそのまま移植
+// ... 既存のコード ...
 
 // 初期化
-initializeOpenCascade().then(() => {
-  loadFonts();
-  
-  // メッセージリスナーの設定
-  onmessage = function(e) {
-    const response = messageHandlers[e.data.type]?.(e.data.payload);
-    if (response) {
-      postMessage({ type: e.data.type, payload: response });
-    }
-  };
-});
+initializeOpenCascade();
 ```
 
-#### 2.2 Workerの作成方法を変更
-`src/lib/CascadeStudioCore.ts`を更新：
-
+#### 2.2 Worker作成方法の更新
 ```typescript
+// src/lib/CascadeStudioCore.ts
 initWorker: () => {
   try {
-    // 既存のWorkerを削除
     if ((window as any).cascadeStudioWorker) {
       (window as any).cascadeStudioWorker.terminate();
     }
@@ -151,258 +126,235 @@ initWorker: () => {
     return worker;
   } catch (error) {
     console.error("Failed to initialize CAD Worker:", error);
-    return null;
+    // フォールバック: 古いWorkerを使用
+    return this.initLegacyWorker();
   }
 }
 ```
 
-### Phase 3: Three.js r177への対応
+## 即座に実施すべき修正
 
-#### 3.1 Three.jsの変更点への対応
-Three.js r177での主な変更点：
-- `ColorManagement.fromWorkingColorSpace()` → `workingToColorSpace()`
-- `ColorManagement.toWorkingColorSpace()` → `colorSpaceToWorking()`
-- JSONシーンフォーマットのバージョンが4.6から4.7に増加
-- `PeppersGhostEffect`が削除
-
-#### 3.2 ThreeViewport.tsxの更新
-必要に応じて新しいAPIに対応：
-
-```typescript
-// 色空間管理の更新（必要な場合）
-import { ColorManagement } from 'three';
-
-// 既存のコードで非推奨APIを使用している場合は更新
-// 例: ColorManagement.fromWorkingColorSpace() → workingToColorSpace()
+### 1. package.jsonの段階的更新
+```json
+{
+  "dependencies": {
+    "three": "^0.177.0",
+    "opencascade.js": "^0.1.15",  // まずは現在のバージョンを維持
+    "@types/three": "^0.177.0"
+  }
+}
 ```
 
-### Phase 4: OpenCascade.js v1.1.1への対応
-
-#### 4.1 新しいWASMファイルの配置
-1. `node_modules/opencascade.js/dist/`から新しいファイルをコピー
-2. `public/js/libs/`に配置
-
-#### 4.2 API互換性の確認
-既存のOpenCascade APIの使用箇所を確認：
-- `oc.BRepPrimAPI_MakeBox`
-- `oc.BRepMesh_IncrementalMesh`
-- `oc.TopoDS_Shape`
-- その他のOCCT API
-
-**重要**: v1.1.1では初期化方法が変更されていますが、初期化後のAPI使用方法は基本的に互換性が保たれています。
-
-#### 4.3 型定義の更新
-TypeScript定義ファイルが更新されている場合は対応
-
-### Phase 5: デフォルトコードの更新
-
-#### 5.1 src/constants/defaultCode.tsの修正
-`DEFAULT_CAD_CODE`を新しいAPIに対応させる：
-
-```typescript
-export const DEFAULT_CAD_CODE = `// Welcome to Modeler X! Here are some useful functions:
-//  Translate(), Rotate(), Scale(), Mirror(), Union(), Difference(), Intersection()
-//  Box(), Sphere(), Cylinder(), Cone(), Text3D(), Polygon()
-//  Offset(), Extrude(), RotatedExtrude(), Revolve(), Pipe(), Loft(), 
-//  FilletEdges(), ChamferEdges(),
-//  Slider(), Checkbox(), TextInput(), Dropdown()
-
-let holeRadius = Slider("Radius", 30 , 20 , 40);
-
-let sphere     = Sphere(50);
-let cylinderZ  =                     Cylinder(holeRadius, 200, true);
-let cylinderY  = Rotate([0,1,0], 90, Cylinder(holeRadius, 200, true));
-let cylinderX  = Rotate([1,0,0], 90, Cylinder(holeRadius, 200, true));
-
-Translate([0, 0, 50], Difference(sphere, [cylinderX, cylinderY, cylinderZ]));
-
-Translate([-25, 0, 40], Text3D("Hi!", 36, 0.15, 'Consolas'));
-
-// Don't forget to push imported or oc-defined shapes into sceneShapes to add them to the workspace!`;
-```
-
-**注意**: 現在のデフォルトコードは基本的にそのまま使用できますが、新しいバージョンでの動作確認が必要です。
-
-### Phase 6: 既存機能の互換性確保
-
-#### 6.1 CascadeStudioShapeToMesh.jsの更新
-WebWorker内でTHREEオブジェクトを使用している箇所を確認：
-
+### 2. WebWorkerの名前空間修正
 ```javascript
-// 既存のコード
-let point1 = new THREE.Vector3();
+// public/js/CascadeStudioMainWorker.js
+// Three.jsのimportを削除
+// importScripts('./three/build/three.min.js'); // ← 削除
 
-// ESM環境では適切にインポートされたTHREEを使用
+// Vector3の代替実装
+function Vector3(x, y, z) {
+  this.x = x || 0;
+  this.y = y || 0;
+  this.z = z || 0;
+}
+
+Vector3.prototype.set = function(x, y, z) {
+  this.x = x;
+  this.y = y;
+  this.z = z;
+  return this;
+};
+
+Vector3.prototype.normalize = function() {
+  const length = Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
+  if (length > 0) {
+    this.x /= length;
+    this.y /= length;
+    this.z /= length;
+  }
+  return this;
+};
+
+// 既存のコードでTHREE.Vector3を使用している箇所を
+// 新しいVector3に置き換え
 ```
 
-#### 6.2 CascadeStudioStandardLibrary.jsの更新
-必要に応じてESM対応
+### 3. CascadeStudioStandardLibrary.jsの修正
+```javascript
+// 名前空間の明確化
+function CAD_Sphere(radius) {
+  // 既存のSphere実装をそのまま使用
+  // ただし関数名をCAD_Sphereに変更
+}
 
-#### 6.3 CascadeStudioFileUtils.jsの更新
-ファイル読み込み機能の互換性確認
+// エクスポート時に元の名前でエイリアス
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    Sphere: CAD_Sphere,
+    Box: CAD_Box,
+    // ... 他の関数
+  };
+} else {
+  // グローバル環境では元の名前で公開
+  self.Sphere = CAD_Sphere;
+  self.Box = CAD_Box;
+  // ... 他の関数
+}
+```
 
-### Phase 7: 動作確認とテスト
+## 動作確認手順（Phase 1）
 
-#### 7.1 基本機能のテスト手順
-
-**開発環境での確認**:
+### 1. Three.js r177のみでの確認
 ```bash
+# 依存関係の更新
+npm install three@^0.177.0 @types/three@^0.177.0
+
 # 開発サーバーの起動
 npm run dev
-
-# または Turbopack使用
-npm run dev:turbo
 ```
 
-**テスト項目**:
-- [ ] WebWorkerの初期化
-- [ ] OpenCascade.jsの読み込み
-- [ ] Three.jsの読み込み
-- [ ] 基本的な形状生成（Box, Sphere等）
-- [ ] メッシュ生成とレンダリング
-- [ ] デフォルトコードの実行
-
-**基本形状テストコード**:
+### 2. 基本機能テスト
 ```javascript
-// エディタで以下のコードを実行して動作確認
+// エディタで以下のコードを実行
 let testBox = Box(10, 10, 10);
-let testSphere = Sphere(20);
+let testSphere = Sphere(20);  // 名前空間衝突が解決されているか確認
 let testCylinder = Cylinder(15, 30);
 
 // 結合テスト
 let combined = Union([testBox, testSphere, testCylinder]);
 ```
 
-#### 7.2 高度な機能のテスト
-- [ ] ファイルインポート/エクスポート
-- [ ] 複雑な形状操作
-- [ ] アニメーション
-- [ ] マテリアル設定
-- [ ] GUI コントロール（Slider, Checkbox等）
+### 3. WebWorkerエラーの確認
+- ブラウザの開発者ツールでConsoleエラーを確認
+- "Identifier 'Sphere' has already been declared" エラーが解消されているか
+- WebWorkerの初期化が正常に完了するか
 
-#### 7.3 自動テストの実行
-現在のプロジェクトには専用のテストスイートが設定されていないため、手動テストを中心に行います：
+## トラブルシューティング
 
-```bash
-# 開発サーバーでの動作確認
-npm run dev
-# または
-npm run dev:turbo
+### 問題1: 名前空間衝突が継続する場合
+```javascript
+// より積極的な名前空間分離
+const CascadeCAD = {
+  Sphere: function(radius) { /* 実装 */ },
+  Box: function(x, y, z) { /* 実装 */ },
+  // ...
+};
 
-# 本番ビルドでの動作確認
-npm run build
-npm run start
-
-# Electronアプリでの動作確認
-npm run electron:dev
+// グローバルに公開
+Object.assign(self, CascadeCAD);
 ```
 
-**注意**: v0フォルダは旧版のバックアップのため、そこにあるテストは使用しません。
-
-#### 7.4 パフォーマンステスト
-- [ ] 読み込み時間の比較
-- [ ] メモリ使用量の確認
-- [ ] レンダリング性能の確認
-- [ ] WebWorker通信の遅延測定
-
-#### 7.5 ブラウザ互換性テスト
-- [ ] Chrome (最新版)
-- [ ] Firefox (最新版)
-- [ ] Safari (最新版)
-- [ ] Edge (最新版)
-
-**WebWorker ESMサポート確認**:
+### 問題2: WebWorkerでVector3エラーが発生する場合
 ```javascript
-// ブラウザコンソールで実行
-if (typeof Worker !== 'undefined') {
+// より完全なVector3実装
+function Vector3(x, y, z) {
+  this.x = x || 0;
+  this.y = y || 0;
+  this.z = z || 0;
+}
+
+Vector3.prototype = {
+  set: function(x, y, z) {
+    this.x = x; this.y = y; this.z = z;
+    return this;
+  },
+  normalize: function() {
+    const length = Math.sqrt(this.x * this.x + this.y * this.y + this.z * this.z);
+    if (length > 0) {
+      this.x /= length; this.y /= length; this.z /= length;
+    }
+    return this;
+  },
+  clone: function() {
+    return new Vector3(this.x, this.y, this.z);
+  },
+  // 必要に応じて他のメソッドを追加
+};
+
+// THREE名前空間の代替
+const THREE = {
+  Vector3: Vector3,
+  // 必要に応じて他のクラスを追加
+};
+```
+
+### 問題3: OpenCascade.js初期化エラーが継続する場合
+```javascript
+// より堅牢な初期化
+async function initializeOpenCascadeWithFallback() {
   try {
-    const testWorker = new Worker('data:text/javascript,console.log("ESM test")', { type: 'module' });
-    console.log('ESM Worker support: YES');
-    testWorker.terminate();
-  } catch (e) {
-    console.log('ESM Worker support: NO');
+    // まず現在のv0.1.15で初期化を試行
+    oc = await new opencascade({
+      locateFile: (path) => {
+        if (path.endsWith('.wasm')) {
+          return '/js/libs/opencascade.wasm.wasm';
+        }
+        return path;
+      }
+    });
+    console.log('OpenCascade.js v0.1.15 initialized successfully');
+    postMessage({ type: "startupCallback" });
+  } catch (error) {
+    console.error('Failed to initialize OpenCascade.js:', error);
+    postMessage({ type: "error", payload: error.message });
   }
 }
 ```
 
-## 注意事項とトラブルシューティング
+## Phase 1完了後の確認項目
 
-### 1. WebWorkerでのESMサポート
-- モダンブラウザでのみサポート
-- `type: 'module'`オプションが必要
-- 古いブラウザでは代替手段が必要
+- [ ] Three.js r177が正常に動作
+- [ ] WebWorkerの名前空間衝突が解決
+- [ ] 基本的なCAD操作が正常に動作
+- [ ] メッシュ生成とレンダリングが正常
+- [ ] デフォルトコードが正常に実行される
+- [ ] パフォーマンスの劣化がない
 
-### 2. WASMファイルサイズ
-- OpenCascade.js v1.1.1のWASMファイルサイズを確認
-- 必要に応じてカスタムビルドを検討
+## Phase 2への移行判断基準
 
-### 3. 型定義の問題
-- TypeScriptエラーが発生した場合は型定義を確認
-- 必要に応じて`@types/three`を更新
+Phase 1が完全に安定してから、以下の条件が揃った場合のみPhase 2に進む：
 
-### 4. パフォーマンスの問題
-- 新しいバージョンでパフォーマンスが低下した場合は設定を見直し
-- WebAssemblyの最適化オプションを確認
+1. **ブラウザ互換性**: ESM Worker対応ブラウザでの動作確認
+2. **フォールバック実装**: 古いブラウザ向けの代替手段の準備
+3. **十分なテスト**: Phase 1での十分な動作確認期間
+4. **リスク評価**: OpenCascade.js v1.1.1移行のリスクとメリットの再評価
 
-### 5. 既存コードの互換性
-- DEFAULT_CAD_CODEで使用されている関数の動作確認
-- 特にBox(), Sphere(), Cylinder(), Text3D()等の基本関数
+## 緊急時のロールバック手順
 
-## 段階的移行戦略
+### Three.js r177で問題が発生した場合
+```bash
+# 元のバージョンに戻す
+npm install three@^0.129.0 @types/three@^0.129.0
 
-### 推奨アプローチ
-1. **開発環境での検証**: まず開発環境で新しいバージョンをテスト
-2. **Three.js単独アップグレード**: まずThree.jsのみをr177に更新
-3. **OpenCascade.js単独アップグレード**: 次にOpenCascade.jsをv1.1.1に更新
-4. **統合テスト**: 両方のアップグレード後の統合テスト
-5. **段階的デプロイ**: 問題がないことを確認してから本番環境に適用
+# WebWorkerのThree.js importを復元
+# importScripts('./three/build/three.min.js'); // ← 復元
+```
 
-### フォールバック計画
-- 問題が発生した場合は既存のバージョンに戻せるよう準備
-- 重要な機能が動作しない場合は部分的なアップグレードを検討
+### 完全なロールバック
+```bash
+# package.jsonを元の状態に戻す
+git checkout HEAD -- package.json
+npm install
 
-## 完了チェックリスト
+# 変更したファイルを元に戻す
+git checkout HEAD -- public/js/CascadeStudioMainWorker.js
+git checkout HEAD -- src/lib/CascadeStudioCore.ts
+```
 
-### Phase 1: 準備
-- [ ] package.jsonの更新
-- [ ] 新しいWASMファイルの配置
-- [ ] 依存関係のインストール確認
+## 結論
 
-### Phase 2: WebWorker更新
-- [ ] 新しいWorkerファイルの作成
-- [ ] Worker初期化コードの更新
-- [ ] ESM対応の確認
+**現在の推奨アクション**:
+1. **即座にPhase 1を実施**: Three.js r177のみのアップグレード
+2. **OpenCascade.js v1.1.1は保留**: Phase 1の安定化後に検討
+3. **段階的検証**: 各段階での十分な動作確認
+4. **フォールバック準備**: 問題発生時の迅速な復旧手順の確立
 
-### Phase 3: Three.js対応
-- [ ] Three.js r177対応
-- [ ] 非推奨APIの更新
-- [ ] 型定義の確認
-
-### Phase 4: OpenCascade.js対応
-- [ ] OpenCascade.js v1.1.1対応
-- [ ] 初期化方法の更新
-- [ ] API互換性の確認
-
-### Phase 5: コード更新
-- [ ] DEFAULT_CAD_CODEの動作確認
-- [ ] 既存ライブラリファイルの更新
-
-### Phase 6: テスト
-- [ ] 基本機能の動作確認
-- [ ] 高度な機能のテスト
-- [ ] パフォーマンステスト
-- [ ] ブラウザ互換性テスト
-- [ ] 自動テストの実行
-
-### Phase 7: 最終確認
-- [ ] ドキュメントの更新
-- [ ] 本番環境での動作確認
-- [ ] ユーザー受け入れテスト
+この段階的アプローチにより、リスクを最小化しながら確実なアップグレードが可能になります。
 
 ## 参考資料
 
 - [Three.js Migration Guide](https://github.com/mrdoob/three.js/wiki/Migration-Guide)
 - [OpenCascade.js Documentation](https://ocjs.org/)
 - [WebWorker ESM Support](https://developer.mozilla.org/en-US/docs/Web/API/Worker/Worker)
-- [WebAssembly Best Practices](https://developer.mozilla.org/en-US/docs/WebAssembly)
+- [WebAssembly Best Practices](https://developer.mozilla.org/en-US/docs/WebAssembly) 
 - [Playwright Testing Documentation](https://playwright.dev/) 
