@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import MonacoEditor from '../components/MonacoEditor';
 import ThreeViewport, { ThreeViewportRef } from '../components/ThreeViewport';
 import DockviewLayout from '../components/DockviewLayout';

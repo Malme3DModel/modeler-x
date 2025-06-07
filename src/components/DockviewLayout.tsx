@@ -26,7 +26,16 @@ const ViewportPanel: React.FC<IDockviewPanelProps> = (props) => {
   const content = (props.params as any)?.content;
    
   return (
-    <div className="h-full w-full flex flex-col overflow-hidden" data-panel-type="viewport">
+    <div 
+      className="h-full w-full flex flex-col overflow-hidden" 
+      data-panel-type="viewport"
+      style={{
+        pointerEvents: 'auto',
+        touchAction: 'auto',
+        position: 'relative',
+        zIndex: 1
+      }}
+    >
       {content}
     </div>
   );

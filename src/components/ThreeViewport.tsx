@@ -275,12 +275,15 @@ const ThreeViewport = forwardRef<ThreeViewportRef, ThreeViewportProps>(({ onScen
 
     // レンダラーの作成
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
+    // devicePixelRatioを1に設定して高DPIスケーリングを無効化
+    renderer.setPixelRatio(1);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     
     // マウント要素のサイズを取得
     const { clientWidth, clientHeight } = mountRef.current;
+    
+    console.log(`マウント要素の実際のサイズ: ${clientWidth}x${clientHeight}`);
     
     // サイズが0または異常に大きい場合はデフォルト値を設定
     const width = clientWidth > 0 && clientWidth < 3000 ? clientWidth : 800;
@@ -288,6 +291,18 @@ const ThreeViewport = forwardRef<ThreeViewportRef, ThreeViewportProps>(({ onScen
     
     renderer.setSize(width, height);
     mountRef.current.appendChild(renderer.domElement);
+
+    // canvasに直接スタイルを適用
+    const canvas = renderer.domElement;
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.width = '100%';  // 幅を100%に設定
+    canvas.style.height = '100%'; // 高さを100%に設定
+    canvas.style.zIndex = '10';
+    canvas.style.pointerEvents = 'auto';
+    canvas.style.touchAction = 'none';
+    
     rendererRef.current = renderer;
 
     // カメラの作成
@@ -297,9 +312,18 @@ const ThreeViewport = forwardRef<ThreeViewportRef, ThreeViewportProps>(({ onScen
     cameraRef.current = camera;
 
     // コントロールの作成
-    const controls = new OrbitControls(camera, renderer.domElement);
+    const controls = new OrbitControls(camera, canvas);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
+    controls.rotateSpeed = 1.0;
+    controls.zoomSpeed = 1.2;
+    controls.panSpeed = 0.8;
+    controls.minDistance = 5;
+    controls.maxDistance = 500;
+    controls.enablePan = true;
+    controls.enableRotate = true;
+    controls.enableZoom = true;
+    controls.update();
     controlsRef.current = controls;
 
     // 初期シーンの設定
@@ -321,7 +345,15 @@ const ThreeViewport = forwardRef<ThreeViewportRef, ThreeViewportProps>(({ onScen
         return;
       }
       
-      rendererRef.current.setSize(width, height);
+      // pixelRatioを1に設定してからサイズを変更
+      rendererRef.current.setPixelRatio(1);
+      rendererRef.current.setSize(width, height, true);
+      
+      // canvasのスタイルも明示的に更新
+      const canvas = rendererRef.current.domElement;
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+      
       cameraRef.current.aspect = width / height;
       cameraRef.current.updateProjectionMatrix();
     };
@@ -376,12 +408,21 @@ const ThreeViewport = forwardRef<ThreeViewportRef, ThreeViewportProps>(({ onScen
           }
         });
       }
+
+      // OrbitControlsの明示的な破棄
+      if (controlsRef.current) {
+        controlsRef.current.dispose();
+      }
     };
   }, [createInitialScene]);
 
   return (
     <div className="relative h-full w-full bg-modeler-viewport-bg">
-      <div ref={mountRef} className="absolute inset-0">
+      {/* マウント要素 - ここにThree.jsのcanvasが追加される */}
+      <div 
+        ref={mountRef} 
+        className="absolute inset-0 w-full h-full"
+      >
         {!isLoaded && (
           <div className="absolute inset-0 flex items-center justify-center text-white">
             Loading Viewport...
@@ -389,7 +430,7 @@ const ThreeViewport = forwardRef<ThreeViewportRef, ThreeViewportProps>(({ onScen
         )}
       </div>
       {isLoaded && (
-        <div className="absolute bottom-2 right-2 text-xs text-white bg-black bg-opacity-50 px-2 py-1 rounded">
+        <div className="absolute bottom-2 right-2 text-xs text-white bg-black bg-opacity-50 px-2 py-1 rounded z-20">
           Three.js Ready
         </div>
       )}

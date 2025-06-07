@@ -9,6 +9,36 @@ body {
   overflow: hidden;
 }
 
+/* === Three.js ビューポートスタイル === */
+[data-panel-type="viewport"] {
+  pointer-events: auto !important;
+}
+
+[data-panel-type="viewport"] canvas {
+  pointer-events: auto !important;
+  touch-action: none !important;
+  z-index: 10;
+}
+
+[data-panel-type="viewport"] > div,
+[data-panel-type="viewport"] > div > div {
+  pointer-events: auto !important;
+}
+
+.threejs-viewport-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto !important;
+}
+
+/* OrbitControlsが機能するためのスタイル */
+canvas {
+  outline: none;
+  pointer-events: auto !important;
+  touch-action: none !important;
+}
+
 /* === Monaco Editor スタイル（CSS変数使用） === */
 .monaco-editor {
   background-color: var(--monaco-editor-background) !important;
