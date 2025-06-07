@@ -65,11 +65,21 @@ Modeler XはNext.js 14・TypeScript・React 18を基盤とした、モダンで�
 ### `/src/components` - UIコンポーネント
 ```typescript
 components/
-├── CADWorkerManager.tsx    # CADワーカー管理（Web Worker Interface）
 ├── DockviewLayout.tsx      # レイアウト管理（パネル・ドッキング）
 ├── MonacoEditor.tsx        # コードエディター（Monaco Editor）
 ├── ThreeViewport.tsx       # 3Dビューポート（Three.js）
-└── Header.tsx              # ヘッダー（タイトル・ステータス）
+├── Header.tsx              # ヘッダー（タイトル・ステータス）
+├── Footer.tsx              # フッター（ステータス表示）
+└── ChatPanel.tsx           # AIチャットパネル
+```
+
+### `/src/lib` - ライブラリ・インフラストラクチャ層
+```typescript
+lib/
+├── cadWorkerManager.ts     # CADワーカー管理（Web Worker Interface）
+├── CascadeStudioCore.ts    # CADカーネルコア機能
+├── tailwindTheme.ts        # Tailwindテーマ設定
+└── utils.ts                # ユーティリティ関数
 ```
 
 ### `/src/hooks` - カスタムフック

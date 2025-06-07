@@ -4,7 +4,7 @@ import React, { useRef, useCallback } from 'react';
 import MonacoEditor from '../components/MonacoEditor';
 import ThreeViewport, { ThreeViewportRef } from '../components/ThreeViewport';
 import DockviewLayout from '../components/DockviewLayout';
-import CADWorkerManager from '../components/CADWorkerManager';
+import CADWorkerManager from '../lib/cadWorkerManager';
 import ChatPanel from '../components/ChatPanel';
 import Header from '../components/Header';
 import Footer from '../components/Footer';

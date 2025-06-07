@@ -102,7 +102,11 @@ src/
 │   ├── layout.tsx       # ルートレイアウト
 │   ├── page.tsx         # メインページ
 │   └── globals.css      # グローバルスタイル
-├── components/          # Reactコンポーネント
+├── components/          # Reactコンポーネント（UI層）
+├── lib/                 # ライブラリ・インフラストラクチャ層
+│   ├── cadWorkerManager.ts  # CADワーカー管理
+│   ├── CascadeStudioCore.ts # CADカーネルコア
+│   └── utils.ts             # ユーティリティ関数
 ├── hooks/              # カスタムフック
 ├── context/            # React Context
 ├── services/           # ビジネスロジック
@@ -124,6 +128,10 @@ src/
           ↓
 ┌─────────────────┐
 │   Services      │ ← ビジネスロジック層
+└─────────────────┘
+          ↓
+┌─────────────────┐
+│      Lib        │ ← インフラストラクチャ層
 └─────────────────┘
           ↓
 ┌─────────────────┐

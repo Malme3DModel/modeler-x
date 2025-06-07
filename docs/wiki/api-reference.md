@@ -509,17 +509,36 @@ function MainApplication() {
 
 ### CADWorkerManager
 
-CADワーカーの初期化・管理・状態監視を行うコンポーネント。
+**場所**: `src/lib/cadWorkerManager.ts`
+
+CADワーカーの初期化・管理・状態監視を行うライブラリ。Web Workerインターフェースを提供し、UIコンポーネントではないため`lib`フォルダに配置されています。
 
 ```typescript
 interface CADWorkerManagerProps {
   onWorkerReady?: () => void;
-  onWorkerError?: (error: string) => void;
-  autoStart?: boolean;
+  onShapeUpdate?: (facesAndEdges: any, sceneOptions: any) => void;
+  onProgress?: (progress: { opNumber: number; opType: string }) => void;
+  onLog?: (message: string) => void;
+  onError?: (error: string) => void;
+  autoEvaluateCode?: string;
+}
+
+export interface CADWorkerInterface {
+  evaluateCode: (code: string, guiState: any) => void;
+  combineAndRenderShapes: (maxDeviation?: number, sceneOptions?: any) => void;
+  isWorking: boolean;
 }
 
 const CADWorkerManager: React.FC<CADWorkerManagerProps>
 ```
+
+#### 特徴
+
+- **Web Worker管理**: CADカーネルのワーカープロセス初期化・通信
+- **インフラストラクチャ層**: UIを持たないライブラリとして`lib`フォルダに配置
+- **自動評価**: 起動時のデフォルトコード実行機能
+- **状態同期**: cadWorkerServiceとの状態同期
+- **エラーハンドリング**: ワーカーエラーの統一処理
 
 ### Footer
 
