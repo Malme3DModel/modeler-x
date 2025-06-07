@@ -4,24 +4,15 @@ Cascade StudioをNext.js 14、TypeScript、React 18でフルリファクタリ�
 
 ## ✨ 特徴
 
-### 🚀 モダン技術スタック
 - **Next.js 14**: App Router・SSR/SSG対応の最新Reactフレームワーク
 - **TypeScript**: 完全な型安全性（any型0個達成）
 - **React 18**: 最新のReact機能・パフォーマンス最適化
 - **Monaco Editor**: VS Codeと同じエディター体験・IntelliSense対応
 - **Three.js**: 高品質3Dビジュアライゼーション
 - **OpenCASCADE.js**: 強力なCADカーネル
-- **Tailwind CSS**: モダンなスタイリングシステム
-- **Dockview**: プロフェッショナルなレイアウト管理
+- **Clean Architecture**: サービス層・責任分離・型安全性
 
-### 🏗️ 設計品質
-- **型安全性**: TypeScriptエラー0件・完全な型定義
-- **アーキテクチャ**: サービス層・責任分離・Clean Architecture
-- **パフォーマンス**: React.memo・useCallback最適化・効率的ポーリング
-- **保守性**: 設定一元管理・重複削除・単一責任原則
-- **開発体験**: カスタムフック・Context API・エラーハンドリング
-
-## 🚀 開始方法
+## 🚀 クイックスタート
 
 ### 前提条件
 
@@ -29,7 +20,7 @@ Cascade StudioをNext.js 14、TypeScript、React 18でフルリファクタリ�
 - npm または yarn
 - モダンブラウザ（Chrome、Firefox、Safari、Edge）
 
-### インストール
+### インストール・起動
 
 ```bash
 # 依存関係をインストール
@@ -47,7 +38,7 @@ npm run dev
 # プロダクション用ビルド
 npm run build
 
-# プロダクションサーバーを起動
+# プロダクションサーバー
 npm start
 
 # 型チェック
@@ -105,152 +96,58 @@ sceneShapes.push(result);
 - `TextInput(name, default)` - テキスト入力
 - `Dropdown(name, options, defaultIndex)` - ドロップダウン
 
-## 🏗️ アーキテクチャ
-
-### プロジェクト構造
+## 🏗️ プロジェクト構造
 
 ```
 modeler-x/
-├── docs/                        # ドキュメント
-│   ├── wiki/                    # 設計書・技術資料
-│   └── refactoring-plan.md      # リファクタリング計画書
-├── src/                         # ソースコード
-│   ├── app/                     # Next.js App Router
-│   │   ├── globals.css          # グローバルスタイル
-│   │   ├── layout.tsx           # レイアウト
-│   │   └── page.tsx             # メインページ
-│   ├── components/              # UIコンポーネント
-│   │   ├── CADWorkerManager.tsx # CADワーカー管理
-│   │   ├── DockviewLayout.tsx   # レイアウト管理
-│   │   ├── MonacoEditor.tsx     # コードエディター
-│   │   ├── ThreeViewport.tsx    # 3Dビューポート
-│   │   └── Header.tsx           # ヘッダー
-│   ├── hooks/                   # カスタムフック
-│   │   ├── useCADWorker.ts      # CADワーカー管理
-│   │   ├── useKeyboardShortcuts.ts # キーボードショートカット
-│   │   └── useProjectState.ts   # プロジェクト状態管理
-│   ├── context/                 # React Context
-│   │   └── ProjectContext.tsx   # プロジェクト状態
-│   ├── services/                # ビジネスロジック
-│   │   ├── cadWorkerService.ts  # CADワーカーサービス
-│   │   ├── editorService.ts     # エディターサービス
-│   │   └── typeDefinitionService.ts # 型定義サービス
-│   ├── config/                  # 設定ファイル
-│   │   └── cadConfig.ts         # CAD関連設定
-│   ├── constants/               # 定数定義
-│   │   └── defaultCode.ts       # デフォルトコード
-│   └── types/                   # 型定義
-│       └── index.ts             # 共通型定義
-├── public/                      # 静的ファイル
-│   ├── js/                      # CADワーカー・ライブラリ
-│   ├── fonts/                   # フォントファイル
-│   ├── icon/                    # アイコン
-│   └── textures/                # 3Dテクスチャ
-└── v0/                          # 旧版（参考用）
-```
-
-### レイヤー構造
-
-```
-┌─────────────────────────────────────┐
-│ UI Layer (Components)               │ ← React Components
-├─────────────────────────────────────┤
-│ Custom Hooks Layer                  │ ← useCADWorker, useProjectState
-├─────────────────────────────────────┤
-│ Context Layer                       │ ← ProjectContext (State Management)
-├─────────────────────────────────────┤
-│ Service Layer                       │ ← Business Logic
-├─────────────────────────────────────┤
-│ Config/Constants Layer              │ ← Configuration & Constants
-└─────────────────────────────────────┘
+├── docs/wiki/               # 📚 技術資料・設計書
+├── src/
+│   ├── app/                 # Next.js App Router
+│   ├── components/          # UIコンポーネント
+│   ├── hooks/               # カスタムフック
+│   ├── context/             # React Context
+│   ├── services/            # ビジネスロジック
+│   ├── config/              # 設定ファイル
+│   ├── constants/           # 定数定義
+│   └── types/               # 型定義
+├── public/                  # 静的ファイル
+└── v0/                      # 旧版（参考用）
 ```
 
 ## 🛠️ 技術スタック
 
-### フロントエンド
 - **フレームワーク**: Next.js 14 (App Router)
 - **言語**: TypeScript 5.x (厳密な型チェック)
 - **UIライブラリ**: React 18
 - **状態管理**: React Context + useReducer
 - **スタイリング**: Tailwind CSS + カスタムテーマ
-- **レイアウト**: Dockview (プロフェッショナルレイアウト)
-
-### エディター・3D
 - **エディター**: Monaco Editor (VS Code ベース)
 - **3Dレンダリング**: Three.js
 - **CADカーネル**: OpenCASCADE.js
-- **ワーカー**: Web Workers (非同期処理)
-
-### 開発・ビルド
-- **パッケージマネージャー**: npm
-- **ビルドツール**: Next.js Built-in
-- **型チェック**: TypeScript Compiler
-- **スタイリング**: PostCSS + Tailwind CSS
-
-## 📈 パフォーマンス
-
-### 最適化されたバンドルサイズ
-- **メインページ**: 289kB (First Load JS)
-- **共有チャンク**: 101kB
-- **静的生成**: プリレンダリング対応
-
-### React最適化
-- **React.memo**: 不要な再レンダリング防止
-- **useCallback**: 安定した関数参照
-- **カスタムフック**: ロジック分離・再利用性
-- **効率的ポーリング**: 100ms → 500ms間隔
-
-## 🔧 開発
-
-### 設定ファイル
-- `next.config.mjs` - Next.js設定
-- `tailwind.config.ts` - Tailwind CSS設定
-- `tsconfig.json` - TypeScript設定
-- `eslint.config.mjs` - ESLint設定
-
-### 開発コマンド
-```bash
-# 開発サーバー起動
-npm run dev
-
-# 型チェック
-npm run type-check
-
-# プロダクションビルド
-npm run build
-
-# プロダクションサーバー
-npm start
-```
+- **レイアウト**: Dockview (プロフェッショナルレイアウト)
 
 ## 📚 ドキュメント
 
 詳細な技術資料は `docs/wiki/` ディレクトリをご覧ください：
 
-- [アーキテクチャ設計書](docs/wiki/architecture.md)
-- [APIリファレンス](docs/wiki/api-reference.md)
-- [開発ガイド](docs/wiki/development-guide.md)
-- [リファクタリング計画書](docs/refactoring-plan.md)
+- **[アーキテクチャ設計書](docs/wiki/architecture.md)** - システム全体の設計思想・構成図・データフロー
+- **[APIリファレンス](docs/wiki/api-reference.md)** - コンポーネント・フック・サービスの詳細仕様
+- **[開発ガイド](docs/wiki/development-guide.md)** - 環境構築・開発ワークフロー・コーディング規約
+- **[リファクタリング計画書](docs/refactoring-plan.md)** - プロジェクト改善履歴・実施内容
 
-## 🚀 元のプロジェクトとの違い
+## 🚀 パフォーマンス
 
-### アーキテクチャの刷新
-1. **型安全性の完全実現**: TypeScriptエラー0件・any型0個
-2. **モダンフレームワーク**: Next.js 14 App Router
-3. **責任分離**: サービス層・カスタムフック・Clean Architecture
-4. **状態管理**: React Context + useReducer パターン
-5. **パフォーマンス最適化**: React.memo・効率的ポーリング
+- **バンドルサイズ**: 289kB (最適化済み)
+- **TypeScriptエラー**: 0件維持
+- **any型使用**: 0個達成
+- **React最適化**: memo・useCallback適用
+- **効率的ポーリング**: 100ms → 500ms間隔
 
-### 開発体験の向上
-1. **IntelliSense**: 完全な型定義・自動補完
-2. **エラーハンドリング**: 統一されたエラー処理
-3. **ホットリロード**: 高速な開発サイクル
-4. **デバッグ性**: 構造化されたログ・エラー表示
-5. **保守性**: 設定一元管理・重複削除
-
-## 🤝 貢献
+## 🤝 コントリビューション
 
 プルリクエストやイシューの報告を歓迎します。
+
+開発に参加される場合は、[開発ガイド](docs/wiki/development-guide.md)をご一読ください。
 
 1. Fork the Project
 2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
