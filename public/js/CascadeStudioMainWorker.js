@@ -23,11 +23,41 @@ console.error = function (err, url, line, colno, errorObj) {
 
 // Import the set of scripts we'll need to perform all the CAD operations
 importScripts(
-  './three/build/three.min.js',
   './CascadeStudioStandardLibrary.js',
   './CascadeStudioShapeToMesh.js',
   './libs/opencascade.wasm.v0-modified.js',
   './opentype.js/dist/opentype.min.js');
+
+function Vector3(x, y, z) {
+  this.x = x || 0;
+  this.y = y || 0;
+  this.z = z || 0;
+}
+
+Vector3.prototype.set = function(x, y, z) {
+  this.x = x;
+  this.y = y;
+  this.z = z;
+  return this;
+};
+
+Vector3.prototype.copy = function(v) {
+  this.x = v.x;
+  this.y = v.y;
+  this.z = v.z;
+  return this;
+};
+
+Vector3.prototype.distanceTo = function(v) {
+  const dx = this.x - v.x;
+  const dy = this.y - v.y;
+  const dz = this.z - v.z;
+  return Math.sqrt(dx * dx + dy * dy + dz * dz);
+};
+
+const THREE = {
+  Vector3: Vector3
+};
 
 // Preload the Various Fonts that are available via Text3D
 var preloadedFonts = ['/fonts/Roboto.ttf',
