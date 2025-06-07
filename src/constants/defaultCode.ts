@@ -12,8 +12,7 @@ let supportCylinder = Cylinder(8, 50);
 let cone = Cone(15, 5, 25);
 let textShape = Text3D("v1.1.1", 12, 2, 'Consolas');
 
-let sketch = new Sketch()
-  .Start([0, 0])
+let sketch = new Sketch([0, 0])
   .LineTo([20, 0])
   .LineTo([20, 15])
   .ArcTo([15, 20], [10, 20])
@@ -23,8 +22,7 @@ let sketch = new Sketch()
 
 let extrudedProfile = Extrude(sketch.Face(), [0, 0, 8]);
 
-let revolutionProfile = new Sketch()
-  .Start([5, 0])
+let revolutionProfile = new Sketch([5, 0])
   .LineTo([15, 0])
   .LineTo([12, 10])
   .LineTo([8, 10])
@@ -85,4 +83,4 @@ export const DEFAULT_PROJECT_CONFIG = {
 export const INITIAL_CONSOLE_MESSAGES = [
   '> Welcome to Modeler X!',
   '> Loading CAD Kernel...'
-] as const;    
+] as const;      
