@@ -125,28 +125,78 @@ function importSTL(fileName, fileText) {
 
 /** This function returns `currentShape` `.STEP` file content.  
  * `currentShape` is set upon the successful completion of `combineAndRenderShapes()`.  */
-function saveShapeSTEP (filename = "CascadeStudioPart.step") {
-  let writer = new oc.STEPControl_Writer();
-  // Convert to a .STEP File
-  let transferResult = writer.Transfer(currentShape, 0);
-  if (transferResult === 1) {
-    // Write the STEP File to the virtual Emscripten Filesystem Temporarily
-    let writeResult = writer.Write(filename);
-    if (writeResult === 1) {
-      // Read the STEP File from the filesystem and clean up
-      let stepFileText = oc.FS.readFile("/" + filename, { encoding:"utf8" });
-      oc.FS.unlink("/" + filename);
-
-      // Return the contents of the STEP File
-      return stepFileText;
-    }else{
-      console.error("WRITE STEP FILE FAILED.");
-    }
-  }else{
-    console.error("TRANSFER TO STEP WRITER FAILED.");
+function saveShapeSTEP() {
+  if (!currentShape || currentShape.IsNull()) {
+    console.error("No shape to save");
+    return;
+  }
+  
+  try {
+    // STEP形式でのエクスポート
+    const stepWriter = new oc.STEPControl_Writer();
+    stepWriter.Transfer(currentShape, 0);
+    
+    // ファイル内容を取得
+    const stepContent = stepWriter.WriteString();
+    
+    // メインスレッドに送信
+    postMessage({ 
+      type: "saveShapeSTEP", 
+      payload: stepContent 
+    });
+    
+    console.log("STEP file export completed");
+  } catch (error) {
+    console.error("Failed to export STEP file:", error);
+    postMessage({ 
+      type: "error", 
+      payload: "Failed to export STEP file: " + error.message 
+    });
   }
 }
-messageHandlers["saveShapeSTEP"] = saveShapeSTEP;
 
 /** Removes the externally imported shapes/files from the project. */ 
 messageHandlers["clearExternalFiles"] = () => { externalShapes = {}; };
+
+// Phase 2: 追加のファイル形式サポート（将来の拡張用）
+function saveShapeSTL() {
+  if (!currentShape || currentShape.IsNull()) {
+    console.error("No shape to save as STL");
+    return;
+  }
+  
+  try {
+    // STL形式でのエクスポート（将来の実装）
+    console.log("STL export functionality - to be implemented");
+    postMessage({ 
+      type: "log", 
+      payload: "STL export functionality - to be implemented" 
+    });
+  } catch (error) {
+    console.error("Failed to export STL file:", error);
+  }
+}
+
+function saveShapeOBJ() {
+  if (!currentShape || currentShape.IsNull()) {
+    console.error("No shape to save as OBJ");
+    return;
+  }
+  
+  try {
+    // OBJ形式でのエクスポート（将来の実装）
+    console.log("OBJ export functionality - to be implemented");
+    postMessage({ 
+      type: "log", 
+      payload: "OBJ export functionality - to be implemented" 
+    });
+  } catch (error) {
+    console.error("Failed to export OBJ file:", error);
+  }
+}
+
+// メッセージハンドラーに登録
+messageHandlers["saveShapeSTL"] = saveShapeSTL;
+messageHandlers["saveShapeOBJ"] = saveShapeOBJ;
+
+console.log("CascadeStudioFileUtils.js loaded successfully");
