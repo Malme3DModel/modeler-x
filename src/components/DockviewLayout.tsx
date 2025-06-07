@@ -6,6 +6,8 @@ import {
   DockviewReadyEvent,
   IDockviewPanelProps,
   DockviewApi,
+  themeAbyss,
+  themeDark,
 } from 'dockview';
 import 'dockview/dist/styles/dockview.css';
 
@@ -136,6 +138,7 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
           console: ConsolePanel,
         }}
         className="h-full w-full"
+        theme={themeDark}
         disableFloatingGroups={true}
       />
     </div>
