@@ -5,6 +5,7 @@ import MonacoEditor from '../components/MonacoEditor';
 import ThreeViewport, { ThreeViewportRef } from '../components/ThreeViewport';
 import DockviewLayout from '../components/DockviewLayout';
 import CADWorkerManager from '../components/CADWorkerManager';
+import ChatPanel from '../components/ChatPanel';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { ProjectProvider } from '../context/ProjectContext';
@@ -107,20 +108,9 @@ function HomeContent() {
     />
   );
 
-  // コンソールパネル（右側）
-  const consolePanel = (
-    <div className="h-full flex flex-col" >
-      <div className="p-4 h-full overflow-auto">
-         {consoleMessages.map((message, index) => (
-           <div key={index}>{message}</div>
-         ))}
-         {isCADWorkerReady && (
-           <div className="mt-2">
-             &gt; CAD Worker Status: Ready
-           </div>
-         )}
-      </div>
-    </div>
+  // チャットパネル（右側）
+  const chatPanel = (
+    <ChatPanel />
   );
 
   return (
@@ -151,7 +141,7 @@ function HomeContent() {
         <DockviewLayout
           editorPanel={editorPanel}
           cadViewPanel={cadViewPanel}
-          consolePanel={consolePanel}
+          consolePanel={chatPanel}
           editorTitle={editorTitle}
         />
       </div>
