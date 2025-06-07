@@ -1,8 +1,8 @@
 // Phase 2: OpenCascade.js v1.1.1 ESM対応WebWorker
 // ESM形式でのOpenCascade.js v1.1.1初期化
 
-// OpenCascade.js v1.1.1のESMインポート（将来の実装用）
-// import { initOpenCascade } from 'opencascade.js';
+// OpenCascade.js v1.1.1のESMインポート
+import { initOpenCascade } from 'opencascade.js';
 
 // 現在はv0.1.15を使用（段階的移行）
 // importScripts('./libs/opencascade.wasm.v0-modified.js');
@@ -160,28 +160,18 @@ async function initializeOpenCascade() {
   try {
     console.log("=== OpenCascade.js ESM Worker Initialization ===");
     
-    // Phase 2: 将来的にはESM形式で初期化
-    // const openCascade = await initOpenCascade({
-    //   locateFile: (path) => {
-    //     if (path.endsWith('.wasm')) {
-    //       return '/js/libs/opencascade.wasm';
-    //     }
-    //     return path;
-    //   }
-    // });
-    
-    // 現在はv0.1.15を使用（段階的移行）
-    const openCascade = await new opencascade({
-      locateFile(path) {
+    // Phase 2b: ESM形式で初期化
+    const openCascade = await initOpenCascade({
+      locateFile: (path) => {
         if (path.endsWith('.wasm')) {
-          return "./libs/opencascade.wasm.wasm";
+          return '/js/libs/opencascade.wasm.wasm';
         }
         return path;
       }
     });
     
     oc = openCascade;
-    console.log('OpenCascade.js initialized successfully (v0.1.15 compatibility mode)');
+    console.log('OpenCascade.js v1.1.1 initialized successfully');
     
     // フォント読み込み
     await loadFonts();
@@ -194,9 +184,10 @@ async function initializeOpenCascade() {
     
     return true;
   } catch (error) {
-    console.error('Failed to initialize OpenCascade.js:', error);
-    postMessage({ type: "error", payload: error.message });
-    return false;
+    console.error('Failed to initialize OpenCascade.js ESM:', error);
+    postMessage({ type: "error", payload: `ESM Worker failed: ${error.message}` });
+    postMessage({ type: "fallbackRequired" });
+    throw error; // Re-throw to trigger fallback
   }
 }
 
@@ -339,4 +330,4 @@ async function main() {
 }
 
 // ワーカー開始
-main(); 
+main();        

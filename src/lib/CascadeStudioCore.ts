@@ -80,9 +80,9 @@ export function createCascadeStudioCore(
           core.setWorkingState(false);
           
           // ESMワーカーでエラーが発生した場合、レガシーワーカーにフォールバック
-          if (!worker.fallbackAttempted) {
+          if (!(worker as any).fallbackAttempted) {
             console.warn("ESM Worker failed, attempting fallback to legacy worker");
-            worker.fallbackAttempted = true;
+            (worker as any).fallbackAttempted = true;
             worker.terminate();
             
             try {
@@ -122,6 +122,27 @@ export function createCascadeStudioCore(
           setConsoleOutput((prev: string) => prev + "\nError: " + payload);
           core.setWorkingState(false);
           (window as any).workerWorking = false;
+          
+          if (payload && payload.includes("ESM Worker failed")) {
+            console.warn("ESM Worker failed, attempting fallback to legacy worker");
+            setTimeout(() => {
+              try {
+                const legacyWorkerUrl = `${window.location.origin}/js/CascadeStudioMainWorker.js`;
+                const fallbackWorker = new Worker(legacyWorkerUrl);
+                
+                fallbackWorker.onmessage = worker.onmessage;
+                fallbackWorker.onerror = (fallbackError) => {
+                  console.error("Fallback Worker also failed:", fallbackError);
+                  setConsoleOutput((prev: string) => prev + "\nBoth ESM and Legacy Workers failed\n");
+                };
+                
+                (window as any).cascadeStudioWorker = fallbackWorker;
+                console.log("Successfully fell back to legacy worker");
+              } catch (fallbackError) {
+                console.error("Fallback worker initialization failed:", fallbackError);
+              }
+            }, 1000);
+          }
         });
 
         // リセットハンドラー
@@ -306,4 +327,4 @@ export function createCascadeStudioCore(
   };
 
   return core;
-} 
+}    
