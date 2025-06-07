@@ -2,17 +2,8 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
-
-interface MonacoEditorProps {
-  value: string;
-  onChange: (value: string) => void;
-  onEvaluate: () => void;
-  onSaveProject?: () => void;
-  hasUnsavedChanges?: boolean;
-  onUnsavedChangesUpdate?: (hasChanges: boolean) => void;
-  projectName?: string;
-  onProjectNameUpdate?: (name: string) => void;
-}
+import { MONACO_EDITOR_CONFIG, TYPESCRIPT_CONFIG, TYPE_DEFINITION_PATHS, DEFAULT_GUI_STATE } from '../config/cadConfig';
+import type { MonacoEditorProps } from '../types';
 
 const MonacoEditor: React.FC<MonacoEditorProps> = ({ 
   value, 
@@ -35,42 +26,42 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // TypeScript設定
+    // TypeScript設定（定数から取得）
     monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-      allowNonTsExtensions: true,
-      target: monaco.languages.typescript.ScriptTarget.ES2020,
-      allowJs: true,
-      checkJs: false,
-      moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
+      allowNonTsExtensions: TYPESCRIPT_CONFIG.allowNonTsExtensions,
+      target: monaco.languages.typescript.ScriptTarget[TYPESCRIPT_CONFIG.target],
+      allowJs: TYPESCRIPT_CONFIG.allowJs,
+      checkJs: TYPESCRIPT_CONFIG.checkJs,
+      moduleResolution: monaco.languages.typescript.ModuleResolutionKind[TYPESCRIPT_CONFIG.moduleResolution],
     });
 
-    monaco.languages.typescript.typescriptDefaults.setEagerModelSync(true);
+    monaco.languages.typescript.typescriptDefaults.setEagerModelSync(TYPESCRIPT_CONFIG.eagerModelSync);
 
-    // 型定義ファイルを読み込み
+    // 型定義ファイルを読み込み（定数から取得）
     const extraLibs: any[] = [];
     const prefix = "";
 
     // CascadeStudio型定義
-    fetch(prefix + "/js/CascadeStudioTypes.d.ts")
+    fetch(prefix + TYPE_DEFINITION_PATHS.cascadeStudio)
       .then(response => response.text())
       .then(text => {
         extraLibs.push({ 
           content: text, 
-          filePath: 'file:///CascadeStudioTypes.d.ts' 
+          filePath: 'file://' + TYPE_DEFINITION_PATHS.cascadeStudio
         });
         monaco.languages.typescript.typescriptDefaults.setExtraLibs(extraLibs);
       })
       .catch(error => console.warn('Could not load CascadeStudio type definitions:', error));
 
     // StandardLibrary型定義
-    fetch(prefix + "/js/StandardLibraryIntellisense.js")
+    fetch(prefix + TYPE_DEFINITION_PATHS.standardLibrary)
       .then(response => response.text())
       .then(text => {
         extraLibs.push({ 
           content: text, 
-          filePath: 'file:///StandardLibraryIntellisense.d.ts' 
+          filePath: 'file://' + TYPE_DEFINITION_PATHS.standardLibrary.replace('.js', '.d.ts')
         });
-        monaco.editor.createModel("", "typescript");
+        monaco.editor.createModel("", MONACO_EDITOR_CONFIG.language);
         monaco.languages.typescript.typescriptDefaults.setExtraLibs(extraLibs);
       })
       .catch(error => console.warn('Could not load StandardLibrary type definitions:', error));
@@ -130,14 +121,8 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
       // エラーハイライトをクリア
       monaco.editor.setModelMarkers(editor.getModel(), 'test', []);
 
-      // GUIStateの初期化（必要に応じて）
-      const guiState = {
-        "Radius": 30,
-        "MeshRes": 0.1,
-        "Cache?": true,
-        "GroundPlane?": true,
-        "Grid?": true
-      };
+      // GUIStateの初期化（定数から取得）
+      const guiState = { ...DEFAULT_GUI_STATE };
 
       try {
         // CADワーカーでコードを評価

@@ -52,15 +52,6 @@ canvas {
   overflow-y: auto;
 }
 
-.gui-panel::-webkit-scrollbar {
-  width: 10px;
-  background: var(--gui-scrollbar-track);
-}
-
-.gui-panel::-webkit-scrollbar-thumb {
-  background: var(--gui-scrollbar-thumb);
-}
-
 .tp-rotv {
   text-shadow: 1px 1px var(--color-shadow-text);
 }
@@ -69,23 +60,7 @@ canvas {
   text-shadow: inherit;
 }
 
-/* === Golden Layout overrides（CSS変数使用） === */
-.lm_content {
-  background-color: var(--golden-content-background) !important;
-}
-
-.lm_header {
-  background-color: var(--golden-header-background) !important;
-}
-
-.lm_tab {
-  background-color: var(--golden-tab-background) !important;
-  color: var(--golden-tab-color) !important;
-}
-
-.lm_tab.lm_active {
-  background-color: var(--golden-tab-active-background) !important;
-}
+/* === Golden Layout関連は削除（Dockviewに移行済み） === */
 
 /* === Dockview テーマ（CSS変数使用） === */
 .dockview-theme-modeler {
