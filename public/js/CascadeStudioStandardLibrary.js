@@ -419,7 +419,7 @@ function Mirror(vector, shapes, keepOriginal) {
     } else if (shapes.length >= 1) {
       let newMirroring = [];
       for (let shapeIndex = 0; shapeIndex < shapes.length; shapeIndex++) {
-        newMirroring.push(new oc.BRepBuilderAPI_Transform(shapes, mirrorTransform).Shape());
+        newMirroring.push(new oc.BRepBuilderAPI_Transform(shapes[shapeIndex], mirrorTransform).Shape());
       }
       return newMirroring;
     }
