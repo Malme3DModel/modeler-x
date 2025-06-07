@@ -1,113 +1,47 @@
 'use client';
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useRef, useCallback } from 'react';
 import MonacoEditor from '../components/MonacoEditor';
 import ThreeViewport, { ThreeViewportRef } from '../components/ThreeViewport';
 import DockviewLayout from '../components/DockviewLayout';
 import CADWorkerManager from '../components/CADWorkerManager';
 import Header from '../components/Header';
-
-// デフォルトコード
-const defaultCode = 
-`// Welcome to Cascade Studio!   Here are some useful functions:
-//  Translate(), Rotate(), Scale(), Mirror(), Union(), Difference(), Intersection()
-//  Box(), Sphere(), Cylinder(), Cone(), Text3D(), Polygon()
-//  Offset(), Extrude(), RotatedExtrude(), Revolve(), Pipe(), Loft(), 
-//  FilletEdges(), ChamferEdges(),
-//  Slider(), Checkbox(), TextInput(), Dropdown()
-
-let holeRadius = Slider("Radius", 30 , 20 , 40);
-
-let sphere     = Sphere(50);
-let cylinderZ  =                     Cylinder(holeRadius, 200, true);
-let cylinderY  = Rotate([0,1,0], 90, Cylinder(holeRadius, 200, true));
-let cylinderX  = Rotate([1,0,0], 90, Cylinder(holeRadius, 200, true));
-
-Translate([0, 0, 50], Difference(sphere, [cylinderX, cylinderY, cylinderZ]));
-
-Translate([-25, 0, 40], Text3D("Hi!", 36, 0.15, 'Consolas'));
-
-// Don't forget to push imported or oc-defined shapes into sceneShapes to add them to the workspace!`;
+import { ProjectProvider } from '../context/ProjectContext';
+import { useProjectState } from '../hooks/useProjectState';
+import { DEFAULT_CAD_CODE } from '../constants/defaultCode';
 
 
-export default function Home() {
-  const [code, setCode] = useState(defaultCode);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [projectName, setProjectName] = useState('Untitled');
-  const [isCADWorkerReady, setIsCADWorkerReady] = useState(false);
-  const [consoleMessages, setConsoleMessages] = useState<string[]>([
-    '> Welcome to Modeler X!',
-    '> Loading CAD Kernel...'
-  ]);
+// メインコンポーネント（プロバイダー内）
+function HomeContent() {
+  const {
+    code,
+    editorTitle,
+    isCADWorkerReady,
+    consoleMessages,
+    hasUnsavedChanges,
+    projectName,
+    handleCodeChange,
+    handleEvaluate,
+    handleSaveProject,
+    handleProjectNameUpdate,
+    handleUnsavedChangesUpdate,
+    cadWorkerCallbacks
+  } = useProjectState();
+  
   const threejsViewportRef = useRef<ThreeViewportRef>(null);
-
-  const handleCodeChange = useCallback((newCode: string) => {
-    setCode(newCode);
-  }, []);
-
-  const handleEvaluate = useCallback(() => {
-    // この関数は現在MonacoEditorコンポーネント内でCADワーカーを直接呼び出しているため、
-    // 追加の処理が必要な場合はここに実装
-    console.log('Code evaluation triggered');
-  }, []);
-
-  const handleSaveProject = useCallback(() => {
-    // TODO: プロジェクト保存機能を実装
-    console.log('Saving project:', projectName);
-    setHasUnsavedChanges(false);
-  }, [projectName]);
-
-  const handleProjectNameUpdate = useCallback((name: string) => {
-    setProjectName(name);
-  }, []);
-
-  const handleUnsavedChangesUpdate = useCallback((hasChanges: boolean) => {
-    setHasUnsavedChanges(hasChanges);
-  }, []);
-
-  const handleWorkerReady = useCallback(() => {
-    setIsCADWorkerReady(true);
-    setConsoleMessages(prev => [...prev, '> CAD Kernel loaded successfully!', '> Ready to evaluate code']);
-  }, []);
 
   // CADワーカーからの形状更新を処理
   const handleShapeUpdate = useCallback((facesAndEdges: any, sceneOptions: any) => {
     if (threejsViewportRef.current?.updateShape) {
       threejsViewportRef.current.updateShape(facesAndEdges, sceneOptions);
     }
-  }, []);
-
-  // CADワーカーからの進捗更新を処理
-  const handleProgress = useCallback((progress: { opNumber: number; opType: string }) => {
-    const progressMessage = `> Generating Model${'.' .repeat(progress.opNumber)}${progress.opType ? ` (${progress.opType})` : ''}`;
-    setConsoleMessages(prev => {
-      const newMessages = [...prev];
-      // 最後のメッセージが進捗メッセージの場合は置き換え、そうでなければ追加
-      if (newMessages.length > 0 && newMessages[newMessages.length - 1].startsWith('> Generating Model')) {
-        newMessages[newMessages.length - 1] = progressMessage;
-      } else {
-        newMessages.push(progressMessage);
-      }
-      return newMessages;
-    });
-  }, []);
-
-  // CADワーカーからのログメッセージを処理
-  const handleLog = useCallback((message: string) => {
-    setConsoleMessages(prev => [...prev, `> ${message}`]);
-  }, []);
-
-  // CADワーカーからのエラーメッセージを処理
-  const handleError = useCallback((error: string) => {
-    setConsoleMessages(prev => [...prev, `> ERROR: ${error}`]);
+    // 循環参照を避けるため、ここではThreeViewport更新のみ行う
   }, []);
 
   // ThreeViewportのシーン準備完了時の処理
   const handleSceneReady = useCallback((scene: any) => {
+    // 将来的にシーン設定が必要な場合はここに実装
   }, []);
-
-  // エディタータイトルの生成
-  const editorTitle = `${hasUnsavedChanges ? '* ' : ''}${projectName}.ts`;
 
   // 左パネル（エディター）
   const leftPanel = (
@@ -135,7 +69,7 @@ export default function Home() {
   const rightBottomPanel = (
     <div className="h-full bg-modeler-background-primary flex flex-col">
       <div className="p-4 h-full overflow-auto text-white font-mono text-sm">
-                 {consoleMessages.map((message, index) => (
+         {consoleMessages.map((message, index) => (
            <div key={index} className="text-modeler-control-text-secondary">{message}</div>
          ))}
          {isCADWorkerReady && (
@@ -151,12 +85,12 @@ export default function Home() {
     <div className="h-screen flex flex-col bg-modeler-background-primary">
       {/* CADワーカーマネージャー（非表示コンポーネント） */}
       <CADWorkerManager
-        onWorkerReady={handleWorkerReady}
+        onWorkerReady={cadWorkerCallbacks.onWorkerReady}
         onShapeUpdate={handleShapeUpdate}
-        onProgress={handleProgress}
-        onLog={handleLog}
-        onError={handleError}
-        autoEvaluateCode={defaultCode}
+        onProgress={cadWorkerCallbacks.onProgress}
+        onLog={cadWorkerCallbacks.onLog}
+        onError={cadWorkerCallbacks.onError}
+        autoEvaluateCode={DEFAULT_CAD_CODE}
       />
 
       {/* トップナビゲーション */}
@@ -177,5 +111,14 @@ export default function Home() {
         />
       </div>
     </div>
+  );
+}
+
+// プロバイダーでラップしたメインコンポーネント
+export default function Home() {
+  return (
+    <ProjectProvider>
+      <HomeContent />
+    </ProjectProvider>
   );
 }
