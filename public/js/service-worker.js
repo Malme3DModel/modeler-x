@@ -14,7 +14,6 @@ var offlineFundamentals = [
   "manifest.webmanifest",
   "icon/android-chrome-192x192.png",
   /*"js/three/build/three.d.ts",
-  "js/three/build/three.min.js",
   "js/three/examples/js/controls/DragControls.js",
   "js/three/examples/js/controls/OrbitControls.js",
   "js/three/examples/js/controls/TransformControls.js",
