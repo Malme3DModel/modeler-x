@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useCallback } from 'react';
+import { cadWorkerService } from '@/services/cadWorkerService';
 
 interface CADWorkerManagerProps {
   onWorkerReady?: () => void;
@@ -65,8 +66,12 @@ const CADWorkerManager: React.FC<CADWorkerManagerProps> = ({
     };
   }, []);
 
+  const hasAutoEvaluatedRef = useRef(false);
+  
   const executeAutoEvaluation = useCallback((cadWorkerInterface: CADWorkerInterface) => {
-    if (!autoEvaluateCode) return;
+    if (!autoEvaluateCode || hasAutoEvaluatedRef.current) return;
+
+    hasAutoEvaluatedRef.current = true; // 1回だけ実行されるように制御
 
     if (onLog) {
       onLog('Auto-evaluating startup code...');
@@ -128,6 +133,10 @@ const CADWorkerManager: React.FC<CADWorkerManagerProps> = ({
         error: (payload: string) => {
           isWorkingRef.current = false;
           (window as any).workerWorking = false;
+          // CADワーカーサービスとの状態同期
+          if (typeof window !== 'undefined' && (window as any).cadWorkerService) {
+            (window as any).cadWorkerService.resetWorking();
+          }
           if (onError) {
             onError(payload);
           }
@@ -137,6 +146,10 @@ const CADWorkerManager: React.FC<CADWorkerManagerProps> = ({
         resetWorking: () => {
           isWorkingRef.current = false;
           (window as any).workerWorking = false;
+          // CADワーカーサービスとの状態同期
+          if (typeof window !== 'undefined' && (window as any).cadWorkerService) {
+            (window as any).cadWorkerService.resetWorking();
+          }
           return null;
         },
         
@@ -173,6 +186,9 @@ const CADWorkerManager: React.FC<CADWorkerManagerProps> = ({
 
       // グローバル変数の初期化
       (window as any).workerWorking = false;
+      
+      // CADワーカーサービスをグローバルに公開（フック以外からのアクセス用）
+      (window as any).cadWorkerService = cadWorkerService;
 
     } catch (error) {
       console.error('Failed to create CAD Worker:', error);
@@ -189,6 +205,7 @@ const CADWorkerManager: React.FC<CADWorkerManagerProps> = ({
       }
       delete (window as any).cadWorker;
       delete (window as any).workerWorking;
+      delete (window as any).cadWorkerService;
     };
   }, [onWorkerReady, onShapeUpdate, onProgress, onLog, onError, executeAutoEvaluation, createWorkerInterface]);
 
