@@ -8,6 +8,7 @@ import { useCADWorker } from '@/hooks/useCADWorker';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { EditorService } from '@/services/editorService';
 import { TypeDefinitionService } from '@/services/typeDefinitionService';
+import { CodeExecutionService } from '@/services/codeExecutionService';
 
 const MonacoEditor: React.FC<MonacoEditorProps> = memo(({ 
   value, 
@@ -84,6 +85,9 @@ const MonacoEditor: React.FC<MonacoEditorProps> = memo(({
 
       // コード折りたたみを設定
       EditorService.setupCodeFolding(editor, value);
+
+      // CodeExecutionServiceにエディターの参照を設定
+      CodeExecutionService.setMonacoEditorRef(editorRef);
 
       setIsLoaded(true);
       console.log('Monaco Editor initialized successfully');

@@ -110,7 +110,16 @@ function HomeContent() {
 
   // チャットパネル（右側）
   const chatPanel = (
-    <ChatPanel />
+    <ChatPanel 
+      onExecuteCode={(code) => {
+        // AIが生成したコードをMonacoEditorに設定して実行
+        handleCodeChange(code);
+        // 少し遅延してから実行（エディターの更新を待つ）
+        setTimeout(() => {
+          handleEvaluate();
+        }, 100);
+      }}
+    />
   );
 
   return (
