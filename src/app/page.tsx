@@ -5,6 +5,7 @@ import MonacoEditor from '../components/MonacoEditor';
 import ThreeViewport, { ThreeViewportRef } from '../components/ThreeViewport';
 import DockviewLayout from '../components/DockviewLayout';
 import CADWorkerManager from '../components/CADWorkerManager';
+import ChatPanel from '../components/ChatPanel';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { ProjectProvider } from '../context/ProjectContext';
@@ -85,8 +86,8 @@ function HomeContent() {
     await exportOBJ();
   }, [exportOBJ]);
 
-  // 左パネル（エディター）
-  const leftPanel = (
+  // エディターパネル（左側非アクティブ）
+  const editorPanel = (
     <MonacoEditor
       value={code}
       onChange={handleCodeChange}
@@ -99,28 +100,17 @@ function HomeContent() {
     />
   );
 
-  // 右上パネル（3Dビューポート）
-  const rightTopPanel = (
+  // CADビューパネル（左側アクティブ）
+  const cadViewPanel = (
     <ThreeViewport 
       ref={threejsViewportRef}
       onSceneReady={handleSceneReady}
     />
   );
 
-  // 右下パネル（コンソール）
-  const rightBottomPanel = (
-    <div className="h-full flex flex-col" >
-      <div className="p-4 h-full overflow-auto">
-         {consoleMessages.map((message, index) => (
-           <div key={index}>{message}</div>
-         ))}
-         {isCADWorkerReady && (
-           <div className="mt-2">
-             &gt; CAD Worker Status: Ready
-           </div>
-         )}
-      </div>
-    </div>
+  // チャットパネル（右側）
+  const chatPanel = (
+    <ChatPanel />
   );
 
   return (
@@ -149,9 +139,9 @@ function HomeContent() {
       {/* メインコンテンツエリア - Dockview */}
       <div className="flex-1 overflow-hidden">
         <DockviewLayout
-          leftPanel={leftPanel}
-          rightTopPanel={rightTopPanel}
-          rightBottomPanel={rightBottomPanel}
+          editorPanel={editorPanel}
+          cadViewPanel={cadViewPanel}
+          consolePanel={chatPanel}
           editorTitle={editorTitle}
         />
       </div>

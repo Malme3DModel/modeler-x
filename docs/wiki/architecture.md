@@ -65,21 +65,19 @@ Modeler XはNext.js 14・TypeScript・React 18を基盤とした、モダンで�
 ### `/src/components` - UIコンポーネント
 ```typescript
 components/
-├── Header.tsx              # 🎨 VSCodeライクなモダンヘッダー（Save/Load/Export）
-├── Footer.tsx              # 🆕 ステータス表示統合フッター（リアルタイム監視）
-├── MonacoEditor.tsx        # コードエディター（Monaco Editor・TypeScript）
-├── ThreeViewport.tsx       # 3Dビューポート（Three.js・WebGL）
+├── CADWorkerManager.tsx    # CADワーカー管理（Web Worker Interface）
 ├── DockviewLayout.tsx      # レイアウト管理（パネル・ドッキング）
-└── CADWorkerManager.tsx    # CADワーカー管理（Web Worker Interface）
+├── MonacoEditor.tsx        # コードエディター（Monaco Editor）
+├── ThreeViewport.tsx       # 3Dビューポート（Three.js）
+└── Header.tsx              # ヘッダー（タイトル・ステータス）
 ```
 
 ### `/src/hooks` - カスタムフック
 ```typescript
 hooks/
-├── useProjectState.ts      # プロジェクト状態管理インターフェース
-├── useProjectActions.ts    # 🆕 プロジェクト操作（保存・読み込み・エクスポート）
 ├── useCADWorker.ts         # CADワーカー管理・状態監視
-└── useKeyboardShortcuts.ts # キーボードショートカット管理
+├── useKeyboardShortcuts.ts # キーボードショートカット管理
+└── useProjectState.ts      # プロジェクト状態管理インターフェース
 ```
 
 ### `/src/context` - React Context
@@ -91,8 +89,6 @@ context/
 ### `/src/services` - ビジネスロジック
 ```typescript
 services/
-├── projectService.ts         # 🆕 プロジェクト保存・読み込み・ファイル操作
-├── exportService.ts          # 🆕 モデルエクスポート（STEP/STL/OBJ）
 ├── cadWorkerService.ts       # CADワーカー操作・ビジネスロジック
 ├── editorService.ts          # エディター評価・コード解析
 └── typeDefinitionService.ts  # TypeScript型定義管理
@@ -173,44 +169,6 @@ graph TB
     G --> H[UI Update]
 ```
 
-### 4. プロジェクト操作フロー（新規追加）
-
-```mermaid
-sequenceDiagram
-    participant User as ユーザー
-    participant Header as Header Component
-    participant Hook as useProjectActions
-    participant Service as ProjectService/ExportService
-    participant Context as ProjectContext
-
-    User->>Header: Save/Load/Export クリック
-    Header->>Hook: 操作関数呼び出し
-    Hook->>Service: ビジネスロジック実行
-    Service->>Service: ファイル操作・データ処理
-    Service-->>Hook: 操作結果
-    Hook->>Context: 状態更新（必要に応じて）
-    Context-->>Header: 状態変更通知
-    Header-->>User: UI更新・フィードバック
-```
-
-### 5. Clean Architecture レイヤー分離
-
-```mermaid
-graph TD
-    A[UI Layer<br/>Components] --> B[Hook Layer<br/>Custom Hooks]
-    B --> C[Service Layer<br/>Business Logic]
-    B --> D[Context Layer<br/>State Management]
-    
-    A1[Header.tsx<br/>MonacoEditor.tsx] --> B1[useProjectActions<br/>useProjectState]
-    B1 --> C1[ProjectService<br/>ExportService]
-    B1 --> D1[ProjectContext]
-    
-    style A fill:#e1f5fe
-    style B fill:#f3e5f5
-    style C fill:#e8f5e8
-    style D fill:#fff3e0
-```
-
 ## 🎯 設計原則
 
 ### 1. 型安全性（Type Safety）
@@ -250,15 +208,21 @@ graph TD
 - **useTransition**: UI応答性改善
 - **Suspense**: 非同期処理の改善
 
-### Tailwind CSS
+### Tailwind CSS v4
 - **Utility-First**: 高速スタイリング
-- **カスタムテーマ**: CADアプリに最適化
+- **統一テーマシステム**: VS Code Darkテーマを全コンポーネントに適用
+- **@themeディレクティブ**: CSS変数ベースのテーマ管理
 - **レスポンシブ対応**: モバイルフレンドリー
 
 ### Monaco Editor
 - **VS Code体験**: プロフェッショナルエディター
 - **TypeScript統合**: IntelliSense・型チェック
-- **カスタマイズ性**: テーマ・設定の柔軟性
+- **vs-darkテーマ**: Visual Studio Darkテーマを適用
+
+### DockView
+- **レイアウト管理**: 柔軟なパネル配置システム
+- **themeDarkテーマ**: Visual Studio Darkテーマを適用
+- **統一UI**: Monaco Editorとの一貫したテーマ
 
 ### Three.js
 - **高性能3D**: WebGL最適化

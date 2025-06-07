@@ -273,7 +273,7 @@ const handleCodeEvaluation = async () => {
 // エディター設定
 const setupEditor = (editor: MonacoEditor) => {
   editorService.setupCodeFolding(editor);
-  editorService.setEditorTheme('vs-dark');
+  editorService.setEditorTheme('vs-dark'); // Visual Studio Darkテーマ
 };
 ```
 
@@ -412,7 +412,7 @@ function CodeEditor() {
     <MonacoEditor
       value={code}
       onChange={setCode}
-      theme="vs-dark"
+      theme="vs-dark" // Visual Studio Darkテーマ
       language="typescript"
       onMount={handleEditorMount}
       options={{
@@ -466,6 +466,46 @@ function ModelViewer() {
   );
 }
 ```
+
+### DockviewLayout
+
+DockViewライブラリを使用したレイアウト管理コンポーネント。Visual Studio Darkテーマを適用。
+
+```typescript
+interface DockviewLayoutProps {
+  editorPanel: React.ReactNode;
+  cadViewPanel: React.ReactNode;
+  consolePanel: React.ReactNode;
+  editorTitle?: string;
+}
+
+const DockviewLayout: React.FC<DockviewLayoutProps>
+```
+
+#### 使用例
+
+```typescript
+function MainApplication() {
+  const [editorTitle, setEditorTitle] = useState('* Untitled.ts');
+
+  return (
+    <DockviewLayout
+      editorPanel={<MonacoEditor value={code} onChange={setCode} theme="vs-dark" />}
+      cadViewPanel={<ThreeViewport shapes={shapes} />}
+      consolePanel={<Console output={consoleOutput} />}
+      editorTitle={editorTitle}
+    />
+  );
+}
+```
+
+#### 特徴
+
+- **themeDarkテーマ**: DockViewのVisual Studio Darkテーマを自動適用
+- **3パネルレイアウト**: CADビュー（左アクティブ）、エディター（左非アクティブ）、コンソール（右側）の配置
+- **レスポンシブ**: パネルサイズの動的調整
+- **統一UI**: Monaco Editorとの一貫したテーマ
+- **初期フォーカス**: CADビューが初期状態でアクティブ
 
 ### CADWorkerManager
 
@@ -644,12 +684,18 @@ interface GUIState {
 }
 
 interface MonacoConfig {
-  theme: string;
+  theme: string; // 'vs-dark' | 'vs-light' | 'hc-black'
   fontSize: number;
   tabSize: number;
   minimap: { enabled: boolean };
   scrollBeyondLastLine: boolean;
   automaticLayout: boolean;
+}
+
+// DockView テーマ設定
+interface DockviewConfig {
+  theme: 'themeDark' | 'themeLight' | 'themeAbyss' | 'themeHighContrast';
+  disableFloatingGroups: boolean;
 }
 ```
 

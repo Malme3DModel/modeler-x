@@ -164,11 +164,9 @@ modeler-x/
 
 詳細な技術資料は `docs/wiki/` ディレクトリをご覧ください：
 
-- **[アーキテクチャ設計書](docs/wiki/architecture.md)** - システム全体の設計思想・構成図・データフロー
-- **[UI設計ガイド](docs/wiki/ui-design-guide.md)** - 🎨 VSCodeライクなモダンUI・デザインシステム
+- **[アーキテクチャ設計書](docs/wiki/architecture.md)** - システム全体の設計思想・デザインシステム
 - **[APIリファレンス](docs/wiki/api-reference.md)** - コンポーネント・フック・サービスの詳細仕様
-- **[開発ガイド](docs/wiki/development-guide.md)** - 環境構築・開発ワークフロー・コーディング規約
-- **[リファクタリング計画書](docs/refactoring-plan.md)** - プロジェクト改善履歴・実施内容
+- **[開発ガイド](docs/wiki/development-guide.md)** - 環境構築・開発ワークフロー・施内容
 
 ## 🚀 パフォーマンス
 

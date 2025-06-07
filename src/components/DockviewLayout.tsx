@@ -12,9 +12,9 @@ import {
 import 'dockview/dist/styles/dockview.css';
 
 interface DockviewLayoutProps {
-  leftPanel: React.ReactNode;
-  rightTopPanel: React.ReactNode;
-  rightBottomPanel: React.ReactNode;
+  editorPanel: React.ReactNode;
+  cadViewPanel: React.ReactNode;
+  consolePanel: React.ReactNode;
   editorTitle?: string;
 }
 
@@ -49,9 +49,9 @@ const ConsolePanel: React.FC<IDockviewPanelProps> = (props) => {
 };
 
 const DockviewLayout: React.FC<DockviewLayoutProps> = ({
-  leftPanel,
-  rightTopPanel,
-  rightBottomPanel,
+  editorPanel,
+  cadViewPanel,
+  consolePanel,
   editorTitle = '* Untitled.ts',
 }) => {
   const apiRef = useRef<DockviewApi | null>(null);
@@ -59,62 +59,59 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
   const onReady = (event: DockviewReadyEvent) => {
     apiRef.current = event.api;
 
-    // エディタパネルを追加
-    event.api.addPanel({
-      id: 'editor',
-      component: 'editor',
-      params: { content: leftPanel },
-      title: editorTitle,
-    });
-
-    // ビューポートパネルを追加
+    // CADビューパネルを最初に追加（左側のアクティブパネル）
     event.api.addPanel({
       id: 'viewport',
       component: 'viewport',
-      params: { content: rightTopPanel },
+      params: { content: cadViewPanel },
       title: 'CAD View',
-      position: { referencePanel: 'editor', direction: 'right' },
     });
 
-    // コンソールパネルを追加
+    // エディタパネルを同じグループに追加（左側の非アクティブパネル）
+    event.api.addPanel({
+      id: 'editor',
+      component: 'editor',
+      params: { content: editorPanel },
+      title: editorTitle,
+      position: { referencePanel: 'viewport', direction: 'within' },
+    });
+
+    // コンソールパネルを右側に追加
     event.api.addPanel({
       id: 'console',
       component: 'console',
-      params: { content: rightBottomPanel },
+      params: { content: consolePanel },
       title: 'Console',
-      position: { referencePanel: 'viewport', direction: 'below' },
+      position: { referencePanel: 'viewport', direction: 'right' },
     });
 
-    // 初期レイアウトの設定（直接実行）
-    try {
-      // dockviewの設定 - apiを通じて直接レイアウトを調整
-      const dockviewApi = event.api as any; // anyを使用して型エラーを回避
-      if (dockviewApi.groups && dockviewApi.groups.length >= 2) {
-        // パネル比率の設定は実装次第で異なる可能性があるため、エラーハンドリングで囲む
-        try {
-          // 左右のパネルの比率を調整（可能であれば）
-          if (typeof dockviewApi.setSplitProportion === 'function') {
-            dockviewApi.setSplitProportion(0, 0.6);
-          }
-          
-          // 右側のパネル内でビューポートとコンソールの比率を調整
-          const rightGroup = dockviewApi.groups.find((g: any) => 
-            g.panels && g.panels.some((p: any) => p.id === 'viewport')
-          );
-          
-          if (rightGroup) {
-            const rightGroupIndex = dockviewApi.groups.indexOf(rightGroup);
-            if (rightGroupIndex >= 0 && typeof dockviewApi.setSplitProportion === 'function') {
-              dockviewApi.setSplitProportion(rightGroupIndex, 0.7);
+    // 初期レイアウトの設定
+    setTimeout(() => {
+      try {
+        // CADViewをアクティブにする
+        const viewportPanel = event.api.getPanel('viewport');
+        if (viewportPanel) {
+          viewportPanel.api.setActive();
+        }
+
+        // 左右のパネル比率を調整（左側70%、右側30%）
+        const groups = (event.api as any).groups;
+        if (groups && groups.length >= 2) {
+          // 左右の分割比率を設定
+          const rootSplitview = (event.api as any).gridview?.root;
+          if (rootSplitview && typeof rootSplitview.setViewSize === 'function') {
+            try {
+              // 左側のグループを70%に設定
+              rootSplitview.setViewSize(0, rootSplitview.size * 0.7);
+            } catch (e) {
+              console.warn('Failed to set split proportion:', e);
             }
           }
-        } catch (e) {
-          console.warn('Split proportion adjustment not supported:', e);
         }
+      } catch (error) {
+        console.error('Error setting initial layout:', error);
       }
-    } catch (error) {
-      console.error('Error setting initial layout proportions', error);
-    }
+    }, 100); // 少し遅延させてレイアウトが安定してから実行
   };
 
   // タイトルの更新
@@ -129,7 +126,6 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
 
   return (
     <div className="h-full w-full">
-
       <DockviewReact
         onReady={onReady}
         components={{
