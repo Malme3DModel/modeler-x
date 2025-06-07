@@ -55,6 +55,7 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
   editorTitle = '* Untitled.ts',
 }) => {
   const apiRef = useRef<DockviewApi | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const onReady = (event: DockviewReadyEvent) => {
     apiRef.current = event.api;
@@ -85,6 +86,28 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
       position: { referencePanel: 'viewport', direction: 'right' },
     });
 
+    // 左右の比率を設定する関数
+    const setLayoutProportions = () => {
+      try {
+        const viewportPanel = event.api.getPanel('viewport');
+        const consolePanel = event.api.getPanel('console');
+        
+        if (viewportPanel && consolePanel && viewportPanel.group && consolePanel.group && containerRef.current) {
+          // 全体の幅を取得
+          const totalWidth = containerRef.current.clientWidth;
+          const leftWidth = Math.floor(totalWidth * 0.7);
+          const rightWidth = totalWidth - leftWidth;
+          
+          // 左側グループ（CADView + Editor）を70%に設定
+          viewportPanel.group.api.setSize({ width: leftWidth });
+          // 右側グループ（Console）を30%に設定
+          consolePanel.group.api.setSize({ width: rightWidth });
+        }
+      } catch (error) {
+        console.error('Error setting layout proportions:', error);
+      }
+    };
+
     // 初期レイアウトの設定
     setTimeout(() => {
       try {
@@ -94,24 +117,22 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
           viewportPanel.api.setActive();
         }
 
-        // 左右のパネル比率を調整（左側70%、右側30%）
-        const groups = (event.api as any).groups;
-        if (groups && groups.length >= 2) {
-          // 左右の分割比率を設定
-          const rootSplitview = (event.api as any).gridview?.root;
-          if (rootSplitview && typeof rootSplitview.setViewSize === 'function') {
-            try {
-              // 左側のグループを70%に設定
-              rootSplitview.setViewSize(0, rootSplitview.size * 0.7);
-            } catch (e) {
-              console.warn('Failed to set split proportion:', e);
-            }
-          }
+        // 比率を設定
+        setLayoutProportions();
+        
+        // リサイズイベントリスナーを追加して比率を維持
+        const resizeObserver = new ResizeObserver(() => {
+          setLayoutProportions();
+        });
+        
+        if (containerRef.current) {
+          resizeObserver.observe(containerRef.current);
         }
+        
       } catch (error) {
         console.error('Error setting initial layout:', error);
       }
-    }, 100); // 少し遅延させてレイアウトが安定してから実行
+    }, 300); // レイアウトが完全に安定してから実行
   };
 
   // タイトルの更新
@@ -125,7 +146,7 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
   }, [editorTitle]);
 
   return (
-    <div className="h-full w-full">
+    <div ref={containerRef} className="h-full w-full">
       <DockviewReact
         onReady={onReady}
         components={{
