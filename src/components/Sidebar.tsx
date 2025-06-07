@@ -24,7 +24,7 @@ const FileTreeNode: React.FC<{
   return (
     <div>
       <div 
-        className="flex items-center h-6 text-sm text-modeler-control-text-secondary hover:text-modeler-control-text-primary hover:bg-modeler-control-button-hover cursor-pointer"
+        className="flex items-center h-6 text-sm text-modeler-sideBar-foreground hover:text-modeler-sideBar-foreground hover:bg-modeler-activityBar-activeBackground cursor-pointer"
         style={{ paddingLeft }}
         onClick={() => item.type === 'folder' && onToggle?.(item.name)}
       >
@@ -113,12 +113,12 @@ const ExplorerView: React.FC = () => {
 
   return (
     <div className="h-full">
-      <div className="p-2 text-xs font-semibold text-modeler-control-text-primary uppercase tracking-wide border-b border-modeler-control-border">
+      <div className="p-2 text-xs font-semibold text-modeler-sideBar-foreground uppercase tracking-wide border-b border-modeler-sideBar-border">
         Explorer
       </div>
       <div className="p-1">
         <div className="mb-2">
-          <div className="flex items-center text-xs font-semibold text-modeler-control-text-primary mb-1">
+          <div className="flex items-center text-xs font-semibold text-modeler-sideBar-foreground mb-1">
             <ChevronDown size={12} className="mr-1" />
             MODELER-X
           </div>
@@ -148,20 +148,20 @@ const CADToolsView: React.FC = () => {
 
   return (
     <div className="h-full">
-      <div className="p-2 text-xs font-semibold text-modeler-control-text-primary uppercase tracking-wide border-b border-modeler-control-border">
+      <div className="p-2 text-xs font-semibold text-modeler-sideBar-foreground uppercase tracking-wide border-b border-modeler-sideBar-border">
         CAD Tools
       </div>
       <div className="p-2">
         {cadFunctions.map((category, index) => (
           <div key={index} className="mb-4">
-            <div className="text-xs font-semibold text-modeler-control-text-primary mb-2">
+            <div className="text-xs font-semibold text-modeler-sideBar-foreground mb-2">
               {category.category}
             </div>
             <div className="space-y-1">
               {category.items.map((item, itemIndex) => (
                 <div 
                   key={itemIndex}
-                  className="text-sm text-modeler-control-text-secondary hover:text-modeler-control-text-primary hover:bg-modeler-control-button-hover px-2 py-1 rounded cursor-pointer"
+                  className="text-sm text-modeler-control-text-secondary hover:text-modeler-sideBar-foreground hover:bg-modeler-activityBar-activeBackground px-2 py-1 rounded cursor-pointer"
                 >
                   {item}
                 </div>
@@ -186,20 +186,20 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, isVisible, width = 240 })
       case 'search':
         return (
           <div className="p-4 text-modeler-control-text-secondary">
-            <div className="text-xs font-semibold text-modeler-control-text-primary uppercase tracking-wide mb-4">
+            <div className="text-xs font-semibold text-modeler-sideBar-foreground uppercase tracking-wide mb-4">
               Search
             </div>
             <input 
               type="text" 
               placeholder="Search files..."
-              className="w-full px-3 py-2 bg-modeler-control-base border border-modeler-control-border rounded text-sm text-modeler-control-text-primary placeholder-modeler-control-text-secondary focus:outline-none focus:border-modeler-accent-link"
+              className="w-full px-3 py-2 bg-modeler-control-base border border-modeler-sideBar-border rounded text-sm text-modeler-sideBar-foreground placeholder-modeler-control-text-secondary focus:outline-none focus:border-modeler-accent-link"
             />
           </div>
         );
       case 'scm':
         return (
           <div className="p-4 text-modeler-control-text-secondary">
-            <div className="text-xs font-semibold text-modeler-control-text-primary uppercase tracking-wide mb-4">
+            <div className="text-xs font-semibold text-modeler-sideBar-foreground uppercase tracking-wide mb-4">
               Source Control
             </div>
             <div className="text-sm">No changes detected</div>
@@ -216,7 +216,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, isVisible, width = 240 })
 
   return (
     <div 
-      className="bg-modeler-background-primary border-r border-modeler-control-border flex flex-col"
+      className="bg-modeler-sideBar-background border-r border-modeler-sideBar-border flex flex-col"
       style={{ width }}
     >
       {renderContent()}

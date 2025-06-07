@@ -25,7 +25,7 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeView, onViewChange }) =
   ];
 
   return (
-    <div className="w-12 bg-modeler-background-secondary border-r border-modeler-control-border flex flex-col">
+    <div className="w-12 bg-modeler-activityBar-background border-r border-modeler-activityBar-border flex flex-col">
       {/* Activity buttons */}
       <div className="flex-1">
         {activities.map((activity) => {
@@ -40,15 +40,15 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeView, onViewChange }) =
                 w-12 h-12 flex items-center justify-center relative
                 transition-colors duration-150
                 ${isActive 
-                  ? 'text-modeler-control-text-primary bg-modeler-control-button-active' 
-                  : 'text-modeler-control-text-secondary hover:text-modeler-control-text-primary hover:bg-modeler-control-button-hover'
+                  ? 'text-modeler-activityBar-foreground bg-modeler-activityBar-activeBackground' 
+                  : 'text-modeler-activityBar-inactiveForeground hover:text-modeler-activityBar-foreground hover:bg-modeler-activityBar-activeBackground'
                 }
               `}
               title={activity.label}
             >
               <Icon size={20} />
               {isActive && (
-                <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-modeler-accent-primary" />
+                <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-modeler-activityBar-activeBorder" />
               )}
             </button>
           );
@@ -56,15 +56,15 @@ const ActivityBar: React.FC<ActivityBarProps> = ({ activeView, onViewChange }) =
       </div>
 
       {/* Settings at bottom */}
-      <div className="border-t border-modeler-control-border">
+      <div className="border-t border-modeler-activityBar-border">
         <button
           onClick={() => onViewChange('settings')}
           className={`
             w-12 h-12 flex items-center justify-center
             transition-colors duration-150
             ${activeView === 'settings'
-              ? 'text-modeler-control-text-primary bg-modeler-control-button-active'
-              : 'text-modeler-control-text-secondary hover:text-modeler-control-text-primary hover:bg-modeler-control-button-hover'
+              ? 'text-modeler-activityBar-foreground bg-modeler-activityBar-activeBackground'
+              : 'text-modeler-activityBar-inactiveForeground hover:text-modeler-activityBar-foreground hover:bg-modeler-activityBar-activeBackground'
             }
           `}
           title="Settings"

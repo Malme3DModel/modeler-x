@@ -19,7 +19,7 @@ const StatusBar: React.FC<StatusBarProps> = ({
   warnings = 0
 }) => {
   return (
-    <div className="h-6 bg-modeler-accent-primary text-white flex items-center justify-between px-2 text-xs">
+    <div className="h-6 bg-modeler-statusBar-background text-modeler-statusBar-foreground flex items-center justify-between px-2 text-xs">
       {/* Left side */}
       <div className="flex items-center space-x-4">
         {/* Git branch */}

@@ -10,58 +10,55 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Modeler X 基本カラーパレット（v0完全互換）
         'modeler': {
-          // 基本色（v0と完全一致）
           background: {
-            primary: '#222222',    // v0: rgb(34, 34, 34) - body背景
-            secondary: '#1e1e1e',  // v0: theme-color
-            modal: '#131313',      // v0: rgb(19, 19, 19) - centeredクラス
-            surface: '#2e2e2e',    // v0: --tp-base-background-color
+            primary: '#1e1e1e',    // VS Code editor.background
+            secondary: '#252526',  // VS Code sideBar.background
+            modal: '#2d2d30',      // VS Code panel background
+            surface: '#3c3c3c',    // VS Code input.background
           },
           
-          // ナビゲーション（v0と完全一致）
-          nav: {
-            bg: '#111',            // v0: #111 (正確な値)
-            text: '#f2f2f2',       // v0と同じ
-            hover: {
-              bg: '#aaa',          // v0: #aaa (正確な値)
-              text: 'black',       // v0: black (正確な値)
-            },
-            active: {
-              bg: '#4CAF50',       // v0と同じ
-              text: 'white',       // v0: white (正確な値)
-            },
+          activityBar: {
+            background: '#333333', // VS Code activityBar.background
+            foreground: '#cccccc', // VS Code activityBar.foreground
+            inactiveForeground: '#858585', // VS Code activityBar.inactiveForeground
+            border: '#2b2b2b',     // VS Code activityBar.border
+            activeBorder: '#007acc', // VS Code activityBar.activeBorder
+            activeBackground: '#37373d', // VS Code activityBar.activeBackground
           },
 
-          // GUI コントロール（TweakPane - v0と完全一致）
+          sideBar: {
+            background: '#252526',             // VS Code sideBar.background
+            foreground: '#cccccc',             // VS Code sideBar.foreground
+            border: '#2b2b2b',                 // VS Code sideBar.border
+          },
           control: {
-            base: '#2e2e2e',                    // v0: --tp-base-background-color
+            base: '#3c3c3c',                   // VS Code input.background
             button: {
-              DEFAULT: 'hsl(0, 0%, 25%)',      // v0: --tp-button-background-color
-              hover: 'hsl(0, 0%, 30%)',        // v0: --tp-button-background-color-hover
-              focus: 'hsl(0, 0%, 35%)',        // v0: --tp-button-background-color-focus
-              active: 'hsl(0, 0%, 40%)',       // v0: --tp-button-background-color-active
+              DEFAULT: '#0e639c',              // VS Code button.background
+              hover: '#1177bb',                // VS Code button.hoverBackground
+              focus: '#007acc',                // VS Code focusBorder
+              active: '#094771',               // VS Code button active state
             },
             text: {
-              primary: '#eeeeee',              // v0: --tp-button-foreground-color
-              secondary: '#aeb5b8',            // v0: --tp-label-foreground-color
-              muted: '#888888',               // 補助的な色
+              primary: '#cccccc',              // VS Code foreground
+              secondary: '#969696',            // VS Code descriptionForeground
+              muted: '#6a6a6a',               // VS Code disabledForeground
             },
-            border: 'hsl(0, 0%, 20%)',         // 境界線（推定値）
+            border: '#464647',                 // VS Code widget.border
             scrollbar: {
-              track: '#2e2e2e',               // v0: var(--tp-base-background-color)
-              thumb: '#777',                   // v0: #777 (正確な値)
+              track: '#2b2b2b',               // VS Code scrollbar track
+              thumb: '#424242',               // VS Code scrollbarSlider.background
             },
           },
 
-          // エディター・コード関連（推定値）
           editor: {
-            bg: '#1e1e1e',          // メタテーマカラーと同じ
-            line: '#2e2e2e',        // GUIベースと同じ
-            selection: '#264f78',   // VS Codeダークテーマ標準
-            gutter: '#2a2a2a',      // 行番号部分
-            cursor: '#ffffff',      // カーソル色
+            bg: '#1e1e1e',          // VS Code editor.background
+            line: '#2f2f2f',        // VS Code editorLineNumber.foreground
+            selection: '#264f78',   // VS Code editor.selectionBackground
+            gutter: '#858585',      // VS Code editorLineNumber.foreground
+            cursor: '#aeafad',      // VS Code editorCursor.foreground
+            lineHighlight: '#2a2d2e', // VS Code editor.lineHighlightBackground
           },
 
           // 3D ビューポート（推定値 - v0では明示的定義なし）
@@ -77,14 +74,22 @@ const config: Config = {
             face: '#cccccc',        // 面の色
           },
 
-          // アクセント・状態色
+          // VS Code アクセント・状態色
           accent: {
-            primary: '#4CAF50',     // v0: #4CAF50 - ナビアクティブと同じ
-            success: '#00C851',     // 成功状態
-            warning: '#ffbb33',     // 警告状態
-            error: '#ff4444',       // エラー状態
-            info: '#33b5e5',        // 情報状態
-            link: '#007acc',        // リンク・フォーカス色
+            primary: '#007acc',     // VS Code focusBorder/link color
+            success: '#89d185',     // VS Code success color
+            warning: '#ffcc02',     // VS Code warning color
+            error: '#f85149',       // VS Code error color
+            info: '#3794ff',        // VS Code info color
+            link: '#3794ff',        // VS Code textLink.foreground
+          },
+          
+          statusBar: {
+            background: '#007acc',             // VS Code statusBar.background
+            foreground: '#ffffff',             // VS Code statusBar.foreground
+            border: '#007acc',                 // VS Code statusBar.border
+            noFolderBackground: '#68217a',     // VS Code statusBar.noFolderBackground
+            debuggingBackground: '#cc6633',    // VS Code statusBar.debuggingBackground
           },
 
           // Dockview テーマ色（既存のdarkテーマ互換）
@@ -237,4 +242,4 @@ const config: Config = {
   ],
 } satisfies Config
 
-export default config 
+export default config  
