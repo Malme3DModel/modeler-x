@@ -3,7 +3,7 @@
 import React, { useRef, useCallback } from 'react';
 import MonacoEditor from '../components/MonacoEditor';
 import ThreeViewport, { ThreeViewportRef } from '../components/ThreeViewport';
-import DockviewLayout from '../components/DockviewLayout';
+import VSCodeLayout from '../components/VSCodeLayout';
 import CADWorkerManager from '../components/CADWorkerManager';
 import Header from '../components/Header';
 import { ProjectProvider } from '../context/ProjectContext';
@@ -101,13 +101,16 @@ function HomeContent() {
         />
       </div>
 
-      {/* メインコンテンツエリア - Dockview */}
+      {/* VS Code風レイアウト */}
       <div className="flex-1 overflow-hidden">
-        <DockviewLayout
+        <VSCodeLayout
           leftPanel={leftPanel}
           rightTopPanel={rightTopPanel}
           rightBottomPanel={rightBottomPanel}
           editorTitle={editorTitle}
+          isCADWorkerReady={isCADWorkerReady}
+          hasUnsavedChanges={hasUnsavedChanges}
+          projectName={projectName}
         />
       </div>
     </div>
