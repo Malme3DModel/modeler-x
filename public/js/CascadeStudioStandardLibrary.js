@@ -1,4 +1,4 @@
-// Cascade Studio Standard Library
+
 // Adding new standard library features and functions:
 // 1. Research the OpenCascade API: https://www.opencascade.com/doc/occt-7.4.0/refman/html/annotated.html
 // 2. Write your new function inside of Cascade Studio, using "oc." to refer to the raw OpenCascade API.
@@ -6,7 +6,7 @@
 // 4. Add typescript annotations to index.ts in this same directory
 // 5. Submit a PR to the main repository! https://github.com/zalo/CascadeStudio/pulls
 // -
-// (Optional) If base functions appear to be missing, fork opencascade.js and add them to this file: 
+// (Optional) If base functions appear to be missing, fork opencascade.js and add them to this file:
 //  - https://github.com/donalffons/opencascade.js/blob/master/opencascade.idl
 //  - Upon push, Github Actions will build a new version of the library and commit it back to the repo
 //  - From there, you can graft those into CascadeStudio/node_modules/opencascade.js/dist (following its existing conventions)
@@ -124,9 +124,9 @@ function Text3D(text, size, height, fontName) {
 
   let textArgs = JSON.stringify(arguments);
   let curText = CacheOp(arguments, () => {
-    if (fonts[fontName] === undefined) { 
-      argCache = {}; 
-      console.log("Font not loaded or found yet!  Try again..."); 
+    if (fonts[fontName] === undefined) {
+      argCache = {};
+      console.log("Font not loaded or found yet!  Try again...");
       return new oc.TopoDS_Shape();
     }
     let textFaces = [];
@@ -185,7 +185,7 @@ function Text3D(text, size, height, fontName) {
         let cubicCurve = new oc.Geom_BezierCurve(ptList);
         let lineEdge = new oc.BRepBuilderAPI_MakeEdge(new oc.Handle_Geom_BezierCurve(cubicCurve)).Edge();
         currentWire.Add(new oc.BRepBuilderAPI_MakeWire(lineEdge).Wire());
-          
+
         lastPoint = nextPoint;
       }
     }
@@ -303,7 +303,7 @@ function ForEachVertex(shape, callback) {
   }
 }
 
-function FilletEdges(shape, radius, edgeList, keepOriginal) { 
+function FilletEdges(shape, radius, edgeList, keepOriginal) {
   let curFillet = CacheOp(arguments, () => {
     let mkFillet = new oc.BRepFilletAPI_MakeFillet(shape);
     let foundEdges = 0;
@@ -321,7 +321,7 @@ function FilletEdges(shape, radius, edgeList, keepOriginal) {
   return curFillet;
 }
 
-function ChamferEdges(shape, distance, edgeList, keepOriginal) { 
+function ChamferEdges(shape, distance, edgeList, keepOriginal) {
   let curChamfer = CacheOp(arguments, () => {
     let mkChamfer = new oc.BRepFilletAPI_MakeChamfer(shape);
     let foundEdges = 0;
@@ -487,7 +487,7 @@ function Difference(mainBody, objectsToSubtract, keepObjects, fuzzValue, keepEdg
   if (!fuzzValue) { fuzzValue = 0.1; }
   let curDifference = CacheOp(arguments, () => {
     if (!mainBody || mainBody.IsNull()) { console.error("Main Shape in Difference is null!"); }
-    
+
     let difference = new oc.TopoDS_Shape(mainBody);
     if (objectsToSubtract.length >= 1) {
       for (let i = 0; i < objectsToSubtract.length; i++) {
@@ -498,7 +498,7 @@ function Difference(mainBody, objectsToSubtract, keepObjects, fuzzValue, keepEdg
         difference = differenceCut.Shape();
       }
     }
-    
+
     if (!keepEdges) {
       let fusor = new oc.ShapeUpgrade_UnifySameDomain(difference); fusor.Build();
       difference = fusor.Shape();
@@ -563,7 +563,7 @@ function Extrude(face, direction, keepFace) {
     return new oc.BRepPrimAPI_MakePrism(face,
       new oc.gp_Vec(direction[0], direction[1], direction[2])).Shape();
   });
-  
+
   if (!keepFace) { sceneShapes = Remove(sceneShapes, face); }
   sceneShapes.push(curExtrusion);
   return curExtrusion;
@@ -575,7 +575,7 @@ function RemoveInternalEdges(shape, keepShape) {
     fusor.Build();
     return fusor.Shape();
   });
-  
+
   if (!keepShape) { sceneShapes = Remove(sceneShapes, shape); }
   sceneShapes.push(cleanShape);
   return cleanShape;
@@ -603,10 +603,10 @@ function Offset(shape, offsetDistance, tolerance, keepShape) {
       solidOffset.Add(offsetShape);
       offsetShape = new oc.TopoDS_Solid(solidOffset.Solid());
     }
-    
+
     return offsetShape;
   });
-  
+
   if (!keepShape) { sceneShapes = Remove(sceneShapes, shape); }
   sceneShapes.push(curOffset);
   return curOffset;
@@ -628,7 +628,7 @@ function Revolve(shape, degrees, direction, keepShape, copy) {
         degrees * 0.0174533, copy).Shape();
     }
   });
-  
+
   if (!keepShape) { sceneShapes = Remove(sceneShapes, shape); }
   sceneShapes.push(curRevolution);
   return curRevolution;
@@ -698,7 +698,7 @@ function Pipe(shape, wirePath, keepInputs) {
     pipe.Build();
     return new oc.TopoDS_Shape(pipe.Shape());
   });
-  
+
   if (!keepInputs) {
     sceneShapes = Remove(sceneShapes, shape);
     sceneShapes = Remove(sceneShapes, wirePath);
@@ -928,7 +928,7 @@ function Slider(name = "Val", defaultValue = 0.5, min = 0.0, max = 1.0, realTime
   if (typeof precision === "undefined") {
     precision = 2;
   } else if (precision % 1) { console.error("Slider precision must be an integer"); }
-  
+
   postMessage({ "type": "addSlider", payload: { name: name, default: defaultValue, min: min, max: max, realTime: realTime, step: step, dp: precision } });
   return GUIState[name];
 }
