@@ -230,6 +230,61 @@ export const NewFeatureComponent: React.FC = () => {
 };
 ```
 
+#### 実装例: Footerコンポーネント（ステータス表示統合）
+
+最近追加されたFooterコンポーネントを例に、実際の開発プロセスを説明します：
+
+```typescript
+// src/components/Footer.tsx - 実装例
+interface FooterProps {
+  isCADWorkerReady: boolean;
+  isWorking: boolean;
+  isWorkerReady: boolean;
+  hasUnsavedChanges: boolean;
+  error?: string;
+}
+
+const Footer: React.FC<FooterProps> = memo(({
+  isCADWorkerReady,
+  isWorking,
+  isWorkerReady,
+  hasUnsavedChanges,
+  error
+}) => {
+  return (
+    <div className="shrink-0 flex items-center justify-between h-6 px-3 bg-modeler-background-secondary border-t border-modeler-control-border">
+      
+      {/* 左側: ステータス情報 */}
+      <div className="flex items-center space-x-4">
+        {/* CADカーネル状態 */}
+        <div className="flex items-center space-x-1">
+          <span className="text-modeler-control-text-secondary">CAD Kernel:</span>
+          <span className={isCADWorkerReady ? 'text-modeler-accent-success' : 'text-modeler-accent-warning'}>
+            {isCADWorkerReady ? '✅ Ready' : '⏳ Initializing...'}
+          </span>
+        </div>
+
+        {/* 他のステータス... */}
+      </div>
+
+      {/* 右側: ショートカットヘルプ */}
+      <div className="text-xs text-modeler-control-text-secondary">
+        Ctrl+Enter: evaluate • F5: update • Ctrl+S: save
+      </div>
+    </div>
+  );
+});
+
+Footer.displayName = 'Footer';
+export default Footer;
+```
+
+**このコンポーネントのポイント:**
+1. **React.memo**: 状態変更時のみ再レンダリング
+2. **型安全性**: 厳密なPropsインターフェース
+3. **デザイン統一**: VSCodeライクなスタイリング
+4. **状態分離**: 各種ステータスを統合表示
+
 ### 2. バグ修正フロー
 
 #### ステップ1: 問題の特定
