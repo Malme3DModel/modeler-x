@@ -24,23 +24,7 @@ const EditorPanel: React.FC<IDockviewPanelProps> = (props) => {
 
 const ViewportPanel: React.FC<IDockviewPanelProps> = (props) => {
   const content = (props.params as any)?.content;
-  
-  // レイアウトが完了した後でViewportのリサイズを強制
-  useEffect(() => {
-    const handleResize = () => {
-      window.dispatchEvent(new Event('resize'));
-    };
-    
-    // 少し遅延させてレイアウトが完了してからリサイズ
-    const timer = setTimeout(handleResize, 100);
-    window.addEventListener('resize', handleResize);
-    
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
-  
+   
   return (
     <div 
       className="h-full w-full flex flex-col overflow-hidden" 
