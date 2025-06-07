@@ -281,12 +281,17 @@ const ThreeViewport = forwardRef<ThreeViewportRef, ThreeViewportProps>(({ onScen
     
     // マウント要素のサイズを取得
     const { clientWidth, clientHeight } = mountRef.current;
-    renderer.setSize(clientWidth, clientHeight);
+    
+    // サイズが0または異常に大きい場合はデフォルト値を設定
+    const width = clientWidth > 0 && clientWidth < 3000 ? clientWidth : 800;
+    const height = clientHeight > 0 && clientHeight < 3000 ? clientHeight : 600;
+    
+    renderer.setSize(width, height);
     mountRef.current.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
     // カメラの作成
-    const camera = new THREE.PerspectiveCamera(75, clientWidth / clientHeight, 0.1, 1000);
+    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
     camera.position.set(50, 50, 50);
     camera.lookAt(0, 0, 0);
     cameraRef.current = camera;
@@ -305,13 +310,25 @@ const ThreeViewport = forwardRef<ThreeViewportRef, ThreeViewportProps>(({ onScen
       if (!mountRef.current || !rendererRef.current || !cameraRef.current) return;
       
       const { clientWidth, clientHeight } = mountRef.current;
-      rendererRef.current.setSize(clientWidth, clientHeight);
-      cameraRef.current.aspect = clientWidth / clientHeight;
+      
+      // サイズが0または異常に大きい場合はデフォルト値を使用
+      const width = clientWidth > 0 && clientWidth < 3000 ? clientWidth : 800;
+      const height = clientHeight > 0 && clientHeight < 3000 ? clientHeight : 600;
+      
+      // サイズが変わっていない場合は何もしない
+      if (rendererRef.current.domElement.width === width && 
+          rendererRef.current.domElement.height === height) {
+        return;
+      }
+      
+      rendererRef.current.setSize(width, height);
+      cameraRef.current.aspect = width / height;
       cameraRef.current.updateProjectionMatrix();
     };
 
     // リサイズオブザーバーの設定
     const resizeObserver = new ResizeObserver(handleResize);
+    
     if (mountRef.current) {
       resizeObserver.observe(mountRef.current);
     }

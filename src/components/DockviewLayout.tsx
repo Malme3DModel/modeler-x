@@ -26,15 +26,7 @@ const ViewportPanel: React.FC<IDockviewPanelProps> = (props) => {
   const content = (props.params as any)?.content;
    
   return (
-    <div 
-      className="h-full w-full flex flex-col overflow-hidden" 
-      style={{ 
-        minHeight: '300px', 
-        maxHeight: '800px', 
-        height: '600px', 
-        position: 'relative' 
-      }}
-    >
+    <div className="h-full w-full flex flex-col overflow-hidden" data-panel-type="viewport">
       {content}
     </div>
   );
@@ -81,6 +73,37 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
       title: 'Console',
       position: { referencePanel: 'viewport', direction: 'below' },
     });
+
+    // 初期レイアウトの設定（直接実行）
+    try {
+      // dockviewの設定 - apiを通じて直接レイアウトを調整
+      const dockviewApi = event.api as any; // anyを使用して型エラーを回避
+      if (dockviewApi.groups && dockviewApi.groups.length >= 2) {
+        // パネル比率の設定は実装次第で異なる可能性があるため、エラーハンドリングで囲む
+        try {
+          // 左右のパネルの比率を調整（可能であれば）
+          if (typeof dockviewApi.setSplitProportion === 'function') {
+            dockviewApi.setSplitProportion(0, 0.6);
+          }
+          
+          // 右側のパネル内でビューポートとコンソールの比率を調整
+          const rightGroup = dockviewApi.groups.find((g: any) => 
+            g.panels && g.panels.some((p: any) => p.id === 'viewport')
+          );
+          
+          if (rightGroup) {
+            const rightGroupIndex = dockviewApi.groups.indexOf(rightGroup);
+            if (rightGroupIndex >= 0 && typeof dockviewApi.setSplitProportion === 'function') {
+              dockviewApi.setSplitProportion(rightGroupIndex, 0.7);
+            }
+          }
+        } catch (e) {
+          console.warn('Split proportion adjustment not supported:', e);
+        }
+      }
+    } catch (error) {
+      console.error('Error setting initial layout proportions', error);
+    }
   };
 
   // タイトルの更新
@@ -110,6 +133,11 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
           --dv-tab-color: var(--dv-dark-tab-text);
           --dv-separator-border: 1px solid var(--dv-dark-border);
           --dv-tab-divider-color: var(--dv-dark-border);
+        }
+        
+        /* ビューポートパネルの最小高さを設定 */
+        [data-panel-type="viewport"] {
+          min-height: 300px;
         }
         
         /* Golden Layoutのスタイルを再現 */
