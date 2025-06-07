@@ -4,6 +4,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 import { MONACO_EDITOR_CONFIG, TYPESCRIPT_CONFIG, TYPE_DEFINITION_PATHS, DEFAULT_GUI_STATE } from '../config/cadConfig';
 import type { MonacoEditorProps } from '../types';
+import { useCADWorker } from '@/hooks/useCADWorker';
 
 const MonacoEditor: React.FC<MonacoEditorProps> = ({ 
   value, 
@@ -18,8 +19,10 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
   const [isLoaded, setIsLoaded] = useState(false);
-  const [isWorking, setIsWorking] = useState(false);
   const originalValueRef = useRef<string>(value);
+  
+  // CADワーカーフックを使用
+  const { evaluateAndRender, isWorking, isWorkerReady, error, clearError } = useCADWorker();
 
   // エディターがマウントされた時の処理
   const handleEditorDidMount = (editor: any, monaco: any) => {
@@ -95,22 +98,18 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
       editor.restoreViewState(mergedViewState);
     }
 
-    // evaluateCode関数をエディターに追加
-    editor.evaluateCode = (saveToURL = false) => {
+    // evaluateCode関数をエディターに追加（新しいフックを使用）
+    editor.evaluateCode = async (saveToURL = false) => {
       // ワーカーが動作中の場合は実行しない
-      if ((window as any).workerWorking) { 
+      if (isWorking) { 
         return; 
       }
 
       // CADワーカーが利用可能かチェック
-      if (!(window as any).cadWorker) {
+      if (!isWorkerReady) {
         console.error('CAD Worker is not ready yet. Please wait for initialization.');
         return;
       }
-
-      // ワーカー動作フラグを設定
-      (window as any).workerWorking = true;
-      setIsWorking(true);
 
       // 型定義を更新
       monaco.languages.typescript.typescriptDefaults.setExtraLibs(extraLibs);
@@ -121,25 +120,17 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
       // エラーハイライトをクリア
       monaco.editor.setModelMarkers(editor.getModel(), 'test', []);
 
-      // GUIStateの初期化（定数から取得）
-      const guiState = { ...DEFAULT_GUI_STATE };
-
       try {
-        // CADワーカーでコードを評価
-        (window as any).cadWorker.evaluateCode(newCode, guiState);
-        
-        // 形状の結合とレンダリングを要求
-        setTimeout(() => {
-          if ((window as any).cadWorker) {
-            (window as any).cadWorker.combineAndRenderShapes(
-              guiState["MeshRes"], 
-              { 
-                groundPlaneVisible: guiState["GroundPlane?"], 
-                gridVisible: guiState["Grid?"] 
-              }
-            );
-          }
-        }, 100);
+        // 新しいフックを使用してCADワーカーでコードを評価
+        await evaluateAndRender({
+          code: newCode,
+          meshRes: DEFAULT_GUI_STATE["MeshRes"],
+          sceneOptions: { 
+            groundPlaneVisible: DEFAULT_GUI_STATE["GroundPlane?"], 
+            gridVisible: DEFAULT_GUI_STATE["Grid?"] 
+          },
+          delay: 100
+        });
 
         // コード評価を実行（従来の処理も維持）
         onEvaluate();
@@ -147,8 +138,6 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
         console.log("Generating Model with OpenCascade.js");
       } catch (error) {
         console.error('Error evaluating code:', error);
-        (window as any).workerWorking = false;
-        setIsWorking(false);
       }
 
       // URLに保存（必要に応じて）
@@ -237,17 +226,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
     };
   }, [onSaveProject, onUnsavedChangesUpdate, onProjectNameUpdate]);
 
-  // ワーカー状態の監視
-  useEffect(() => {
-    const checkWorkerStatus = () => {
-      if (!(window as any).workerWorking && isWorking) {
-        setIsWorking(false);
-      }
-    };
-
-    const interval = setInterval(checkWorkerStatus, 100);
-    return () => clearInterval(interval);
-  }, [isWorking]);
+  // ワーカー状態の監視は useCADWorker フックで処理されているため削除
 
   // 元の値を更新（保存時など）
   useEffect(() => {
