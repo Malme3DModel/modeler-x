@@ -473,9 +473,9 @@ DockViewライブラリを使用したレイアウト管理コンポーネント
 
 ```typescript
 interface DockviewLayoutProps {
-  leftPanel: React.ReactNode;
-  rightTopPanel: React.ReactNode;
-  rightBottomPanel: React.ReactNode;
+  editorPanel: React.ReactNode;
+  cadViewPanel: React.ReactNode;
+  consolePanel: React.ReactNode;
   editorTitle?: string;
 }
 
@@ -490,9 +490,9 @@ function MainApplication() {
 
   return (
     <DockviewLayout
-      leftPanel={<MonacoEditor value={code} onChange={setCode} theme="vs-dark" />}
-      rightTopPanel={<ThreeViewport shapes={shapes} />}
-      rightBottomPanel={<Console output={consoleOutput} />}
+      editorPanel={<MonacoEditor value={code} onChange={setCode} theme="vs-dark" />}
+      cadViewPanel={<ThreeViewport shapes={shapes} />}
+      consolePanel={<Console output={consoleOutput} />}
       editorTitle={editorTitle}
     />
   );
@@ -502,9 +502,10 @@ function MainApplication() {
 #### 特徴
 
 - **themeDarkテーマ**: DockViewのVisual Studio Darkテーマを自動適用
-- **3パネルレイアウト**: エディター、ビューポート、コンソールの配置
+- **3パネルレイアウト**: CADビュー（左アクティブ）、エディター（左非アクティブ）、コンソール（右側）の配置
 - **レスポンシブ**: パネルサイズの動的調整
 - **統一UI**: Monaco Editorとの一貫したテーマ
+- **初期フォーカス**: CADビューが初期状態でアクティブ
 
 ### CADWorkerManager
 

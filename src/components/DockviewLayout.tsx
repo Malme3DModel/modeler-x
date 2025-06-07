@@ -12,9 +12,9 @@ import {
 import 'dockview/dist/styles/dockview.css';
 
 interface DockviewLayoutProps {
-  leftPanel: React.ReactNode;
-  rightTopPanel: React.ReactNode;
-  rightBottomPanel: React.ReactNode;
+  editorPanel: React.ReactNode;
+  cadViewPanel: React.ReactNode;
+  consolePanel: React.ReactNode;
   editorTitle?: string;
 }
 
@@ -49,9 +49,9 @@ const ConsolePanel: React.FC<IDockviewPanelProps> = (props) => {
 };
 
 const DockviewLayout: React.FC<DockviewLayoutProps> = ({
-  leftPanel,
-  rightTopPanel,
-  rightBottomPanel,
+  editorPanel,
+  cadViewPanel,
+  consolePanel,
   editorTitle = '* Untitled.ts',
 }) => {
   const apiRef = useRef<DockviewApi | null>(null);
@@ -63,7 +63,7 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
     event.api.addPanel({
       id: 'viewport',
       component: 'viewport',
-      params: { content: rightTopPanel },
+      params: { content: cadViewPanel },
       title: 'CAD View',
     });
 
@@ -71,7 +71,7 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
     event.api.addPanel({
       id: 'editor',
       component: 'editor',
-      params: { content: leftPanel },
+      params: { content: editorPanel },
       title: editorTitle,
       position: { referencePanel: 'viewport', direction: 'within' },
     });
@@ -80,7 +80,7 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
     event.api.addPanel({
       id: 'console',
       component: 'console',
-      params: { content: rightBottomPanel },
+      params: { content: consolePanel },
       title: 'Console',
       position: { referencePanel: 'viewport', direction: 'right' },
     });

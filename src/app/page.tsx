@@ -85,8 +85,8 @@ function HomeContent() {
     await exportOBJ();
   }, [exportOBJ]);
 
-  // 左パネル（エディター）
-  const leftPanel = (
+  // エディターパネル（左側非アクティブ）
+  const editorPanel = (
     <MonacoEditor
       value={code}
       onChange={handleCodeChange}
@@ -99,16 +99,16 @@ function HomeContent() {
     />
   );
 
-  // 右上パネル（3Dビューポート）
-  const rightTopPanel = (
+  // CADビューパネル（左側アクティブ）
+  const cadViewPanel = (
     <ThreeViewport 
       ref={threejsViewportRef}
       onSceneReady={handleSceneReady}
     />
   );
 
-  // 右下パネル（コンソール）
-  const rightBottomPanel = (
+  // コンソールパネル（右側）
+  const consolePanel = (
     <div className="h-full flex flex-col" >
       <div className="p-4 h-full overflow-auto">
          {consoleMessages.map((message, index) => (
@@ -149,9 +149,9 @@ function HomeContent() {
       {/* メインコンテンツエリア - Dockview */}
       <div className="flex-1 overflow-hidden">
         <DockviewLayout
-          leftPanel={leftPanel}
-          rightTopPanel={rightTopPanel}
-          rightBottomPanel={rightBottomPanel}
+          editorPanel={editorPanel}
+          cadViewPanel={cadViewPanel}
+          consolePanel={consolePanel}
           editorTitle={editorTitle}
         />
       </div>
