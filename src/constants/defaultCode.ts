@@ -3,25 +3,69 @@
  * CADエディタの初期コードを定義
  */
 
-export const DEFAULT_CAD_CODE = `// Welcome to Cascade Studio!   Here are some useful functions:
-//  Translate(), Rotate(), Scale(), Mirror(), Union(), Difference(), Intersection()
-//  Box(), Sphere(), Cylinder(), Cone(), Text3D(), Polygon()
-//  Offset(), Extrude(), RotatedExtrude(), Revolve(), Pipe(), Loft(), 
-//  FilletEdges(), ChamferEdges(),
-//  Slider(), Checkbox(), TextInput(), Dropdown()
+export const DEFAULT_CAD_CODE = `// OpenCascade.js v1.1.1 Comprehensive Feature Demo
 
-let holeRadius = Slider("Radius", 30 , 20 , 40);
+let baseBox = Box(40, 30, 10);
+let mainSphere = Sphere(25);
+let supportCylinder = Cylinder(8, 50);
 
-let sphere     = Sphere(50);
-let cylinderZ  =                     Cylinder(holeRadius, 200, true);
-let cylinderY  = Rotate([0,1,0], 90, Cylinder(holeRadius, 200, true));
-let cylinderX  = Rotate([1,0,0], 90, Cylinder(holeRadius, 200, true));
+let cone = Cone(15, 5, 25);
+let textShape = Text3D("v1.1.1", 12, 2, 'Consolas');
 
-Translate([0, 0, 50], Difference(sphere, [cylinderX, cylinderY, cylinderZ]));
+let sketch = new Sketch([0, 0])
+  .LineTo([20, 0])
+  .LineTo([20, 15])
+  .ArcTo([15, 20], [10, 20])
+  .LineTo([0, 20])
+  .LineTo([0, 0])
+  .End();
 
-Translate([-25, 0, 40], Text3D("Hi!", 36, 0.15, 'Consolas'));
+let extrudedProfile = Extrude(sketch.Face(), [0, 0, 8]);
 
-// Don't forget to push imported or oc-defined shapes into sceneShapes to add them to the workspace!`;
+let revolutionProfile = new Sketch([5, 0])
+  .LineTo([15, 0])
+  .LineTo([12, 10])
+  .LineTo([8, 10])
+  .LineTo([5, 0])
+  .End();
+
+let revolvedShape = Revolve(revolutionProfile.Face(), [0, 0, 0], [0, 1, 0], 270);
+
+let hollowBox = Difference(baseBox, [
+  Translate([0, 0, 2], Box(30, 20, 8)),
+  Translate([35, 15, 0], supportCylinder)
+]);
+
+let complexUnion = Union([
+  hollowBox,
+  Translate([0, 0, 15], mainSphere),
+  Translate([45, 0, 0], cone)
+]);
+
+let filletedShape = complexUnion;
+
+let rotatedText = Rotate([1, 0, 0], 90, 
+  Translate([0, -10, 25], textShape)
+);
+
+let scaledRevolution = Scale([0.8, 0.8, 1.2], 
+  Translate([-30, 0, 0], revolvedShape)
+);
+
+let finalModel = Union([
+  filletedShape,
+  rotatedText,
+  scaledRevolution,
+  Translate([20, 35, 5], extrudedProfile)
+]);
+
+let mirroredAssembly = Union([
+  finalModel,
+  Mirror([1, 0, 0], [0, 0, 0], finalModel)
+]);
+
+mirroredAssembly;
+`;
 
 /**
  * プロジェクトのデフォルト設定
@@ -39,4 +83,4 @@ export const DEFAULT_PROJECT_CONFIG = {
 export const INITIAL_CONSOLE_MESSAGES = [
   '> Welcome to Modeler X!',
   '> Loading CAD Kernel...'
-] as const; 
+] as const;        

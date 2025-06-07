@@ -54,12 +54,14 @@ export function createCascadeStudioCore(
             // まずESM対応のWorkerを試行
             const esmWorkerUrl = `${window.location.origin}/js/CascadeStudioMainWorker.mjs`;
             worker = new Worker(esmWorkerUrl, { type: 'module' });
+            (worker as any).isESMWorker = true;
             console.log("ESM Worker initialized successfully");
           } catch (esmError) {
             console.warn("ESM Worker failed, falling back to legacy worker:", esmError);
             // フォールバック: 既存のWorkerを使用
             const legacyWorkerUrl = `${window.location.origin}/js/CascadeStudioMainWorker.js`;
             worker = new Worker(legacyWorkerUrl);
+            (worker as any).isESMWorker = false;
             console.log("Legacy Worker initialized as fallback");
           }
         } else {
@@ -80,14 +82,15 @@ export function createCascadeStudioCore(
           core.setWorkingState(false);
           
           // ESMワーカーでエラーが発生した場合、レガシーワーカーにフォールバック
-          if (!worker.fallbackAttempted) {
+          if (!(worker as any).fallbackAttempted) {
             console.warn("ESM Worker failed, attempting fallback to legacy worker");
-            worker.fallbackAttempted = true;
+            (worker as any).fallbackAttempted = true;
             worker.terminate();
             
             try {
               const legacyWorkerUrl = `${window.location.origin}/js/CascadeStudioMainWorker.js`;
               const fallbackWorker = new Worker(legacyWorkerUrl);
+              (fallbackWorker as any).isESMWorker = false;
               
               fallbackWorker.onmessage = worker.onmessage;
               fallbackWorker.onerror = (fallbackError) => {
@@ -132,14 +135,16 @@ export function createCascadeStudioCore(
 
         // 開始コールバック
         core.registerMessageHandler("startupCallback", () => {
-          console.log("CAD Worker Initialized");
-          setConsoleOutput((prev: string) => prev + "\nCAD Worker Initialized");
+          const workerType = ((window as any).cascadeStudioWorker as any)?.isESMWorker ? 'ESM' : 'Legacy';
+          console.log(`${workerType} CAD Worker Initialized`);
+          setConsoleOutput((prev: string) => prev + `\n${workerType} CAD Worker Initialized`);
         });
 
         // Phase 2: API調査結果ハンドラー
         core.registerMessageHandler("apiInvestigation", (payload) => {
-          console.log("OpenCascade.js API Investigation Results:", payload);
-          setConsoleOutput((prev: string) => prev + "\nAPI Investigation completed");
+          const version = payload.version || 'unknown';
+          console.log(`OpenCascade.js ${version} API Investigation Results:`, payload);
+          setConsoleOutput((prev: string) => prev + `\nAPI Investigation completed (${version})`);
         });
 
         // 進捗ハンドラー
@@ -306,4 +311,4 @@ export function createCascadeStudioCore(
   };
 
   return core;
-} 
+}  
