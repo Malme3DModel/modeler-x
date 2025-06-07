@@ -129,7 +129,13 @@ modeler-x/
 │   │   ├── Footer.tsx       # 🆕 ステータス表示統合フッター
 │   │   ├── MonacoEditor.tsx # Monaco エディター
 │   │   ├── ThreeViewport.tsx # 3D ビューポート
-│   │   └── DockviewLayout.tsx # レイアウト管理
+│   │   ├── DockviewLayout.tsx # レイアウト管理
+│   │   └── ChatPanel.tsx    # AIチャットパネル
+│   ├── lib/                 # 🆕 ライブラリ・インフラストラクチャ層
+│   │   ├── cadWorkerManager.ts  # CAD ワーカー管理（Web Worker Interface）
+│   │   ├── CascadeStudioCore.ts # CAD カーネルコア
+│   │   ├── tailwindTheme.ts     # Tailwind テーマ設定
+│   │   └── utils.ts             # ユーティリティ関数
 │   ├── hooks/               # カスタムフック
 │   │   ├── useProjectState.ts   # プロジェクト状態管理
 │   │   ├── useProjectActions.ts # 🆕 プロジェクト操作
@@ -139,7 +145,9 @@ modeler-x/
 │   │   ├── projectService.ts    # プロジェクト保存・読み込み
 │   │   ├── exportService.ts     # モデルエクスポート（STEP/STL/OBJ）
 │   │   ├── cadWorkerService.ts  # CAD ワーカー操作
-│   │   └── editorService.ts     # エディター操作
+│   │   ├── editorService.ts     # エディター操作
+│   │   ├── codeExecutionService.ts # コード実行サービス
+│   │   └── typeDefinitionService.ts # TypeScript型定義管理
 │   ├── context/             # React Context
 │   ├── config/              # 設定ファイル
 │   ├── constants/           # 定数定義

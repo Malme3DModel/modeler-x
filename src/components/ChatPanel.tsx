@@ -1,25 +1,28 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, Copy, ThumbsUp, ThumbsDown, AlertCircle } from 'lucide-react';
+import { Send, User, Bot, Copy, ThumbsUp, ThumbsDown, AlertCircle, Play, Code } from 'lucide-react';
+import { CodeExecutionService } from '@/services/codeExecutionService';
 
 interface ChatMessage {
   id: string;
   type: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  extractedCode?: string; // 抽出されたコードを保存
 }
 
 interface ChatPanelProps {
   className?: string;
+  onExecuteCode?: (code: string) => void; // コード実行のコールバック
 }
 
-const ChatPanel: React.FC<ChatPanelProps> = ({ className = '' }) => {
+const ChatPanel: React.FC<ChatPanelProps> = ({ className = '', onExecuteCode }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
       type: 'assistant',
-      content: 'こんにちは！CADモデリングについて何でもお聞きください。OpenCascade.jsを使用したコードの改善提案や3Dモデリングのヘルプができます。',
+      content: 'こんにちは！CADモデリングについて何でもお聞きください。OpenCascade.jsを使用したコードの改善提案や3Dモデリングのヘルプができます。\n\n例えば「箱と球体を組み合わせた形状を作って」と言ってみてください。実行可能なコードを生成します！',
       timestamp: new Date()
     }
   ]);
@@ -41,6 +44,20 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ className = '' }) => {
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
   }, [inputValue]);
+
+  // コードブロックを抽出する関数
+  const extractCodeFromMessage = (content: string): string | null => {
+    // ```typescript または ```ts で囲まれたコードブロックを抽出
+    const codeBlockRegex = /```(?:typescript|ts)\n([\s\S]*?)```/g;
+    const matches = content.match(codeBlockRegex);
+    
+    if (matches && matches.length > 0) {
+      // 最初のコードブロックを取得し、```typescript と ``` を除去
+      return matches[0].replace(/```(?:typescript|ts)\n/, '').replace(/```$/, '').trim();
+    }
+    
+    return null;
+  };
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
@@ -76,11 +93,15 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ className = '' }) => {
 
       const data = await response.json();
       
+      // レスポンスからコードを抽出
+      const extractedCode = extractCodeFromMessage(data.message);
+      
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
         content: data.message,
-        timestamp: new Date()
+        timestamp: new Date(),
+        extractedCode: extractedCode || undefined
       };
       
       setMessages(prev => [...prev, assistantMessage]);
@@ -111,6 +132,29 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ className = '' }) => {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
+  };
+
+  // コードを実行する関数
+  const executeCode = async (code: string) => {
+    if (onExecuteCode) {
+      onExecuteCode(code);
+    } else {
+      // CodeExecutionServiceを使用してコードを実行
+      try {
+        const result = await CodeExecutionService.executeCode(code);
+        if (result.success) {
+          console.log('コード実行成功:', result.message);
+          // 成功メッセージを表示（オプション）
+          // alert(result.message);
+        } else {
+          console.error('コード実行エラー:', result.error);
+          alert(`コード実行エラー: ${result.error}`);
+        }
+      } catch (error) {
+        console.error('コード実行中にエラーが発生:', error);
+        alert('コード実行中にエラーが発生しました。');
+      }
+    }
   };
 
   const formatTimestamp = (date: Date) => {
@@ -164,6 +208,39 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ className = '' }) => {
                   <div className="whitespace-pre-wrap break-words">
                     {message.content}
                   </div>
+                  
+                  {/* コード実行ボタン（AIメッセージでコードが含まれている場合のみ表示） */}
+                  {message.type === 'assistant' && message.extractedCode && (
+                    <div className="mt-2 p-2 bg-gray-50 rounded border">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs text-gray-600 flex items-center">
+                          <Code size={10} className="mr-1" />
+                          実行可能なコード
+                        </span>
+                        <div className="flex space-x-1">
+                          <button
+                            onClick={() => copyToClipboard(message.extractedCode!)}
+                            className="p-1 hover:bg-gray-200 rounded transition-colors"
+                            title="コードをコピー"
+                          >
+                            <Copy size={10} className="text-gray-500" />
+                          </button>
+                          <button
+                            onClick={() => executeCode(message.extractedCode!)}
+                            className="p-1 bg-green-500 hover:bg-green-600 text-white rounded transition-colors flex items-center"
+                            title="コードを実行"
+                          >
+                            <Play size={10} className="mr-1" />
+                            実行
+                          </button>
+                        </div>
+                      </div>
+                      <pre className="text-xs text-gray-700 bg-white p-1 rounded border overflow-x-auto">
+                        <code>{message.extractedCode}</code>
+                      </pre>
+                    </div>
+                  )}
+                  
                   <div className="flex items-center justify-between mt-1">
                     <span className={`text-xs ${
                       message.type === 'user' ? 'text-blue-100' : 'text-gray-500'
