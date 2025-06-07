@@ -227,33 +227,45 @@ const ThreeViewport = forwardRef<ThreeViewportRef, ThreeViewportProps>(({ onScen
     directionalLight.position.set(1, 1, 1);
     scene.add(directionalLight);
 
-    // 背景色を設定（CSS変数から）
-    const bgColor = getComputedStyle(document.documentElement)
-      .getPropertyValue('--threejs-viewport-background').trim() || '#1a1a1a';
-    scene.background = new THREE.Color(bgColor);
+    // 背景色を設定（旧版と同じ色に設定）
+    const backgroundColor = 0x222222;
+    scene.background = new THREE.Color(backgroundColor);
+    
+    // フォグを追加（旧版と同じ設定）
+    scene.fog = new THREE.Fog(backgroundColor, 200, 600);
     
     // 軸ヘルパー
     const axesHelper = new THREE.AxesHelper(50);
     scene.add(axesHelper);
 
-    // CADオブジェクト用のコンテナグループ
+    // CADオブジェクト用のコンテナグループ（旧版と同じ回転を適用）
     const mainObject = new THREE.Group();
     mainObject.name = "CAD Model Container";
+    mainObject.rotation.x = -Math.PI / 2; // 旧版と同じ-90度回転
     scene.add(mainObject);
     mainObjectRef.current = mainObject;
 
-    // グリッドヘルパー
-    const grid = new THREE.GridHelper(100, 10);
-    grid.rotation.x = Math.PI / 2;
+    // グリッドヘルパー（旧版と同じ設定）
+    const grid = new THREE.GridHelper(2000, 20, 0xcccccc, 0xcccccc);
+    grid.position.y = -0.01;
+    grid.material.opacity = 0.3;
+    grid.material.transparent = true;
     scene.add(grid);
     gridRef.current = grid;
 
-    // グラウンドプレーン
-    const groundGeometry = new THREE.PlaneGeometry(200, 200);
-    const groundMaterial = new THREE.ShadowMaterial({ opacity: 0.3 });
+    // グラウンドプレーン（旧版と同じ設定）
+    const groundGeometry = new THREE.PlaneGeometry(2000, 2000);
+    const groundMaterial = new THREE.MeshPhongMaterial({
+      color: 0x080808,
+      depthWrite: true,
+      dithering: true,
+      polygonOffset: true,
+      polygonOffsetFactor: 6.0,
+      polygonOffsetUnits: 1.0
+    });
     const groundPlane = new THREE.Mesh(groundGeometry, groundMaterial);
+    groundPlane.position.y = -0.1;
     groundPlane.rotation.x = -Math.PI / 2;
-    groundPlane.position.y = -0.01; // 軸と重ならないよう少しオフセット
     groundPlane.receiveShadow = true;
     groundPlane.name = "Ground Plane";
     scene.add(groundPlane);
@@ -305,24 +317,26 @@ const ThreeViewport = forwardRef<ThreeViewportRef, ThreeViewportProps>(({ onScen
     
     rendererRef.current = renderer;
 
-    // カメラの作成
-    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-    camera.position.set(50, 50, 50);
-    camera.lookAt(0, 0, 0);
+    // カメラの作成（旧版の設定に合わせて調整）
+    const camera = new THREE.PerspectiveCamera(45, width / height, 1, 5000);
+    camera.position.set(50, 100, 150);
+    camera.lookAt(0, 45, 0);
     cameraRef.current = camera;
 
-    // コントロールの作成
+    // コントロールの作成（旧版の設定に合わせて調整）
     const controls = new OrbitControls(camera, canvas);
+    controls.target.set(0, 45, 0);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
+    controls.panSpeed = 2;
+    controls.zoomSpeed = 1;
     controls.rotateSpeed = 1.0;
-    controls.zoomSpeed = 1.2;
-    controls.panSpeed = 0.8;
     controls.minDistance = 5;
     controls.maxDistance = 500;
     controls.enablePan = true;
     controls.enableRotate = true;
     controls.enableZoom = true;
+    controls.screenSpacePanning = true;
     controls.update();
     controlsRef.current = controls;
 
