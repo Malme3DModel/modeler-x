@@ -417,7 +417,7 @@ const ThreeViewport = forwardRef<ThreeViewportRef, ThreeViewportProps>(({ onScen
   }, [createInitialScene]);
 
   return (
-    <div className="relative h-full w-full bg-modeler-viewport-bg">
+    <div className="relative h-full w-full">
       {/* マウント要素 - ここにThree.jsのcanvasが追加される */}
       <div 
         ref={mountRef} 
@@ -429,11 +429,6 @@ const ThreeViewport = forwardRef<ThreeViewportRef, ThreeViewportProps>(({ onScen
           </div>
         )}
       </div>
-      {isLoaded && (
-        <div className="absolute bottom-2 right-2 text-xs text-white bg-black bg-opacity-50 px-2 py-1 rounded z-20">
-          Three.js Ready
-        </div>
-      )}
     </div>
   );
 });

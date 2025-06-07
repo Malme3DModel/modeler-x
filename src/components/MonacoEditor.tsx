@@ -112,29 +112,10 @@ const MonacoEditor: React.FC<MonacoEditorProps> = memo(({
     </div>
   ) : null;
 
-  // ステータス表示（最適化: 状態変更時のみレンダリング）
-  const statusDisplay = (
-    <div className="flex items-center justify-between mb-2 text-sm text-gray-600">
-      <div className="flex items-center space-x-4">
-        <span>
-          Worker: {isWorkerReady ? '✅ Ready' : '⏳ Loading...'}
-        </span>
-        <span>
-          Status: {isWorking ? '🔄 Working...' : '✅ Idle'}
-        </span>
-        {hasUnsavedChanges && (
-          <span className="text-orange-600">● Unsaved changes</span>
-        )}
-      </div>
-      <div className="text-xs">
-        Press Ctrl+Enter to evaluate • F5 to update • Ctrl+S to save
-      </div>
-    </div>
-  );
+
 
   return (
     <div className="h-full flex flex-col">
-      {statusDisplay}
       {errorDisplay}
       <div className="flex-1">
         <Editor

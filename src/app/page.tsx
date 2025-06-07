@@ -6,8 +6,11 @@ import ThreeViewport, { ThreeViewportRef } from '../components/ThreeViewport';
 import DockviewLayout from '../components/DockviewLayout';
 import CADWorkerManager from '../components/CADWorkerManager';
 import Header from '../components/Header';
+import Footer from '../components/Footer';
 import { ProjectProvider } from '../context/ProjectContext';
 import { useProjectState } from '../hooks/useProjectState';
+import { useProjectActions } from '../hooks/useProjectActions';
+import { useCADWorker } from '../hooks/useCADWorker';
 import { DEFAULT_CAD_CODE } from '../constants/defaultCode';
 
 
@@ -27,6 +30,20 @@ function HomeContent() {
     handleUnsavedChangesUpdate,
     cadWorkerCallbacks
   } = useProjectState();
+
+  // プロジェクト操作フック
+  const {
+    saveProject,
+    loadProject,
+    exportSTEP,
+    exportSTL,
+    exportOBJ,
+    isLoading: isProjectActionLoading,
+    lastError: projectActionError
+  } = useProjectActions();
+
+  // CADワーカーの状態を取得（フッター用）
+  const { isWorking, isWorkerReady, error } = useCADWorker();
   
   const threejsViewportRef = useRef<ThreeViewportRef>(null);
 
@@ -42,6 +59,31 @@ function HomeContent() {
   const handleSceneReady = useCallback((scene: any) => {
     // 将来的にシーン設定が必要な場合はここに実装
   }, []);
+
+  // プロジェクト操作のハンドラー（UIイベント→フック呼び出し）
+  const handleLoadProject = useCallback(async () => {
+    const projectData = await loadProject();
+    if (projectData) {
+      handleCodeChange(projectData.code);
+      handleProjectNameUpdate(projectData.name);
+    }
+  }, [loadProject, handleCodeChange, handleProjectNameUpdate]);
+
+  const handleSaveProjectAction = useCallback(async () => {
+    await saveProject(projectName, code);
+  }, [saveProject, projectName, code]);
+
+  const handleExportSTEP = useCallback(async () => {
+    await exportSTEP();
+  }, [exportSTEP]);
+
+  const handleExportSTL = useCallback(async () => {
+    await exportSTL();
+  }, [exportSTL]);
+
+  const handleExportOBJ = useCallback(async () => {
+    await exportOBJ();
+  }, [exportOBJ]);
 
   // 左パネル（エディター）
   const leftPanel = (
@@ -67,13 +109,13 @@ function HomeContent() {
 
   // 右下パネル（コンソール）
   const rightBottomPanel = (
-    <div className="h-full bg-modeler-background-primary flex flex-col">
-      <div className="p-4 h-full overflow-auto text-white font-mono text-sm">
+    <div className="h-full flex flex-col" >
+      <div className="p-4 h-full overflow-auto">
          {consoleMessages.map((message, index) => (
-           <div key={index} className="text-modeler-control-text-secondary">{message}</div>
+           <div key={index}>{message}</div>
          ))}
          {isCADWorkerReady && (
-           <div className="text-modeler-accent-success mt-2">
+           <div className="mt-2">
              &gt; CAD Worker Status: Ready
            </div>
          )}
@@ -82,7 +124,7 @@ function HomeContent() {
   );
 
   return (
-    <div className="h-screen flex flex-col bg-modeler-background-primary">
+    <div className="h-screen flex flex-col">
       {/* CADワーカーマネージャー（非表示コンポーネント） */}
       <CADWorkerManager
         onWorkerReady={cadWorkerCallbacks.onWorkerReady}
@@ -94,10 +136,13 @@ function HomeContent() {
       />
 
       {/* トップナビゲーション */}
-      <div className="bg-modeler-background-secondary text-modeler-control-text-primary px-4 py-2 border-b border-modeler-control-border z-10">
+      <div className="shrink-0 z-10">
         <Header 
-          isCADWorkerReady={isCADWorkerReady} 
-          onSaveProject={handleSaveProject} 
+          onSaveProject={handleSaveProjectAction}
+          onLoadProject={handleLoadProject}
+          onSaveSTEP={handleExportSTEP}
+          onSaveSTL={handleExportSTL}
+          onSaveOBJ={handleExportOBJ}
         />
       </div>
 
@@ -110,6 +155,15 @@ function HomeContent() {
           editorTitle={editorTitle}
         />
       </div>
+
+      {/* フッター */}
+      <Footer
+        isCADWorkerReady={isCADWorkerReady}
+        isWorking={isWorking}
+        isWorkerReady={isWorkerReady}
+        hasUnsavedChanges={hasUnsavedChanges}
+        error={error || undefined}
+      />
     </div>
   );
 }
