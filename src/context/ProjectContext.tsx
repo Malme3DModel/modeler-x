@@ -10,12 +10,14 @@ export interface ProjectContextState {
   projectName: string;
   code: string;
   hasUnsavedChanges: boolean;
+  lastSaved?: Date;
   
   // CADワーカー関連
   isCADWorkerReady: boolean;
   
   // コンソール関連
   consoleMessages: string[];
+  currentProgressMessage: string;
 }
 
 // アクション型定義
@@ -70,17 +72,18 @@ const initialState: ProjectContextState = {
   code: DEFAULT_CAD_CODE,
   hasUnsavedChanges: false,
   isCADWorkerReady: false,
-  consoleMessages: [...INITIAL_CONSOLE_MESSAGES]
+  consoleMessages: [...INITIAL_CONSOLE_MESSAGES],
+  currentProgressMessage: ''
 };
 
 // Reducer
 const projectReducer = (state: ProjectContextState, action: ProjectAction): ProjectContextState => {
   switch (action.type) {
     case 'SET_PROJECT_NAME':
-      return { ...state, projectName: action.payload };
+      return { ...state, projectName: action.payload, hasUnsavedChanges: true };
       
     case 'SET_CODE':
-      return { ...state, code: action.payload };
+      return { ...state, code: action.payload, hasUnsavedChanges: true };
       
     case 'SET_UNSAVED_CHANGES':
       return { ...state, hasUnsavedChanges: action.payload };
@@ -101,25 +104,17 @@ const projectReducer = (state: ProjectContextState, action: ProjectAction): Proj
       };
       
     case 'UPDATE_PROGRESS_MESSAGE':
-      return {
-        ...state,
-        consoleMessages: (() => {
-          const newMessages = [...state.consoleMessages];
-          // 最後のメッセージが進捗メッセージの場合は置き換え
-          if (newMessages.length > 0 && newMessages[newMessages.length - 1].startsWith('> Generating Model')) {
-            newMessages[newMessages.length - 1] = action.payload;
-          } else {
-            newMessages.push(action.payload);
-          }
-          return newMessages;
-        })()
-      };
+      return { ...state, currentProgressMessage: action.payload };
       
     case 'CLEAR_CONSOLE':
-      return { ...state, consoleMessages: [] };
+      return { ...state, consoleMessages: [], currentProgressMessage: '' };
       
     case 'SAVE_PROJECT':
-      return { ...state, hasUnsavedChanges: false };
+      return { 
+        ...state, 
+        hasUnsavedChanges: false, 
+        lastSaved: new Date() 
+      };
       
     case 'RESET_PROJECT':
       return { ...initialState, ...action.payload };
@@ -130,7 +125,7 @@ const projectReducer = (state: ProjectContextState, action: ProjectAction): Proj
 };
 
 // Context作成
-const ProjectContext = createContext<ProjectContextType | undefined>(undefined);
+const ProjectContext = createContext<ProjectContextType | null>(null);
 
 // Provider Props
 interface ProjectProviderProps {
@@ -194,7 +189,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({
     }
     console.log('Saving project:', state.projectName);
     dispatch({ type: 'SAVE_PROJECT' });
-  }, [onSaveProject]); // state依存を削除して安定化
+  }, [onSaveProject, state.projectName, state.code]);
 
   const resetProject = useCallback((initialState?: Partial<ProjectContextState>) => {
     dispatch({ type: 'RESET_PROJECT', payload: initialState });
@@ -208,25 +203,29 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({
   // CADワーカー関連コールバック
   const handleWorkerReady = useCallback(() => {
     setCADWorkerReady(true);
-    addConsoleMessages(['> CAD Kernel loaded successfully!', '> Ready to evaluate code']);
-  }, [setCADWorkerReady, addConsoleMessages]);
+    addConsoleMessage('CAD Worker is ready!');
+  }, [setCADWorkerReady, addConsoleMessage]);
 
   const handleShapeUpdate = useCallback((facesAndEdges: any, sceneOptions: any) => {
-    // 形状更新は各コンポーネントで直接処理するため、ここでは何もしない
-    // プロジェクト状態に関連する処理が必要な場合のみここに実装
-  }, []);
+    // 外部コールバックが提供されている場合は実行
+    if (onShapeUpdate) {
+      onShapeUpdate(facesAndEdges, sceneOptions);
+    }
+    addConsoleMessage('Shape updated successfully');
+  }, [onShapeUpdate, addConsoleMessage]);
 
   const handleProgress = useCallback((progress: CADWorkerProgress) => {
-    const progressMessage = `> Generating Model${'.' .repeat(progress.opNumber)}${progress.opType ? ` (${progress.opType})` : ''}`;
-    updateProgressMessage(progressMessage);
+    const message = `Progress: Operation ${progress.opNumber} - ${progress.opType}`;
+    updateProgressMessage(message);
   }, [updateProgressMessage]);
 
   const handleLog = useCallback((message: string) => {
-    addConsoleMessage(`> ${message}`);
+    addConsoleMessage(`[CAD Worker]: ${message}`);
   }, [addConsoleMessage]);
 
   const handleError = useCallback((error: string) => {
-    addConsoleMessage(`> ERROR: ${error}`);
+    addConsoleMessage(`[ERROR]: ${error}`);
+    console.error('CAD Worker Error:', error);
   }, [addConsoleMessage]);
 
   // Context値の作成
@@ -272,7 +271,7 @@ export const ProjectProvider: React.FC<ProjectProviderProps> = ({
 // Context使用フック
 export const useProjectContext = (): ProjectContextType => {
   const context = useContext(ProjectContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useProjectContext must be used within a ProjectProvider');
   }
   return context;

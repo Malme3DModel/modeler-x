@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, memo } from 'react';
 import Editor from '@monaco-editor/react';
 import { MONACO_EDITOR_CONFIG, TYPESCRIPT_CONFIG } from '../config/cadConfig';
 import type { MonacoEditorProps } from '../types';
@@ -9,7 +9,7 @@ import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { EditorService } from '@/services/editorService';
 import { TypeDefinitionService } from '@/services/typeDefinitionService';
 
-const MonacoEditor: React.FC<MonacoEditorProps> = ({ 
+const MonacoEditor: React.FC<MonacoEditorProps> = memo(({ 
   value, 
   onChange, 
   onEvaluate, 
@@ -37,134 +37,121 @@ const MonacoEditor: React.FC<MonacoEditorProps> = ({
     originalValue: value
   });
 
-  // エディターがマウントされた時の処理
-  const handleEditorDidMount = (editor: any, monaco: any) => {
+  // 元の値を更新（最適化: 値が変更された時のみ）
+  useEffect(() => {
+    originalValueRef.current = value;
+  }, [value]);
+
+  // エディターからコードを評価する関数（最適化: メモ化）
+  const evaluateCode = useCallback(async (saveToURL = false) => {
+    if (!editorRef.current || !monacoRef.current) {
+      console.warn('Editor or Monaco instance not ready');
+      return;
+    }
+
+    try {
+      await EditorService.evaluateCode({
+        editor: editorRef.current,
+        monaco: monacoRef.current,
+        evaluateAndRender,
+        extraLibs,
+        saveToURL,
+        onEvaluate
+      });
+    } catch (error) {
+      console.error('Error during code evaluation:', error);
+    }
+  }, [evaluateAndRender, extraLibs, onEvaluate]);
+
+  // エディターの初期化処理（最適化: 依存関係を最小化）
+  const handleEditorDidMount = useCallback(async (editor: any, monaco: any) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // TypeScript設定（定数から取得）
-    monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-      allowNonTsExtensions: TYPESCRIPT_CONFIG.allowNonTsExtensions,
-      target: monaco.languages.typescript.ScriptTarget[TYPESCRIPT_CONFIG.target],
-      allowJs: TYPESCRIPT_CONFIG.allowJs,
-      checkJs: TYPESCRIPT_CONFIG.checkJs,
-      moduleResolution: monaco.languages.typescript.ModuleResolutionKind[TYPESCRIPT_CONFIG.moduleResolution],
-    });
+    try {
+      // TypeScript設定を適用
+      monaco.languages.typescript.typescriptDefaults.setCompilerOptions(TYPESCRIPT_CONFIG);
 
-    monaco.languages.typescript.typescriptDefaults.setEagerModelSync(TYPESCRIPT_CONFIG.eagerModelSync);
+      // 型定義ファイルを読み込み
+      const libs = await TypeDefinitionService.loadTypeDefinitions(monaco);
+      setExtraLibs(libs);
 
-    // 型定義ファイルを読み込み（サービスを使用）
-    TypeDefinitionService.loadTypeDefinitions(monaco)
-      .then(libs => {
-        setExtraLibs(libs);
-      })
-      .catch(error => {
-        console.error('Failed to load type definitions:', error);
-      });
+      // エディターにevaluateCode関数を追加
+      editor.evaluateCode = evaluateCode;
 
-    // 関数の折りたたみ処理（サービスを使用）
-    EditorService.setupCodeFolding(editor, value);
+      // キーボードショートカットを設定
+      setupEditorShortcuts(editor, monaco);
 
-    // evaluateCode関数をエディターに追加（サービスを使用）
-    editor.evaluateCode = async (saveToURL = false) => {
-      try {
-        await EditorService.evaluateCode({
-          editor,
-          monaco,
-          evaluateAndRender,
-          extraLibs: TypeDefinitionService.getExtraLibs(),
-          saveToURL,
-          onEvaluate
-        });
-      } catch (error) {
-        console.error('Error evaluating code:', error);
-      }
-    };
+      // コード折りたたみを設定
+      EditorService.setupCodeFolding(editor, value);
 
-    // キーボードショートカットの設定（フックを使用）
-    setupEditorShortcuts(editor, monaco);
+      setIsLoaded(true);
+      console.log('Monaco Editor initialized successfully');
+    } catch (error) {
+      console.error('Error initializing Monaco Editor:', error);
+    }
+  }, [evaluateCode, setupEditorShortcuts, value]);
 
-    // エディターのフォーカス
-    editor.focus();
-    setIsLoaded(true);
-  };
-
-  // エディターの値が変更された時の処理
+  // エディター値変更時の処理（最適化: メモ化）
   const handleEditorChange = useCallback((newValue: string | undefined) => {
-    if (newValue !== undefined) {
+    if (newValue !== undefined && onChange) {
       onChange(newValue);
-      
-      // 未保存変更の状態を更新
-      if (onUnsavedChangesUpdate) {
-        const hasChanges = newValue !== originalValueRef.current;
-        onUnsavedChangesUpdate(hasChanges);
-      }
     }
-  }, [onChange, onUnsavedChangesUpdate]);
+  }, [onChange]);
 
-  // グローバルキーイベントの処理は useKeyboardShortcuts フックで管理されています
+  // エラー表示（最適化: エラーがある場合のみレンダリング）
+  const errorDisplay = error ? (
+    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+      <strong>Error:</strong> {error}
+      <button 
+        onClick={clearError}
+        className="ml-2 text-red-500 hover:text-red-700"
+      >
+        ×
+      </button>
+    </div>
+  ) : null;
 
-  // 元の値を更新（保存時など）
-  useEffect(() => {
-    if (!hasUnsavedChanges) {
-      originalValueRef.current = value;
-    }
-  }, [hasUnsavedChanges, value]);
-
-  // delayReloadEditor関数（Tweakpaneエラー回避用）
-  const delayReloadEditor = useCallback(() => {
-    setTimeout(() => {
-      if (editorRef.current?.evaluateCode) {
-        editorRef.current.evaluateCode();
-      }
-    }, 0);
-  }, []);
-
-  // グローバルにdelayReloadEditor関数を公開
-  useEffect(() => {
-    (window as any).delayReloadEditor = delayReloadEditor;
-    return () => {
-      delete (window as any).delayReloadEditor;
-    };
-  }, [delayReloadEditor]);
+  // ステータス表示（最適化: 状態変更時のみレンダリング）
+  const statusDisplay = (
+    <div className="flex items-center justify-between mb-2 text-sm text-gray-600">
+      <div className="flex items-center space-x-4">
+        <span>
+          Worker: {isWorkerReady ? '✅ Ready' : '⏳ Loading...'}
+        </span>
+        <span>
+          Status: {isWorking ? '🔄 Working...' : '✅ Idle'}
+        </span>
+        {hasUnsavedChanges && (
+          <span className="text-orange-600">● Unsaved changes</span>
+        )}
+      </div>
+      <div className="text-xs">
+        Press Ctrl+Enter to evaluate • F5 to update • Ctrl+S to save
+      </div>
+    </div>
+  );
 
   return (
     <div className="h-full flex flex-col">
-      <div className="bg-gray-700 text-white px-4 py-1 text-xs border-b border-gray-600 flex justify-between">
-        <span>
-          Press F5 or Ctrl+Enter to evaluate • Ctrl+S to save
-          {isWorking && <span className="text-yellow-400 ml-2">• Evaluating...</span>}
-        </span>
-        <span className="text-gray-400">
-          {isLoaded ? 'TypeScript Ready' : 'Loading Editor...'}
-        </span>
-      </div>
+      {statusDisplay}
+      {errorDisplay}
       <div className="flex-1">
         <Editor
-          defaultValue={value}
-          language="typescript"
-          theme="vs-dark"
+          height="100%"
+          defaultLanguage="typescript"
+          value={value}
           onChange={handleEditorChange}
           onMount={handleEditorDidMount}
-          options={{
-            automaticLayout: true,
-            minimap: { enabled: false },
-            fontSize: 14,
-            wordWrap: 'on',
-            scrollBeyondLastLine: false,
-          }}
-          loading={
-            <div className="flex-1 bg-gray-900 flex items-center justify-center text-white">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-2"></div>
-                <div>Loading Monaco Editor...</div>
-              </div>
-            </div>
-          }
+          options={MONACO_EDITOR_CONFIG}
+          theme="vs-dark"
         />
       </div>
     </div>
   );
-};
+});
+
+// displayNameを設定（デバッグ用）
+MonacoEditor.displayName = 'MonacoEditor';
 
 export default MonacoEditor; 

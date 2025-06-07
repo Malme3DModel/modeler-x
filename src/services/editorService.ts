@@ -53,6 +53,7 @@ export class EditorService {
           groundPlaneVisible: DEFAULT_GUI_STATE["GroundPlane?"], 
           gridVisible: DEFAULT_GUI_STATE["Grid?"] 
         },
+        guiState: DEFAULT_GUI_STATE,
         delay: 100
       });
 

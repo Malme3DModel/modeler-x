@@ -1,16 +1,17 @@
 import { TYPE_DEFINITION_PATHS } from '../config/cadConfig';
+import type { MonacoInstance, MonacoExtraLib } from '../types';
 
 /**
  * 型定義読み込みサービス
  * Monaco EditorのTypeScript型定義ファイル読み込みを管理
  */
 export class TypeDefinitionService {
-  private static extraLibs: any[] = [];
+  private static extraLibs: MonacoExtraLib[] = [];
 
   /**
    * すべての型定義ファイルを読み込み
    */
-  static async loadTypeDefinitions(monaco: any): Promise<any[]> {
+  static async loadTypeDefinitions(monaco: MonacoInstance): Promise<MonacoExtraLib[]> {
     this.extraLibs = [];
     const prefix = "";
 
@@ -34,7 +35,7 @@ export class TypeDefinitionService {
   /**
    * CascadeStudio型定義を読み込み
    */
-  private static async loadCascadeStudioTypes(prefix: string, monaco: any): Promise<void> {
+  private static async loadCascadeStudioTypes(prefix: string, monaco: MonacoInstance): Promise<void> {
     try {
       const response = await fetch(prefix + TYPE_DEFINITION_PATHS.cascadeStudio);
       const text = await response.text();
@@ -54,7 +55,7 @@ export class TypeDefinitionService {
   /**
    * StandardLibrary型定義を読み込み
    */
-  private static async loadStandardLibraryTypes(prefix: string, monaco: any): Promise<void> {
+  private static async loadStandardLibraryTypes(prefix: string, monaco: MonacoInstance): Promise<void> {
     try {
       const response = await fetch(prefix + TYPE_DEFINITION_PATHS.standardLibrary);
       const text = await response.text();
@@ -77,7 +78,7 @@ export class TypeDefinitionService {
   /**
    * 現在読み込まれている型定義を取得
    */
-  static getExtraLibs(): any[] {
+  static getExtraLibs(): MonacoExtraLib[] {
     return [...this.extraLibs];
   }
 
