@@ -5,6 +5,7 @@ import MonacoEditor from '../components/MonacoEditor';
 import ThreeViewport, { ThreeViewportRef } from '../components/ThreeViewport';
 import DockviewLayout from '../components/DockviewLayout';
 import CADWorkerManager from '../components/CADWorkerManager';
+import Header from '../components/Header';
 
 // デフォルトコード
 const defaultCode = 
@@ -160,50 +161,10 @@ export default function Home() {
 
       {/* トップナビゲーション */}
       <div className="bg-gray-800 text-white px-4 py-2 border-b border-gray-700 z-10">
-        <div className="flex items-center space-x-4">
-          <span className="font-semibold">Modeler X</span>
-          <button 
-            onClick={handleSaveProject}
-            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 rounded text-sm"
-            title="Save Project to .json"
-          >
-            Save Project
-          </button>
-          <button 
-            className="px-3 py-1 bg-gray-600 hover:bg-gray-700 rounded text-sm"
-            title="Load Project from .json"
-          >
-            Load Project
-          </button>
-          <button 
-            className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm"
-            title="Save STEP"
-          >
-            Save STEP
-          </button>
-          <button 
-            className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm"
-            title="Save STL"
-          >
-            Save STL
-          </button>
-          <button 
-            className="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-sm"
-            title="Save OBJ"
-          >
-            Save OBJ
-          </button>
-          {!isCADWorkerReady && (
-            <span className="text-yellow-400 text-sm">
-              • Loading CAD Kernel...
-            </span>
-          )}
-          {isCADWorkerReady && (
-            <span className="text-green-400 text-sm">
-              • CAD Kernel Ready
-            </span>
-          )}
-        </div>
+        <Header 
+          isCADWorkerReady={isCADWorkerReady} 
+          onSaveProject={handleSaveProject} 
+        />
       </div>
 
       {/* メインコンテンツエリア - Dockview */}

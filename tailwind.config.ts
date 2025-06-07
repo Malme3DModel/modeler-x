@@ -222,6 +222,15 @@ const config: Config = {
           // 汎用色
           '--color-accent-link': modelerColors.accent.link,
           '--color-shadow-text': modelerColors.shadow.text,
+
+          // Three.js ビューポート用
+          '--threejs-viewport-background': modelerColors.viewport.bg,
+          '--threejs-viewport-face': modelerColors.viewport.face,
+          '--threejs-viewport-wireframe': modelerColors.viewport.wireframe,
+          '--threejs-viewport-grid': modelerColors.viewport.grid,
+          '--threejs-viewport-axis-x': modelerColors.viewport.axis.x,
+          '--threejs-viewport-axis-y': modelerColors.viewport.axis.y,
+          '--threejs-viewport-axis-z': modelerColors.viewport.axis.z,
         },
       })
     }

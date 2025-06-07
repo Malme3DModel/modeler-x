@@ -116,9 +116,8 @@ const ThreeViewport = forwardRef<ThreeViewportRef, ThreeViewportProps>(({ onScen
         geometry.computeBoundingSphere();
 
         // モデラー色設定からフェイス色を取得（CSS変数から）
-        const root = document.documentElement;
-        const computedStyle = getComputedStyle(root);
-        const faceColor = computedStyle.getPropertyValue('--monaco-editor-background') || '#f5f5f5';
+        const faceColor = getComputedStyle(document.documentElement)
+          .getPropertyValue('--threejs-viewport-face').trim() || '#cccccc';
 
         // マテリアルの作成
         const matcapMaterial = new THREE.MeshMatcapMaterial({
@@ -171,7 +170,7 @@ const ThreeViewport = forwardRef<ThreeViewportRef, ThreeViewportProps>(({ onScen
         if (edgeVertices.length > 0) {
           // ワイヤーフレーム色を取得（CSS変数から）
           const wireframeColor = getComputedStyle(document.documentElement)
-            .getPropertyValue('--dv-dark-border').trim() || '#000000';
+            .getPropertyValue('--threejs-viewport-wireframe').trim() || '#999999';
             
           edgeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(edgeVertices, 3));
           const edgeMaterial = new THREE.LineBasicMaterial({ color: wireframeColor, linewidth: 1 });
@@ -230,7 +229,7 @@ const ThreeViewport = forwardRef<ThreeViewportRef, ThreeViewportProps>(({ onScen
 
     // 背景色を設定（CSS変数から）
     const bgColor = getComputedStyle(document.documentElement)
-      .getPropertyValue('--golden-content-background').trim() || '#222222';
+      .getPropertyValue('--threejs-viewport-background').trim() || '#1a1a1a';
     scene.background = new THREE.Color(bgColor);
     
     // 軸ヘルパー

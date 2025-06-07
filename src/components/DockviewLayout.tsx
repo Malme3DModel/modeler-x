@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   DockviewReact,
   DockviewReadyEvent,
@@ -24,7 +24,36 @@ const EditorPanel: React.FC<IDockviewPanelProps> = (props) => {
 
 const ViewportPanel: React.FC<IDockviewPanelProps> = (props) => {
   const content = (props.params as any)?.content;
-  return <div className="h-full w-full flex flex-col overflow-hidden">{content}</div>;
+  
+  // レイアウトが完了した後でViewportのリサイズを強制
+  useEffect(() => {
+    const handleResize = () => {
+      window.dispatchEvent(new Event('resize'));
+    };
+    
+    // 少し遅延させてレイアウトが完了してからリサイズ
+    const timer = setTimeout(handleResize, 100);
+    window.addEventListener('resize', handleResize);
+    
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+  
+  return (
+    <div 
+      className="h-full w-full flex flex-col overflow-hidden" 
+      style={{ 
+        minHeight: '300px', 
+        maxHeight: '800px', 
+        height: '600px', 
+        position: 'relative' 
+      }}
+    >
+      {content}
+    </div>
+  );
 };
 
 const ConsolePanel: React.FC<IDockviewPanelProps> = (props) => {
