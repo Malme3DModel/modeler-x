@@ -52,8 +52,19 @@ npm run type-check
 左側のエディターでTypeScriptコードを記述し、以下のキーボードショートカットで実行します：
 
 - **`Ctrl+Enter`**: コード実行
-- **`F5`**: モデル更新
+- **`F5`**: モデル更新  
 - **`Ctrl+S`**: プロジェクト保存
+
+### ヘッダーメニュー機能
+
+VSCodeライクなモダンなヘッダーメニューで以下の操作が可能です：
+
+- **Save**: プロジェクトをJSONファイルで保存
+- **Load**: JSONファイルからプロジェクトを読み込み
+- **Export**: 3Dモデルを各種フォーマットでエクスポート
+  - **STEP**: 高精度CADフォーマット（産業標準）
+  - **STL**: 3Dプリンタ向けメッシュフォーマット
+  - **OBJ**: 汎用3Dモデルフォーマット
 
 ```typescript
 // 基本的な形状
@@ -104,9 +115,21 @@ modeler-x/
 ├── src/
 │   ├── app/                 # Next.js App Router
 │   ├── components/          # UIコンポーネント
+│   │   ├── Header.tsx       # 🎨 VSCodeライクなモダンヘッダー
+│   │   ├── MonacoEditor.tsx # Monaco エディター
+│   │   ├── ThreeViewport.tsx # 3D ビューポート
+│   │   └── DockviewLayout.tsx # レイアウト管理
 │   ├── hooks/               # カスタムフック
+│   │   ├── useProjectState.ts   # プロジェクト状態管理
+│   │   ├── useProjectActions.ts # 🆕 プロジェクト操作
+│   │   ├── useCADWorker.ts      # CAD ワーカー管理
+│   │   └── useKeyboardShortcuts.ts # キーボードショートカット
+│   ├── services/            # 🆕 ビジネスロジック層
+│   │   ├── projectService.ts    # プロジェクト保存・読み込み
+│   │   ├── exportService.ts     # モデルエクスポート（STEP/STL/OBJ）
+│   │   ├── cadWorkerService.ts  # CAD ワーカー操作
+│   │   └── editorService.ts     # エディター操作
 │   ├── context/             # React Context
-│   ├── services/            # ビジネスロジック
 │   ├── config/              # 設定ファイル
 │   ├── constants/           # 定数定義
 │   └── types/               # 型定義
@@ -131,6 +154,7 @@ modeler-x/
 詳細な技術資料は `docs/wiki/` ディレクトリをご覧ください：
 
 - **[アーキテクチャ設計書](docs/wiki/architecture.md)** - システム全体の設計思想・構成図・データフロー
+- **[UI設計ガイド](docs/wiki/ui-design-guide.md)** - 🎨 VSCodeライクなモダンUI・デザインシステム
 - **[APIリファレンス](docs/wiki/api-reference.md)** - コンポーネント・フック・サービスの詳細仕様
 - **[開発ガイド](docs/wiki/development-guide.md)** - 環境構築・開発ワークフロー・コーディング規約
 - **[リファクタリング計画書](docs/refactoring-plan.md)** - プロジェクト改善履歴・実施内容

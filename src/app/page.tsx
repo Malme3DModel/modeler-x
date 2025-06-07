@@ -8,6 +8,7 @@ import CADWorkerManager from '../components/CADWorkerManager';
 import Header from '../components/Header';
 import { ProjectProvider } from '../context/ProjectContext';
 import { useProjectState } from '../hooks/useProjectState';
+import { useProjectActions } from '../hooks/useProjectActions';
 import { DEFAULT_CAD_CODE } from '../constants/defaultCode';
 
 
@@ -27,6 +28,17 @@ function HomeContent() {
     handleUnsavedChangesUpdate,
     cadWorkerCallbacks
   } = useProjectState();
+
+  // プロジェクト操作フック
+  const {
+    saveProject,
+    loadProject,
+    exportSTEP,
+    exportSTL,
+    exportOBJ,
+    isLoading: isProjectActionLoading,
+    lastError: projectActionError
+  } = useProjectActions();
   
   const threejsViewportRef = useRef<ThreeViewportRef>(null);
 
@@ -42,6 +54,31 @@ function HomeContent() {
   const handleSceneReady = useCallback((scene: any) => {
     // 将来的にシーン設定が必要な場合はここに実装
   }, []);
+
+  // プロジェクト操作のハンドラー（UIイベント→フック呼び出し）
+  const handleLoadProject = useCallback(async () => {
+    const projectData = await loadProject();
+    if (projectData) {
+      handleCodeChange(projectData.code);
+      handleProjectNameUpdate(projectData.name);
+    }
+  }, [loadProject, handleCodeChange, handleProjectNameUpdate]);
+
+  const handleSaveProjectAction = useCallback(async () => {
+    await saveProject(projectName, code);
+  }, [saveProject, projectName, code]);
+
+  const handleExportSTEP = useCallback(async () => {
+    await exportSTEP();
+  }, [exportSTEP]);
+
+  const handleExportSTL = useCallback(async () => {
+    await exportSTL();
+  }, [exportSTL]);
+
+  const handleExportOBJ = useCallback(async () => {
+    await exportOBJ();
+  }, [exportOBJ]);
 
   // 左パネル（エディター）
   const leftPanel = (
@@ -94,10 +131,14 @@ function HomeContent() {
       />
 
       {/* トップナビゲーション */}
-      <div className="bg-modeler-background-secondary text-modeler-control-text-primary px-4 py-2 border-b border-modeler-control-border z-10">
+      <div className="shrink-0 z-10">
         <Header 
           isCADWorkerReady={isCADWorkerReady} 
-          onSaveProject={handleSaveProject} 
+          onSaveProject={handleSaveProjectAction}
+          onLoadProject={handleLoadProject}
+          onSaveSTEP={handleExportSTEP}
+          onSaveSTL={handleExportSTL}
+          onSaveOBJ={handleExportOBJ}
         />
       </div>
 

@@ -65,19 +65,20 @@ Modeler XはNext.js 14・TypeScript・React 18を基盤とした、モダンで�
 ### `/src/components` - UIコンポーネント
 ```typescript
 components/
-├── CADWorkerManager.tsx    # CADワーカー管理（Web Worker Interface）
+├── Header.tsx              # 🎨 VSCodeライクなモダンヘッダー（Save/Load/Export）
+├── MonacoEditor.tsx        # コードエディター（Monaco Editor・TypeScript）
+├── ThreeViewport.tsx       # 3Dビューポート（Three.js・WebGL）
 ├── DockviewLayout.tsx      # レイアウト管理（パネル・ドッキング）
-├── MonacoEditor.tsx        # コードエディター（Monaco Editor）
-├── ThreeViewport.tsx       # 3Dビューポート（Three.js）
-└── Header.tsx              # ヘッダー（タイトル・ステータス）
+└── CADWorkerManager.tsx    # CADワーカー管理（Web Worker Interface）
 ```
 
 ### `/src/hooks` - カスタムフック
 ```typescript
 hooks/
+├── useProjectState.ts      # プロジェクト状態管理インターフェース
+├── useProjectActions.ts    # 🆕 プロジェクト操作（保存・読み込み・エクスポート）
 ├── useCADWorker.ts         # CADワーカー管理・状態監視
-├── useKeyboardShortcuts.ts # キーボードショートカット管理
-└── useProjectState.ts      # プロジェクト状態管理インターフェース
+└── useKeyboardShortcuts.ts # キーボードショートカット管理
 ```
 
 ### `/src/context` - React Context
@@ -89,6 +90,8 @@ context/
 ### `/src/services` - ビジネスロジック
 ```typescript
 services/
+├── projectService.ts         # 🆕 プロジェクト保存・読み込み・ファイル操作
+├── exportService.ts          # 🆕 モデルエクスポート（STEP/STL/OBJ）
 ├── cadWorkerService.ts       # CADワーカー操作・ビジネスロジック
 ├── editorService.ts          # エディター評価・コード解析
 └── typeDefinitionService.ts  # TypeScript型定義管理
@@ -167,6 +170,44 @@ graph TB
     E --> F[State Update]
     F --> G[Re-render]
     G --> H[UI Update]
+```
+
+### 4. プロジェクト操作フロー（新規追加）
+
+```mermaid
+sequenceDiagram
+    participant User as ユーザー
+    participant Header as Header Component
+    participant Hook as useProjectActions
+    participant Service as ProjectService/ExportService
+    participant Context as ProjectContext
+
+    User->>Header: Save/Load/Export クリック
+    Header->>Hook: 操作関数呼び出し
+    Hook->>Service: ビジネスロジック実行
+    Service->>Service: ファイル操作・データ処理
+    Service-->>Hook: 操作結果
+    Hook->>Context: 状態更新（必要に応じて）
+    Context-->>Header: 状態変更通知
+    Header-->>User: UI更新・フィードバック
+```
+
+### 5. Clean Architecture レイヤー分離
+
+```mermaid
+graph TD
+    A[UI Layer<br/>Components] --> B[Hook Layer<br/>Custom Hooks]
+    B --> C[Service Layer<br/>Business Logic]
+    B --> D[Context Layer<br/>State Management]
+    
+    A1[Header.tsx<br/>MonacoEditor.tsx] --> B1[useProjectActions<br/>useProjectState]
+    B1 --> C1[ProjectService<br/>ExportService]
+    B1 --> D1[ProjectContext]
+    
+    style A fill:#e1f5fe
+    style B fill:#f3e5f5
+    style C fill:#e8f5e8
+    style D fill:#fff3e0
 ```
 
 ## 🎯 設計原則
