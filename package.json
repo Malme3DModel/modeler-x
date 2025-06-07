@@ -14,6 +14,7 @@
     "@types/jquery": "^3.5.32",
     "@types/three": "^0.177.0",
     "autoprefixer": "^10.4.21",
+    "clsx": "^2.1.1",
     "dockview": "^4.3.1",
     "golden-layout": "^1.5.9",
     "jquery": "^3.7.1",
@@ -24,6 +25,7 @@
     "potpack": "^2.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.3.0",
     "three": "^0.129.0",
     "tweakpane": "^3.1.10"
   },

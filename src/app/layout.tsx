@@ -23,7 +23,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#1e1e1e',
+  themeColor: '#1e1e1e', // modeler.background.secondary と同じ値（tailwind.config.tsで管理）
 };
 
 export default function RootLayout({

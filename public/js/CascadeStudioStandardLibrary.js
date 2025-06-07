@@ -124,7 +124,11 @@ function Text3D(text, size, height, fontName) {
 
   let textArgs = JSON.stringify(arguments);
   let curText = CacheOp(arguments, () => {
-    if (fonts[fontName] === undefined) { argCache = {}; console.log("Font not loaded or found yet!  Try again..."); return; }
+    if (fonts[fontName] === undefined) { 
+      argCache = {}; 
+      console.log("Font not loaded or found yet!  Try again..."); 
+      return new oc.TopoDS_Shape();
+    }
     let textFaces = [];
     let commands = fonts[fontName].getPath(text, 0, 0, size).commands;
     for (let idx = 0; idx < commands.length; idx++) {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   DockviewReact,
   DockviewReadyEvent,
@@ -24,7 +24,21 @@ const EditorPanel: React.FC<IDockviewPanelProps> = (props) => {
 
 const ViewportPanel: React.FC<IDockviewPanelProps> = (props) => {
   const content = (props.params as any)?.content;
-  return <div className="h-full w-full flex flex-col overflow-hidden">{content}</div>;
+   
+  return (
+    <div 
+      className="h-full w-full flex flex-col overflow-hidden" 
+      data-panel-type="viewport"
+      style={{
+        pointerEvents: 'auto',
+        touchAction: 'auto',
+        position: 'relative',
+        zIndex: 1
+      }}
+    >
+      {content}
+    </div>
+  );
 };
 
 const ConsolePanel: React.FC<IDockviewPanelProps> = (props) => {
@@ -68,6 +82,37 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
       title: 'Console',
       position: { referencePanel: 'viewport', direction: 'below' },
     });
+
+    // 初期レイアウトの設定（直接実行）
+    try {
+      // dockviewの設定 - apiを通じて直接レイアウトを調整
+      const dockviewApi = event.api as any; // anyを使用して型エラーを回避
+      if (dockviewApi.groups && dockviewApi.groups.length >= 2) {
+        // パネル比率の設定は実装次第で異なる可能性があるため、エラーハンドリングで囲む
+        try {
+          // 左右のパネルの比率を調整（可能であれば）
+          if (typeof dockviewApi.setSplitProportion === 'function') {
+            dockviewApi.setSplitProportion(0, 0.6);
+          }
+          
+          // 右側のパネル内でビューポートとコンソールの比率を調整
+          const rightGroup = dockviewApi.groups.find((g: any) => 
+            g.panels && g.panels.some((p: any) => p.id === 'viewport')
+          );
+          
+          if (rightGroup) {
+            const rightGroupIndex = dockviewApi.groups.indexOf(rightGroup);
+            if (rightGroupIndex >= 0 && typeof dockviewApi.setSplitProportion === 'function') {
+              dockviewApi.setSplitProportion(rightGroupIndex, 0.7);
+            }
+          }
+        } catch (e) {
+          console.warn('Split proportion adjustment not supported:', e);
+        }
+      }
+    } catch (error) {
+      console.error('Error setting initial layout proportions', error);
+    }
   };
 
   // タイトルの更新
@@ -81,70 +126,75 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
   }, [editorTitle]);
 
   return (
-    <div className="h-full w-full" style={{ backgroundColor: '#1e1e1e' }}>
+    <div className="h-full w-full bg-modeler-background-secondary">
       <style jsx global>{`
-        .dockview-theme-dark {
+        .dockview-theme-modeler {
           --dv-group-header-height: 26px;
           --dv-group-header-font-size: 12px;
           --dv-tabs-and-actions-container-font-size: 12px;
           --dv-drag-over-background-color: rgba(30, 144, 255, 0.1);
-          --dv-paneview-header-background-color: #2d2d30;
-          --dv-group-view-background-color: #1e1e1e;
-          --dv-tabs-container-background-color: #2d2d30;
-          --dv-activegroup-visiblepanel-tab-background-color: #1e1e1e;
-          --dv-activegroup-visiblepanel-tab-color: #ffffff;
-          --dv-tab-background-color: #2d2d30;
-          --dv-tab-color: #969696;
-          --dv-separator-border: 1px solid #464647;
-          --dv-tab-divider-color: #464647;
+          --dv-paneview-header-background-color: var(--dv-dark-header-background);
+          --dv-group-view-background-color: var(--dv-modeler-group-view-background-color);
+          --dv-tabs-container-background-color: var(--dv-dark-header-background);
+          --dv-activegroup-visiblepanel-tab-background-color: var(--dv-modeler-group-view-background-color);
+          --dv-activegroup-visiblepanel-tab-color: var(--dv-dark-text-white);
+          --dv-tab-background-color: var(--dv-dark-tab-background);
+          --dv-tab-color: var(--dv-dark-tab-text);
+          --dv-separator-border: 1px solid var(--dv-dark-border);
+          --dv-tab-divider-color: var(--dv-dark-border);
+        }
+        
+        /* ビューポートパネルの最小高さを設定 */
+        [data-panel-type="viewport"] {
+          min-height: 300px;
         }
         
         /* Golden Layoutのスタイルを再現 */
-        .dockview-theme-dark .dv-default-tab {
+        .dockview-theme-modeler .dv-default-tab {
           height: 26px;
           line-height: 26px;
           padding: 0 10px;
-          border-right: 1px solid #464647;
+          border-right: 1px solid var(--dv-dark-border);
           font-size: 12px;
         }
         
-        .dockview-theme-dark .dv-default-tab.dv-active {
-          background-color: #1e1e1e;
-          color: #ffffff;
-          border-bottom: 1px solid #1e1e1e;
+        .dockview-theme-modeler .dv-default-tab.dv-active {
+          background-color: var(--dv-modeler-group-view-background-color);
+          color: var(--dv-dark-text-white);
+          border-bottom: 1px solid var(--dv-modeler-group-view-background-color);
         }
         
-        .dockview-theme-dark .dv-default-tab:not(.dv-active):hover {
-          background-color: #3e3e42;
+        .dockview-theme-modeler .dv-default-tab:not(.dv-active):hover {
+          background-color: var(--dv-dark-tab-hover);
         }
         
-        .dockview-theme-dark .tabs-and-actions-container {
-          background-color: #2d2d30;
-          border-bottom: 1px solid #464647;
+        .dockview-theme-modeler .tabs-and-actions-container {
+          background-color: var(--dv-dark-header-background);
+          border-bottom: 1px solid var(--dv-dark-border);
         }
         
-        .dockview-theme-dark .group-container {
+        .dockview-theme-modeler .group-container {
           border: none;
-          background-color: #1e1e1e;
+          background-color: var(--dv-modeler-group-view-background-color);
         }
         
         /* タブのクローズボタン */
-        .dockview-theme-dark .dv-default-tab-action {
+        .dockview-theme-modeler .dv-default-tab-action {
           display: none;
         }
         
         /* スプリッターのスタイル */
-        .dockview-theme-dark .split-view-view-separator {
-          background-color: #464647;
+        .dockview-theme-modeler .split-view-view-separator {
+          background-color: var(--dv-dark-border);
           width: 4px;
         }
         
-        .dockview-theme-dark .split-view-view-separator:hover {
-          background-color: #007acc;
+        .dockview-theme-modeler .split-view-view-separator:hover {
+          background-color: var(--color-accent-link);
         }
         
         /* 垂直スプリッター */
-        .dockview-theme-dark .split-view-container-vertical > .split-view-view-separator {
+        .dockview-theme-modeler .split-view-container-vertical > .split-view-view-separator {
           height: 4px;
           width: 100%;
         }
@@ -156,7 +206,7 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
           viewport: ViewportPanel,
           console: ConsolePanel,
         }}
-        className="dockview-theme-dark h-full w-full"
+        className="dockview-theme-modeler h-full w-full"
         disableFloatingGroups={true}
       />
     </div>

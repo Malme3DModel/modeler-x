@@ -4,6 +4,18 @@ import React, { useRef, useEffect, useState, useCallback, forwardRef, useImperat
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
+// モデラー色設定のインポート（型情報のみ）
+type ModelerColors = {
+  viewport: {
+    bg: string;
+    face: string;
+    wireframe: string;
+  };
+  background: {
+    primary: string;
+  };
+};
+
 interface ThreeViewportProps {
   onSceneReady?: (scene: THREE.Scene) => void;
 }
@@ -31,8 +43,6 @@ const ThreeViewport = forwardRef<ThreeViewportRef, ThreeViewportProps>(({ onScen
 
     const scene = sceneRef.current;
     const mainObject = mainObjectRef.current;
-
-
 
     // 既存のCADオブジェクトをクリア
     while (mainObject.children.length > 0) {
@@ -105,9 +115,13 @@ const ThreeViewport = forwardRef<ThreeViewportRef, ThreeViewportProps>(({ onScen
         geometry.setIndex(indices);
         geometry.computeBoundingSphere();
 
+        // モデラー色設定からフェイス色を取得（CSS変数から）
+        const faceColor = getComputedStyle(document.documentElement)
+          .getPropertyValue('--threejs-viewport-face').trim() || '#cccccc';
+
         // マテリアルの作成
         const matcapMaterial = new THREE.MeshMatcapMaterial({
-          color: new THREE.Color(0xf5f5f5),
+          color: new THREE.Color(faceColor),
           polygonOffset: true,
           polygonOffsetFactor: 2.0,
           polygonOffsetUnits: 1.0
@@ -154,8 +168,12 @@ const ThreeViewport = forwardRef<ThreeViewportRef, ThreeViewportProps>(({ onScen
         }
 
         if (edgeVertices.length > 0) {
+          // ワイヤーフレーム色を取得（CSS変数から）
+          const wireframeColor = getComputedStyle(document.documentElement)
+            .getPropertyValue('--threejs-viewport-wireframe').trim() || '#999999';
+            
           edgeGeometry.setAttribute('position', new THREE.Float32BufferAttribute(edgeVertices, 3));
-          const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 1 });
+          const edgeMaterial = new THREE.LineBasicMaterial({ color: wireframeColor, linewidth: 1 });
           const edgeLines = new THREE.LineSegments(edgeGeometry, edgeMaterial);
           edgeLines.name = "Model Edges";
           mainObject.add(edgeLines);
@@ -201,221 +219,225 @@ const ThreeViewport = forwardRef<ThreeViewportRef, ThreeViewportProps>(({ onScen
       }
     }
 
-    // 照明の設定
-    const hemisphereLight = new THREE.HemisphereLight(0xffffff, 0x444444, 1);
-    hemisphereLight.position.set(0, 200, 0);
-    scene.add(hemisphereLight);
+    // 光源
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xbbbbbb, 1);
-    directionalLight.position.set(6, 50, -12);
-    directionalLight.castShadow = true;
-    directionalLight.shadow.camera.top = 200;
-    directionalLight.shadow.camera.bottom = -200;
-    directionalLight.shadow.camera.left = -200;
-    directionalLight.shadow.camera.right = 200;
-    directionalLight.shadow.mapSize.width = 128;
-    directionalLight.shadow.mapSize.height = 128;
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(1, 1, 1);
     scene.add(directionalLight);
 
-    // グラウンドプレーンの作成
-    const groundGeometry = new THREE.PlaneGeometry(2000, 2000);
-    const groundMaterial = new THREE.MeshPhongMaterial({
-      color: 0x080808,
-      depthWrite: true,
-      dithering: true,
-      polygonOffset: true,
-      polygonOffsetFactor: 6.0,
-      polygonOffsetUnits: 1.0
-    });
-    const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
-    groundMesh.position.y = -0.1;
-    groundMesh.rotation.x = -Math.PI / 2;
-    groundMesh.receiveShadow = true;
-    scene.add(groundMesh);
-    groundPlaneRef.current = groundMesh;
+    // 背景色を設定（CSS変数から）
+    const bgColor = getComputedStyle(document.documentElement)
+      .getPropertyValue('--threejs-viewport-background').trim() || '#1a1a1a';
+    scene.background = new THREE.Color(bgColor);
+    
+    // 軸ヘルパー
+    const axesHelper = new THREE.AxesHelper(50);
+    scene.add(axesHelper);
 
-    // グリッドの作成
-    const grid = new THREE.GridHelper(2000, 20, 0xcccccc, 0xcccccc);
-    grid.position.y = -0.01;
-    grid.material.opacity = 0.3;
-    grid.material.transparent = true;
+    // CADオブジェクト用のコンテナグループ
+    const mainObject = new THREE.Group();
+    mainObject.name = "CAD Model Container";
+    scene.add(mainObject);
+    mainObjectRef.current = mainObject;
+
+    // グリッドヘルパー
+    const grid = new THREE.GridHelper(100, 10);
+    grid.rotation.x = Math.PI / 2;
     scene.add(grid);
     gridRef.current = grid;
 
-    // メインオブジェクトグループの作成
-    const mainObject = new THREE.Group();
-    mainObject.name = "shape";
-    mainObject.rotation.x = -Math.PI / 2;
-    scene.add(mainObject);
-    mainObjectRef.current = mainObject;
+    // グラウンドプレーン
+    const groundGeometry = new THREE.PlaneGeometry(200, 200);
+    const groundMaterial = new THREE.ShadowMaterial({ opacity: 0.3 });
+    const groundPlane = new THREE.Mesh(groundGeometry, groundMaterial);
+    groundPlane.rotation.x = -Math.PI / 2;
+    groundPlane.position.y = -0.01; // 軸と重ならないよう少しオフセット
+    groundPlane.receiveShadow = true;
+    groundPlane.name = "Ground Plane";
+    scene.add(groundPlane);
+    groundPlaneRef.current = groundPlane;
 
     if (onSceneReady) {
       onSceneReady(scene);
     }
   }, [onSceneReady]);
 
-  // リサイズハンドラー
-  const handleResize = useCallback(() => {
-    if (!mountRef.current || !cameraRef.current || !rendererRef.current) return;
-    
-    const mount = mountRef.current;
-    const newWidth = mount.clientWidth;
-    const newHeight = mount.clientHeight;
-    
-    // カメラのアスペクト比を更新
-    cameraRef.current.aspect = newWidth / newHeight;
-    cameraRef.current.updateProjectionMatrix();
-    
-    // レンダラーのサイズを更新
-    rendererRef.current.setSize(newWidth, newHeight);
-    
-    console.log(`Three.js viewport resized to: ${newWidth}x${newHeight}`);
-  }, []);
-
-  // Three.jsの初期化
+  // シーンのセットアップ
   useEffect(() => {
+    // マウント要素がない場合は何もしない
     if (!mountRef.current) return;
-
-    const mount = mountRef.current;
-    const width = mount.clientWidth;
-    const height = mount.clientHeight;
 
     // シーンの作成
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x222222);
-    scene.fog = new THREE.Fog(0x222222, 200, 600);
     sceneRef.current = scene;
-
-    // カメラの作成
-    const camera = new THREE.PerspectiveCamera(45, width / height, 1, 5000);
-    camera.position.set(50, 100, 150);
-    camera.lookAt(0, 45, 0);
-    cameraRef.current = camera;
 
     // レンダラーの作成
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setSize(width, height);
+    // devicePixelRatioを1に設定して高DPIスケーリングを無効化
+    renderer.setPixelRatio(1);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    
+    // マウント要素のサイズを取得
+    const { clientWidth, clientHeight } = mountRef.current;
+    
+    console.log(`マウント要素の実際のサイズ: ${clientWidth}x${clientHeight}`);
+    
+    // サイズが0または異常に大きい場合はデフォルト値を設定
+    const width = clientWidth > 0 && clientWidth < 3000 ? clientWidth : 800;
+    const height = clientHeight > 0 && clientHeight < 3000 ? clientHeight : 600;
+    
+    renderer.setSize(width, height);
+    mountRef.current.appendChild(renderer.domElement);
+
+    // canvasに直接スタイルを適用
+    const canvas = renderer.domElement;
+    canvas.style.position = 'absolute';
+    canvas.style.top = '0';
+    canvas.style.left = '0';
+    canvas.style.width = '100%';  // 幅を100%に設定
+    canvas.style.height = '100%'; // 高さを100%に設定
+    canvas.style.zIndex = '10';
+    canvas.style.pointerEvents = 'auto';
+    canvas.style.touchAction = 'none';
+    
     rendererRef.current = renderer;
 
-    mount.appendChild(renderer.domElement);
+    // カメラの作成
+    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+    camera.position.set(50, 50, 50);
+    camera.lookAt(0, 0, 0);
+    cameraRef.current = camera;
 
-    // コントロールの設定
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.target.set(0, 45, 0);
-    controls.panSpeed = 2;
-    controls.zoomSpeed = 1;
-    controls.screenSpacePanning = true;
+    // コントロールの作成
+    const controls = new OrbitControls(camera, canvas);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.rotateSpeed = 1.0;
+    controls.zoomSpeed = 1.2;
+    controls.panSpeed = 0.8;
+    controls.minDistance = 5;
+    controls.maxDistance = 500;
+    controls.enablePan = true;
+    controls.enableRotate = true;
+    controls.enableZoom = true;
     controls.update();
     controlsRef.current = controls;
 
-    // 初期シーンの作成
+    // 初期シーンの設定
     createInitialScene();
+
+    // リサイズ処理
+    const handleResize = () => {
+      if (!mountRef.current || !rendererRef.current || !cameraRef.current) return;
+      
+      const { clientWidth, clientHeight } = mountRef.current;
+      
+      // サイズが0または異常に大きい場合はデフォルト値を使用
+      const width = clientWidth > 0 && clientWidth < 3000 ? clientWidth : 800;
+      const height = clientHeight > 0 && clientHeight < 3000 ? clientHeight : 600;
+      
+      // サイズが変わっていない場合は何もしない
+      if (rendererRef.current.domElement.width === width && 
+          rendererRef.current.domElement.height === height) {
+        return;
+      }
+      
+      // pixelRatioを1に設定してからサイズを変更
+      rendererRef.current.setPixelRatio(1);
+      rendererRef.current.setSize(width, height, true);
+      
+      // canvasのスタイルも明示的に更新
+      const canvas = rendererRef.current.domElement;
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+      
+      cameraRef.current.aspect = width / height;
+      cameraRef.current.updateProjectionMatrix();
+    };
+
+    // リサイズオブザーバーの設定
+    const resizeObserver = new ResizeObserver(handleResize);
+    
+    if (mountRef.current) {
+      resizeObserver.observe(mountRef.current);
+    }
+    resizeObserverRef.current = resizeObserver;
 
     // アニメーションループ
     const animate = () => {
-      animationIdRef.current = requestAnimationFrame(animate);
-      controls.update();
-      renderer.render(scene, camera);
-    };
-    animate();
-
-    setIsLoaded(true);
-
-    // ResizeObserverを設定してdockviewのパネルリサイズに対応
-    if (window.ResizeObserver) {
-      resizeObserverRef.current = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          // contentBoxSizeが利用可能な場合はそれを使用、そうでなければcontentRectを使用
-          const { width: newWidth, height: newHeight } = entry.contentBoxSize 
-            ? { width: entry.contentBoxSize[0].inlineSize, height: entry.contentBoxSize[0].blockSize }
-            : entry.contentRect;
-          
-          if (newWidth > 0 && newHeight > 0) {
-            handleResize();
-          }
-        }
-      });
+      if (!rendererRef.current || !sceneRef.current || !cameraRef.current || !controlsRef.current) return;
       
-      resizeObserverRef.current.observe(mount);
-    }
+      animationIdRef.current = requestAnimationFrame(animate);
+      controlsRef.current.update();
+      rendererRef.current.render(sceneRef.current, cameraRef.current);
+    };
 
-    // フォールバック: windowリサイズイベント
-    window.addEventListener('resize', handleResize);
+    animate();
+    setIsLoaded(true);
 
     // クリーンアップ
     return () => {
-      window.removeEventListener('resize', handleResize);
-      
-      if (resizeObserverRef.current) {
-        resizeObserverRef.current.disconnect();
-        resizeObserverRef.current = null;
-      }
-      
       if (animationIdRef.current) {
         cancelAnimationFrame(animationIdRef.current);
       }
       
-      if (mount && renderer.domElement) {
-        mount.removeChild(renderer.domElement);
+      if (resizeObserverRef.current && mountRef.current) {
+        resizeObserverRef.current.unobserve(mountRef.current);
+        resizeObserverRef.current.disconnect();
       }
-      
-      // Three.jsリソースの解放
-      scene.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          child.geometry.dispose();
-          if (Array.isArray(child.material)) {
-            child.material.forEach(material => material.dispose());
-          } else {
-            child.material.dispose();
+
+      if (rendererRef.current && mountRef.current) {
+        mountRef.current.removeChild(rendererRef.current.domElement);
+        rendererRef.current.dispose();
+      }
+
+      if (sceneRef.current) {
+        sceneRef.current.traverse((object) => {
+          if (object instanceof THREE.Mesh) {
+            if (object.geometry) {
+              object.geometry.dispose();
+            }
+            if (Array.isArray(object.material)) {
+              object.material.forEach(material => material.dispose());
+            } else if (object.material) {
+              object.material.dispose();
+            }
           }
-        }
-      });
-      
-      renderer.dispose();
-    };
-  }, [createInitialScene, handleResize]);
+        });
+      }
 
-  // グローバルにThreeViewportインターフェースを公開
-  useEffect(() => {
-    (window as any).threejsViewport = {
-      updateShape: updateShapeFromWorker,
-      clearTransformHandles: () => {
-        // Transform handles clearing logic (if needed)
-      },
-      saveShapeSTEP: () => {
-        console.log('Save STEP functionality not yet implemented');
-      },
-      saveShapeSTL: () => {
-        console.log('Save STL functionality not yet implemented');
-      },
-      saveShapeOBJ: () => {
-        console.log('Save OBJ functionality not yet implemented');
+      // OrbitControlsの明示的な破棄
+      if (controlsRef.current) {
+        controlsRef.current.dispose();
       }
     };
-
-    return () => {
-      delete (window as any).threejsViewport;
-    };
-  }, [updateShapeFromWorker]);
+  }, [createInitialScene]);
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="bg-gray-700 text-white px-4 py-1 text-xs border-b border-gray-600 flex justify-between">
-        <span>CAD View</span>
-        <span className="text-gray-400">
-          {isLoaded ? 'Three.js Ready' : 'Loading Viewport...'}
-        </span>
-      </div>
+    <div className="relative h-full w-full bg-modeler-viewport-bg">
+      {/* マウント要素 - ここにThree.jsのcanvasが追加される */}
       <div 
         ref={mountRef} 
-        className="flex-1 bg-gray-900"
-        style={{ minHeight: '400px' }}
-      />
+        className="absolute inset-0 w-full h-full"
+      >
+        {!isLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center text-white">
+            Loading Viewport...
+          </div>
+        )}
+      </div>
+      {isLoaded && (
+        <div className="absolute bottom-2 right-2 text-xs text-white bg-black bg-opacity-50 px-2 py-1 rounded z-20">
+          Three.js Ready
+        </div>
+      )}
     </div>
   );
 });
+
+ThreeViewport.displayName = 'ThreeViewport';
 
 export default ThreeViewport;         
