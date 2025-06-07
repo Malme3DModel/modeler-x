@@ -324,6 +324,87 @@ npm run build
 npm run dev
 ```
 
+## 🎨 テーマ・スタイリング
+
+### 統一テーマシステム
+
+Modeler XではVisual Studio Darkテーマを全コンポーネントに統一適用しています。
+
+#### TailwindCSS v4テーマ設定
+
+```css
+/* src/app/globals.css */
+@theme {
+  /* VS Code Dark テーマカラー */
+  --color-modeler-background-primary: #1e1e1e;
+  --color-modeler-background-secondary: #252526;
+  --color-modeler-background-tertiary: #2d2d30;
+  
+  --color-modeler-control-border: #3e3e42;
+  --color-modeler-control-text-primary: #cccccc;
+  --color-modeler-control-text-secondary: #969696;
+  
+  --color-modeler-accent-primary: #007acc;
+  --color-modeler-accent-success: #4ec9b0;
+  --color-modeler-accent-warning: #ffcc02;
+  --color-modeler-accent-error: #f44747;
+}
+```
+
+#### コンポーネントでの使用
+
+```typescript
+// TailwindCSSクラスを使用
+const Header: React.FC = () => {
+  return (
+    <header className="bg-modeler-background-secondary border-b border-modeler-control-border">
+      <h1 className="text-modeler-control-text-primary">Modeler X</h1>
+    </header>
+  );
+};
+```
+
+#### Monaco Editor テーマ
+
+```typescript
+// vs-darkテーマを適用
+<MonacoEditor
+  value={code}
+  onChange={setCode}
+  theme="vs-dark" // Visual Studio Darkテーマ
+  language="typescript"
+/>
+```
+
+#### DockView テーマ
+
+```typescript
+// themeDarkを適用
+import { themeDark } from 'dockview';
+
+<DockviewReact
+  theme={themeDark} // Visual Studio Darkテーマ
+  components={{ /* ... */ }}
+/>
+```
+
+### テーマカスタマイズ
+
+新しいコンポーネントを作成する際は、以下のカラーパレットを使用してください：
+
+| 用途 | TailwindCSSクラス | 色値 |
+|------|------------------|------|
+| 主背景 | `bg-modeler-background-primary` | `#1e1e1e` |
+| 副背景 | `bg-modeler-background-secondary` | `#252526` |
+| 第三背景 | `bg-modeler-background-tertiary` | `#2d2d30` |
+| ボーダー | `border-modeler-control-border` | `#3e3e42` |
+| 主テキスト | `text-modeler-control-text-primary` | `#cccccc` |
+| 副テキスト | `text-modeler-control-text-secondary` | `#969696` |
+| アクセント | `text-modeler-accent-primary` | `#007acc` |
+| 成功 | `text-modeler-accent-success` | `#4ec9b0` |
+| 警告 | `text-modeler-accent-warning` | `#ffcc02` |
+| エラー | `text-modeler-accent-error` | `#f44747` |
+
 ## 📝 コーディング規約
 
 ### TypeScript規約
