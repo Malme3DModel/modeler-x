@@ -42,7 +42,7 @@ let complexUnion = Union([
   Translate([45, 0, 0], cone)
 ]);
 
-let filletedShape = FilletEdges(complexUnion, 3);
+let filletedShape = complexUnion;
 
 let rotatedText = Rotate([1, 0, 0], 90, 
   Translate([0, -10, 25], textShape)
@@ -83,4 +83,4 @@ export const DEFAULT_PROJECT_CONFIG = {
 export const INITIAL_CONSOLE_MESSAGES = [
   '> Welcome to Modeler X!',
   '> Loading CAD Kernel...'
-] as const;      
+] as const;        
