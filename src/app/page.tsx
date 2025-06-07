@@ -109,13 +109,13 @@ function HomeContent() {
 
   // 右下パネル（コンソール）
   const rightBottomPanel = (
-    <div className="h-full bg-modeler-background-primary flex flex-col">
-      <div className="p-4 h-full overflow-auto text-white font-mono text-sm">
+    <div className="h-full flex flex-col" >
+      <div className="p-4 h-full overflow-auto">
          {consoleMessages.map((message, index) => (
-           <div key={index} className="text-modeler-control-text-secondary">{message}</div>
+           <div key={index}>{message}</div>
          ))}
          {isCADWorkerReady && (
-           <div className="text-modeler-accent-success mt-2">
+           <div className="mt-2">
              &gt; CAD Worker Status: Ready
            </div>
          )}
@@ -124,7 +124,7 @@ function HomeContent() {
   );
 
   return (
-    <div className="h-screen flex flex-col bg-modeler-background-primary">
+    <div className="h-screen flex flex-col">
       {/* CADワーカーマネージャー（非表示コンポーネント） */}
       <CADWorkerManager
         onWorkerReady={cadWorkerCallbacks.onWorkerReady}
