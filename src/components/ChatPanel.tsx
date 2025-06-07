@@ -141,67 +141,62 @@ let cylinder = new oc.BRepPrimAPI_MakeCylinder(5, 10).Shape();
 
   return (
     <div className={`h-full flex flex-col bg-gray-50 ${className}`}>
-      {/* ヘッダー */}
-      <div className="flex-shrink-0 p-4 border-b border-gray-200 bg-white">
-        <h3 className="text-lg font-semibold text-gray-800">AI Chat Assistant</h3>
-        <p className="text-sm text-gray-600">CADモデリングのサポートをします</p>
-      </div>
 
       {/* メッセージエリア */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
+            className="w-full"
           >
             <div
-              className={`max-w-[80%] rounded-lg p-3 ${
+              className={`w-full rounded-lg p-2 text-xs ${
                 message.type === 'user'
                   ? 'bg-blue-500 text-white'
                   : 'bg-white border border-gray-200 text-gray-800'
               }`}
             >
-              <div className="flex items-start space-x-2">
+              <div className="flex items-start space-x-1">
                 <div className="flex-shrink-0">
                   {message.type === 'user' ? (
-                    <User size={16} className="mt-1" />
+                    <User size={12} className="mt-0.5" />
                   ) : (
-                    <Bot size={16} className="mt-1 text-blue-500" />
+                    <Bot size={12} className="mt-0.5 text-blue-500" />
                   )}
                 </div>
                 <div className="flex-1">
                   <div className="whitespace-pre-wrap break-words">
                     {message.content}
                   </div>
-                  <div className="flex items-center justify-between mt-2">
+                  <div className="flex items-center justify-between mt-1">
                     <span className={`text-xs ${
                       message.type === 'user' ? 'text-blue-100' : 'text-gray-500'
                     }`}>
                       {formatTimestamp(message.timestamp)}
                     </span>
                     {message.type === 'assistant' && (
-                      <div className="flex space-x-1">
+                      <div className="flex space-x-0.5">
                         <button
                           onClick={() => copyToClipboard(message.content)}
-                          className="p-1 hover:bg-gray-100 rounded transition-colors"
+                          className="p-0.5 hover:bg-gray-100 rounded transition-colors"
                           title="コピー"
                           aria-label="コピー"
                         >
-                          <Copy size={12} className="text-gray-500" />
+                          <Copy size={10} className="text-gray-500" />
                         </button>
                         <button
-                          className="p-1 hover:bg-gray-100 rounded transition-colors"
+                          className="p-0.5 hover:bg-gray-100 rounded transition-colors"
                           title="いいね"
                           aria-label="いいね"
                         >
-                          <ThumbsUp size={12} className="text-gray-500" />
+                          <ThumbsUp size={10} className="text-gray-500" />
                         </button>
                         <button
-                          className="p-1 hover:bg-gray-100 rounded transition-colors"
+                          className="p-0.5 hover:bg-gray-100 rounded transition-colors"
                           title="よくない"
                           aria-label="よくない"
                         >
-                          <ThumbsDown size={12} className="text-gray-500" />
+                          <ThumbsDown size={10} className="text-gray-500" />
                         </button>
                       </div>
                     )}
@@ -213,14 +208,14 @@ let cylinder = new oc.BRepPrimAPI_MakeCylinder(5, 10).Shape();
         ))}
         
         {isLoading && (
-          <div className="flex justify-start">
-            <div className="bg-white border border-gray-200 rounded-lg p-3 max-w-[80%]">
-              <div className="flex items-center space-x-2">
-                <Bot size={16} className="text-blue-500" />
+          <div className="w-full">
+            <div className="bg-white border border-gray-200 rounded-lg p-2 w-full text-xs">
+              <div className="flex items-center space-x-1">
+                <Bot size={12} className="text-blue-500" />
                 <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
+                  <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
               </div>
             </div>
@@ -230,7 +225,7 @@ let cylinder = new oc.BRepPrimAPI_MakeCylinder(5, 10).Shape();
       </div>
 
       {/* 入力エリア */}
-      <div className="flex-shrink-0 p-4 border-t border-gray-200 bg-white">
+      <div className="flex-shrink-0 p-3 border-t border-gray-200 bg-white">
         <div className="flex space-x-2">
           <div className="flex-1 relative">
             <textarea
@@ -239,23 +234,23 @@ let cylinder = new oc.BRepPrimAPI_MakeCylinder(5, 10).Shape();
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="メッセージを入力してください... (Enter で送信、Shift+Enter で改行)"
-              className="w-full p-3 pr-12 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full p-2 pr-8 border border-gray-300 rounded text-xs resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
               rows={1}
-              style={{ minHeight: '44px', maxHeight: '120px' }}
+              style={{ minHeight: '32px', maxHeight: '80px' }}
               disabled={isLoading}
             />
             <button
               onClick={handleSendMessage}
               disabled={!inputValue.trim() || isLoading}
-              className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 text-blue-500 hover:text-blue-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
+              className="absolute right-1 top-1/2 transform -translate-y-1/2 p-1 text-blue-500 hover:text-blue-600 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
               aria-label="メッセージを送信"
               title="メッセージを送信"
             >
-              <Send size={18} />
+              <Send size={14} />
             </button>
           </div>
         </div>
-        <div className="mt-2 text-xs text-gray-500">
+        <div className="mt-1 text-xs text-gray-500">
           AI Assistant は開発中の機能です。実際のAI統合は今後実装予定です。
         </div>
       </div>
