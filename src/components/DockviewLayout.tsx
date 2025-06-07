@@ -60,32 +60,6 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
   const onReady = (event: DockviewReadyEvent) => {
     apiRef.current = event.api;
 
-    // CADビューパネルを最初に追加（左側のアクティブパネル）
-    event.api.addPanel({
-      id: 'viewport',
-      component: 'viewport',
-      params: { content: cadViewPanel },
-      title: 'CAD View',
-    });
-
-    // エディタパネルを同じグループに追加（左側の非アクティブパネル）
-    event.api.addPanel({
-      id: 'editor',
-      component: 'editor',
-      params: { content: editorPanel },
-      title: editorTitle,
-      position: { referencePanel: 'viewport', direction: 'within' },
-    });
-
-    // コンソールパネルを右側に追加
-    event.api.addPanel({
-      id: 'console',
-      component: 'console',
-      params: { content: consolePanel },
-      title: 'Console',
-      position: { referencePanel: 'viewport', direction: 'right' },
-    });
-
     // 左右の比率を設定する関数
     const setLayoutProportions = () => {
       try {
@@ -108,8 +82,8 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
       }
     };
 
-    // 初期レイアウトの設定
-    setTimeout(() => {
+    // 初期レイアウト設定関数
+    const initializeLayout = () => {
       try {
         // CADViewをアクティブにする
         const viewportPanel = event.api.getPanel('viewport');
@@ -117,10 +91,7 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
           viewportPanel.api.setActive();
         }
 
-        // 比率を設定
-        setLayoutProportions();
-        
-        // リサイズイベントリスナーを追加して比率を維持
+        // リサイズイベントリスナーを追加
         const resizeObserver = new ResizeObserver(() => {
           setLayoutProportions();
         });
@@ -128,11 +99,61 @@ const DockviewLayout: React.FC<DockviewLayoutProps> = ({
         if (containerRef.current) {
           resizeObserver.observe(containerRef.current);
         }
+
+        // レイアウトが完全に構築された後に比率を設定
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setLayoutProportions();
+          });
+        });
         
       } catch (error) {
-        console.error('Error setting initial layout:', error);
+        console.error('Error initializing layout:', error);
       }
-    }, 300); // レイアウトが完全に安定してから実行
+    };
+
+    // パネル追加完了を追跡するカウンター
+    let panelsAdded = 0;
+    const totalPanels = 3;
+
+    const onPanelAdded = () => {
+      panelsAdded++;
+      if (panelsAdded === totalPanels) {
+        // すべてのパネルが追加された後に初期設定を実行
+        initializeLayout();
+      }
+    };
+
+    // CADビューパネルを最初に追加（左側のアクティブパネル）
+    event.api.addPanel({
+      id: 'viewport',
+      component: 'viewport',
+      params: { content: cadViewPanel },
+      title: 'CAD View',
+    });
+    onPanelAdded();
+
+    // エディタパネルを同じグループに追加（左側の非アクティブパネル）
+    event.api.addPanel({
+      id: 'editor',
+      component: 'editor',
+      params: { content: editorPanel },
+      title: editorTitle,
+      position: { referencePanel: 'viewport', direction: 'within' },
+    });
+    onPanelAdded();
+
+    // コンソールパネルを右側に追加
+    event.api.addPanel({
+      id: 'console',
+      component: 'console',
+      params: { content: consolePanel },
+      title: 'Console',
+      position: { referencePanel: 'viewport', direction: 'right' },
+    });
+    onPanelAdded();
+
+
   };
 
   // タイトルの更新
