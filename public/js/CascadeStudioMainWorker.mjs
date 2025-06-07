@@ -1,16 +1,14 @@
-// Phase 2: OpenCascade.js v1.1.1 ESM対応WebWorker
+// Phase 2b: OpenCascade.js v1.1.1 ESM対応WebWorker
 // ESM形式でのOpenCascade.js v1.1.1初期化
 
-// OpenCascade.js v1.1.1のESMインポート（将来の実装用）
-// import { initOpenCascade } from 'opencascade.js';
-
-// 現在はv0.1.15を使用（段階的移行）
-// importScripts('./libs/opencascade.wasm.v0-modified.js');
+// OpenCascade.js v1.1.1のESMインポート
+import { initOpenCascade } from 'opencascade.js';
 
 // Define the persistent global variables
 var oc = null, externalShapes = {}, sceneShapes = [],
   GUIState, fullShapeEdgeHashes = {}, fullShapeFaceHashes = {},
-  currentShape;
+  currentShape, opNumber = 0, currentOp = "", currentLineNumber = 0,
+  argCache = {}, usedHashes = {};
 
 // Capture Logs and Errors and forward them to the main thread
 let realConsoleLog   = console.log;
@@ -29,44 +27,11 @@ console.error = function (err, url, line, colno, errorObj) {
   realConsoleError.apply(console, arguments);
 };
 
-// ESM対応のダイナミックインポート関数
-async function loadDependencies() {
-  try {
-    // 段階的移行：まずは既存のimportScriptsを使用
-    // 将来的にはESMインポートに置き換え
-    
-    // 既存のスクリプトを動的に読み込み
-    const scripts = [
-      './CascadeStudioStandardLibrary.js',
-      './CascadeStudioShapeToMesh.js',
-      './libs/opencascade.wasm.v0-modified.js',
-      './opentype.js/dist/opentype.min.js'
-    ];
-    
-    for (const script of scripts) {
-      await loadScript(script);
-    }
-    
-    console.log("All dependencies loaded successfully");
-    return true;
-  } catch (error) {
-    console.error("Failed to load dependencies:", error);
-    return false;
-  }
-}
-
-// スクリプトを動的に読み込む関数
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    try {
-      // WebWorker環境でのスクリプト読み込み
-      importScripts(src);
-      resolve();
-    } catch (error) {
-      reject(error);
-    }
-  });
-}
+// Import required scripts using importScripts for WebWorker compatibility
+importScripts('./CascadeStudioStandardLibrary.js');
+importScripts('./CascadeStudioShapeToMesh.js');
+importScripts('./opentype.js/dist/opentype.min.js');
+importScripts('./CascadeStudioFileUtils.js');
 
 // Vector3の代替実装（Phase 1から継承）
 function Vector3(x, y, z) {
@@ -155,38 +120,29 @@ async function loadFonts() {
   return fontLoadingPromise;
 }
 
-// OpenCascade.js初期化関数（v1.1.1対応準備）
+// OpenCascade.js v1.1.1初期化関数
 async function initializeOpenCascade() {
   try {
-    console.log("=== OpenCascade.js ESM Worker Initialization ===");
+    console.log("=== OpenCascade.js v1.1.1 ESM Worker Initialization ===");
     
-    // Phase 2: 将来的にはESM形式で初期化
-    // const openCascade = await initOpenCascade({
-    //   locateFile: (path) => {
-    //     if (path.endsWith('.wasm')) {
-    //       return '/js/libs/opencascade.wasm';
-    //     }
-    //     return path;
-    //   }
-    // });
-    
-    // 現在はv0.1.15を使用（段階的移行）
-    const openCascade = await new opencascade({
-      locateFile(path) {
+    // OpenCascade.js v1.1.1のESM形式で初期化
+    const openCascade = await initOpenCascade({
+      locateFile: (path) => {
         if (path.endsWith('.wasm')) {
-          return "./libs/opencascade.wasm.wasm";
+          // v1.1.1では標準的なWASMパスを使用
+          return '/js/libs/opencascade.wasm.wasm';
         }
         return path;
       }
     });
     
     oc = openCascade;
-    console.log('OpenCascade.js initialized successfully (v0.1.15 compatibility mode)');
+    console.log('OpenCascade.js v1.1.1 initialized successfully');
     
     // フォント読み込み
     await loadFonts();
     
-    // API調査
+    // API調査（v1.1.1用に更新）
     investigateAPI();
     
     // 初期化完了通知
@@ -194,15 +150,15 @@ async function initializeOpenCascade() {
     
     return true;
   } catch (error) {
-    console.error('Failed to initialize OpenCascade.js:', error);
+    console.error('Failed to initialize OpenCascade.js v1.1.1:', error);
     postMessage({ type: "error", payload: error.message });
     return false;
   }
 }
 
-// Debug function to investigate v0.1.15 API
+// Debug function to investigate v1.1.1 API
 function investigateAPI() {
-  console.log("=== OpenCascade.js v0.1.15 API Investigation ===");
+  console.log("=== OpenCascade.js v1.1.1 API Investigation ===");
   
   // Check gp_Trsf methods
   if (oc.gp_Trsf) {
@@ -219,10 +175,11 @@ function investigateAPI() {
     // Check all available methods
     console.log("All gp_Trsf methods:", trsfMethods);
     
-    // Send detailed info to main thread
+    // Send detailed info to main thread with v1.1.1 version
     postMessage({ 
       type: "apiInvestigation", 
       payload: {
+        version: "v1.1.1",
         trsfMethods: trsfMethods,
         rotationMethods: rotationMethods,
         setMethods: setMethods
@@ -230,7 +187,49 @@ function investigateAPI() {
     });
   }
   
-  console.log("=== End API Investigation ===");
+  // Check primitive creation APIs
+  const primitiveAPIs = [
+    'BRepPrimAPI_MakeBox',
+    'BRepPrimAPI_MakeSphere', 
+    'BRepPrimAPI_MakeCylinder',
+    'BRepPrimAPI_MakeCone'
+  ];
+  
+  console.log("=== Primitive Creation APIs ===");
+  primitiveAPIs.forEach(apiName => {
+    if (oc[apiName]) {
+      console.log(`${apiName}: Available`);
+      try {
+        // Test the constructor signature
+        if (apiName === 'BRepPrimAPI_MakeBox') {
+          console.log("Testing BRepPrimAPI_MakeBox constructor...");
+          const testBox = new oc.BRepPrimAPI_MakeBox(10, 10, 10);
+          console.log("BRepPrimAPI_MakeBox object:", testBox);
+          console.log("BRepPrimAPI_MakeBox methods:", Object.getOwnPropertyNames(testBox.constructor.prototype));
+          
+          // Check if Shape method exists
+          if (typeof testBox.Shape === 'function') {
+            console.log("testBox.Shape() method exists");
+            try {
+              const shape = testBox.Shape();
+              console.log("testBox.Shape() returned:", shape);
+            } catch (e) {
+              console.log("testBox.Shape() error:", e.message);
+            }
+          } else {
+            console.log("testBox.Shape() method NOT exists");
+            console.log("Available methods on testBox:", Object.getOwnPropertyNames(testBox));
+          }
+        }
+      } catch (e) {
+        console.log(`${apiName} constructor error:`, e.message);
+      }
+    } else {
+      console.log(`${apiName}: Not available`);
+    }
+  });
+  
+  console.log("=== End v1.1.1 API Investigation ===");
 }
 
 // メッセージハンドラー
@@ -308,18 +307,12 @@ messageHandlers["combineAndRenderShapes"] = combineAndRenderShapes;
 // メインの初期化処理
 async function main() {
   try {
-    console.log("=== ESM Worker Starting ===");
+    console.log("=== ESM Worker v1.1.1 Starting ===");
     
-    // 依存関係の読み込み
-    const dependenciesLoaded = await loadDependencies();
-    if (!dependenciesLoaded) {
-      throw new Error("Failed to load dependencies");
-    }
-    
-    // OpenCascade.js初期化
+    // OpenCascade.js v1.1.1初期化
     const ocInitialized = await initializeOpenCascade();
     if (!ocInitialized) {
-      throw new Error("Failed to initialize OpenCascade.js");
+      throw new Error("Failed to initialize OpenCascade.js v1.1.1");
     }
     
     // メッセージハンドラーの設定
@@ -330,13 +323,13 @@ async function main() {
       }
     };
     
-    console.log("=== ESM Worker Ready ===");
+    console.log("=== ESM Worker v1.1.1 Ready ===");
     
   } catch (error) {
-    console.error("ESM Worker initialization failed:", error);
+    console.error("ESM Worker v1.1.1 initialization failed:", error);
     postMessage({ type: "error", payload: error.message });
   }
 }
 
 // ワーカー開始
-main(); 
+main();    
