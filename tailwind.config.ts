@@ -10,7 +10,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Modeler X 基本カラーパレット（v0完全互換）
+        // Modeler X 基本カラーパレット（v0完全互換 + VS Code様式拡張）
         'modeler': {
           // 基本色（v0と完全一致）
           background: {
@@ -85,6 +85,172 @@ const config: Config = {
             error: '#ff4444',       // エラー状態
             info: '#33b5e5',        // 情報状態
             link: '#007acc',        // リンク・フォーカス色
+          },
+
+          // VS Code様式専用色設定（新規追加）
+          vscode: {
+            // タイトルバー
+            titlebar: {
+              bg: '#1e1e1e',                    // VS Codeタイトルバー背景
+              text: '#cccccc',                  // タイトルテキスト
+              button: {
+                hover: '#333333',               // ボタンホバー
+                active: '#444444',              // ボタンアクティブ
+              },
+            },
+            
+            // サイドバー
+            sidebar: {
+              bg: '#252526',                    // サイドバー背景
+              text: '#cccccc',                  // サイドバーテキスト
+              icon: '#c5c5c5',                  // アイコン色
+              selected: {
+                bg: '#094771',                  // 選択項目背景
+                text: '#ffffff',                // 選択項目テキスト
+              },
+              hover: {
+                bg: '#2a2d2e',                  // ホバー背景
+              },
+              tree: {
+                bg: '#1e1e1e',                  // ツリービュー背景
+                hover: '#2a2d2e',               // ツリー項目ホバー
+                selected: '#37373d',            // ツリー項目選択
+                indent: '#404040',              // インデントガイド
+              },
+            },
+
+            // タブバー
+            tabs: {
+              bg: '#2d2d30',                    // タブバー背景
+              border: '#2d2d30',                // タブ境界線
+              inactive: {
+                bg: '#2d2d30',                  // 非アクティブタブ
+                text: '#969696',                // 非アクティブタブテキスト
+                hover: {
+                  bg: '#1e1e1e',                // 非アクティブタブホバー
+                  text: '#ffffff',              // 非アクティブタブホバーテキスト
+                },
+              },
+              active: {
+                bg: '#1e1e1e',                  // アクティブタブ
+                text: '#ffffff',                // アクティブタブテキスト
+                border: '#007acc',              // アクティブタブ下線
+              },
+              dirty: '#ffffff88',               // 未保存インジケーター
+              close: {
+                text: '#969696',                // 閉じるボタン
+                hover: '#ffffff',               // 閉じるボタンホバー
+              },
+            },
+
+            // ステータスバー
+            statusbar: {
+              bg: '#007acc',                    // ステータスバー背景
+              text: '#ffffff',                  // ステータスバーテキスト
+              hover: '#005a9e',                 // ステータスバーホバー
+              error: '#f14c4c',                 // エラー状態
+              warning: '#ffcc02',               // 警告状態
+            },
+
+            // パネル（ターミナル、デバッグコンソールなど）
+            panel: {
+              bg: '#181818',                    // パネル背景
+              border: '#2d2d30',                // パネル境界線
+              header: {
+                bg: '#252526',                  // パネルヘッダー背景
+                text: '#cccccc',                // パネルヘッダーテキスト
+                active: {
+                  bg: '#1e1e1e',                // アクティブパネルヘッダー
+                  text: '#ffffff',              // アクティブパネルヘッダーテキスト
+                },
+              },
+              terminal: {
+                bg: '#0c0c0c',                  // ターミナル背景
+                text: '#cccccc',                // ターミナルテキスト
+                cursor: '#ffffff',              // ターミナルカーソル
+                selection: '#264f78',           // ターミナル選択範囲
+              },
+            },
+
+            // エクスプローラー
+            explorer: {
+              bg: '#252526',                    // エクスプローラー背景
+              text: '#cccccc',                  // エクスプローラーテキスト
+              folder: {
+                icon: '#dcb67a',                // フォルダーアイコン
+                expanded: '#dcb67a',            // 展開されたフォルダー
+                collapsed: '#dcb67a',           // 折りたたまれたフォルダー
+              },
+              file: {
+                icon: '#c5c5c5',                // ファイルアイコン
+                text: '#cccccc',                // ファイルテキスト
+                active: '#ffffff',              // アクティブファイル
+              },
+            },
+
+            // 検索
+            search: {
+              bg: '#252526',                    // 検索パネル背景
+              input: {
+                bg: '#3c3c3c',                  // 検索入力背景
+                border: '#3c3c3c',              // 検索入力境界線
+                text: '#cccccc',                // 検索入力テキスト
+                placeholder: '#767676',         // プレースホルダー
+                focus: {
+                  bg: '#3c3c3c',                // フォーカス時背景
+                  border: '#007acc',            // フォーカス時境界線
+                },
+              },
+              match: {
+                bg: '#613a1a',                  // マッチ背景
+                text: '#ffffff',                // マッチテキスト
+                border: '#f99b15',              // マッチ境界線
+              },
+            },
+
+            // スクロールバー
+            scrollbar: {
+              bg: 'transparent',                // スクロールバー背景
+              thumb: {
+                DEFAULT: '#79797966',           // スクロールバーつまみ
+                hover: '#646464b3',             // ホバー時つまみ
+                active: '#bfbfbf66',            // アクティブ時つまみ
+              },
+            },
+
+            // メニュー・コンテキストメニュー
+            menu: {
+              bg: '#2d2d30',                    // メニュー背景
+              text: '#cccccc',                  // メニューテキスト
+              border: '#454545',                // メニュー境界線
+              separator: '#454545',             // セパレーター
+              hover: {
+                bg: '#094771',                  // メニューホバー
+                text: '#ffffff',                // メニューホバーテキスト
+              },
+              disabled: {
+                text: '#656565',                // 無効メニューテキスト
+              },
+            },
+
+            // 通知・アラート
+            notification: {
+              bg: '#252526',                    // 通知背景
+              border: '#454545',                // 通知境界線
+              text: '#cccccc',                  // 通知テキスト
+              info: {
+                bg: '#1a365d',                  // 情報通知背景
+                border: '#007acc',              // 情報通知境界線
+              },
+              warning: {
+                bg: '#5d4037',                  // 警告通知背景
+                border: '#ffcc02',              // 警告通知境界線
+              },
+              error: {
+                bg: '#5d1a1a',                  // エラー通知背景
+                border: '#f14c4c',              // エラー通知境界線
+              },
+            },
           },
 
           // Dockview テーマ色（既存のdarkテーマ互換）
