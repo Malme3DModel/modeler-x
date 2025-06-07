@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useVSDarkTheme } from '@/context/ThemeContext';
+import { vsComponents, cn } from '@/lib/tailwindTheme';
 
 interface HeaderProps {
   onSaveProject: () => void;
@@ -48,13 +48,9 @@ const Header: React.FC<HeaderProps> = ({
   onSaveOBJ
 }) => {
   const [showExportMenu, setShowExportMenu] = useState(false);
-  const { headerStyle, colors, getComponentStyles } = useVSDarkTheme();
 
   return (
-    <div 
-      className="flex items-center justify-between h-8 px-3 border-b"
-      style={headerStyle}
-    >
+    <div className={cn("flex items-center justify-between h-8 px-3", vsComponents.header)}>
       {/* 左側: アプリケーション名 */}
       <div className="flex items-center space-x-4">
         <div className="flex items-center space-x-2">
@@ -70,18 +66,7 @@ const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center space-x-0.5">
             <button 
               onClick={onSaveProject}
-              className="flex items-center space-x-1.5 px-2 py-1 rounded transition-colors duration-150 group"
-              style={{
-                ...getComponentStyles('button'),
-                backgroundColor: 'transparent',
-                color: colors.foreground,
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = colors.dropdownHover;
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
-              }}
+              className={cn("flex items-center space-x-1.5", vsComponents.buttonGhost)}
               title="Save Project (.json)"
             >
               <SaveIcon className="w-3.5 h-3.5 group-hover:opacity-100 transition-opacity" />
@@ -91,18 +76,7 @@ const Header: React.FC<HeaderProps> = ({
             {onLoadProject && (
               <button 
                 onClick={onLoadProject}
-                className="flex items-center space-x-1.5 px-2 py-1 rounded transition-colors duration-150 group"
-                style={{
-                  ...getComponentStyles('button'),
-                  backgroundColor: 'transparent',
-                  color: colors.foreground,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = colors.dropdownHover;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }}
+                className={cn("flex items-center space-x-1.5", vsComponents.buttonGhost)}
                 title="Load Project (.json)"
               >
                 <LoadIcon className="w-3.5 h-3.5 group-hover:opacity-100 transition-opacity"/>
@@ -116,18 +90,7 @@ const Header: React.FC<HeaderProps> = ({
             <div className="relative">
               <button 
                 onClick={() => setShowExportMenu(!showExportMenu)}
-                className="flex items-center space-x-1 px-2 py-1 rounded transition-colors duration-150 group"
-                style={{
-                  ...getComponentStyles('button'),
-                  backgroundColor: 'transparent',
-                  color: colors.foreground,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = colors.dropdownHover;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                }}
+                className={cn("flex items-center space-x-1", vsComponents.buttonGhost)}
                 title="Export Options"
               >
                 <ExportIcon className="w-3.5 h-3.5 group-hover:opacity-100 transition-opacity"/>
@@ -137,27 +100,14 @@ const Header: React.FC<HeaderProps> = ({
 
               {/* ドロップダウンメニュー */}
               {showExportMenu && (
-                <div 
-                  className="absolute top-full left-0 mt-1 border rounded shadow-lg min-w-[120px] z-50"
-                  style={getComponentStyles('dropdown')}
-                >
+                <div className={cn("absolute top-full left-0 mt-1 z-50", vsComponents.dropdown)}>
                   {onSaveSTEP && (
                     <button
                       onClick={() => {
                         onSaveSTEP();
                         setShowExportMenu(false);
                       }}
-                      className="w-full flex items-center space-x-2 px-3 py-2 text-xs text-left transition-colors duration-150"
-                      style={{
-                        backgroundColor: 'transparent',
-                        color: colors.foreground,
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = colors.dropdownHover;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }}
+                      className={vsComponents.dropdownItem}
                     >
                       <span>●</span>
                       <span>STEP Format</span>
@@ -169,17 +119,7 @@ const Header: React.FC<HeaderProps> = ({
                         onSaveSTL();
                         setShowExportMenu(false);
                       }}
-                      className="w-full flex items-center space-x-2 px-3 py-2 text-xs text-left transition-colors duration-150"
-                      style={{
-                        backgroundColor: 'transparent',
-                        color: colors.foreground,
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = colors.dropdownHover;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }}
+                      className={vsComponents.dropdownItem}
                     >
                       <span>●</span>
                       <span>STL Format</span>
@@ -191,17 +131,7 @@ const Header: React.FC<HeaderProps> = ({
                         onSaveOBJ();
                         setShowExportMenu(false);
                       }}
-                      className="w-full flex items-center space-x-2 px-3 py-2 text-xs text-left transition-colors duration-150"
-                      style={{
-                        backgroundColor: 'transparent',
-                        color: colors.foreground,
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = colors.dropdownHover;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                      }}
+                      className={vsComponents.dropdownItem}
                     >
                       <span>●</span>
                       <span>OBJ Format</span>

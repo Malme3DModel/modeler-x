@@ -1,41 +1,39 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* VS Code Dark テーマのグローバルスタイル */
-:root {
-  --vs-dark-background: #1e1e1e;
-  --vs-dark-background-secondary: #252526;
-  --vs-dark-background-tertiary: #2d2d30;
-  --vs-dark-foreground: #cccccc;
-  --vs-dark-foreground-secondary: #969696;
-  --vs-dark-foreground-muted: #6a6a6a;
-  --vs-dark-border: #3e3e42;
-  --vs-dark-border-light: #464647;
-  --vs-dark-accent: #007acc;
-  --vs-dark-accent-hover: #1177bb;
-  --vs-dark-success: #4ec9b0;
-  --vs-dark-warning: #dcdcaa;
-  --vs-dark-error: #f44747;
-  --vs-dark-info: #569cd6;
-  --vs-dark-button-background: #0e639c;
-  --vs-dark-button-background-hover: #1177bb;
-  --vs-dark-button-foreground: #ffffff;
-  --vs-dark-input-background: #3c3c3c;
-  --vs-dark-input-border: #3e3e42;
-  --vs-dark-input-foreground: #cccccc;
-  --vs-dark-dropdown-background: #252526;
-  --vs-dark-dropdown-border: #3e3e42;
-  --vs-dark-dropdown-hover: #2a2d2e;
-  --vs-dark-scrollbar-background: #1e1e1e;
-  --vs-dark-scrollbar-thumb: #424242;
-  --vs-dark-scrollbar-thumb-hover: #4f4f4f;
+/* TailwindCSS v4 カスタムテーマ設定 */
+@theme {
+  /* VS Code Dark テーマの色定義 */
+  --color-vs-bg: #1e1e1e;
+  --color-vs-bg-secondary: #252526;
+  --color-vs-bg-tertiary: #2d2d30;
+  --color-vs-fg: #cccccc;
+  --color-vs-fg-secondary: #969696;
+  --color-vs-fg-muted: #6a6a6a;
+  --color-vs-border: #3e3e42;
+  --color-vs-border-light: #464647;
+  --color-vs-accent: #007acc;
+  --color-vs-accent-hover: #1177bb;
+  --color-vs-success: #4ec9b0;
+  --color-vs-warning: #dcdcaa;
+  --color-vs-error: #f44747;
+  --color-vs-info: #569cd6;
+  --color-vs-btn-bg: #0e639c;
+  --color-vs-btn-bg-hover: #1177bb;
+  --color-vs-btn-fg: #ffffff;
+  --color-vs-input-bg: #3c3c3c;
+  --color-vs-input-border: #3e3e42;
+  --color-vs-input-fg: #cccccc;
+  --color-vs-dropdown-bg: #252526;
+  --color-vs-dropdown-border: #3e3e42;
+  --color-vs-dropdown-hover: #2a2d2e;
+  --color-vs-scrollbar-bg: #1e1e1e;
+  --color-vs-scrollbar-thumb: #424242;
+  --color-vs-scrollbar-thumb-hover: #4f4f4f;
 }
 
 /* ボディのデフォルトスタイル */
 body {
-  background-color: var(--vs-dark-background);
-  color: var(--vs-dark-foreground);
+  @apply bg-vs-bg text-vs-fg;
 }
 
 /* スクロールバーのスタイル */
@@ -45,30 +43,27 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--vs-dark-scrollbar-background);
+  @apply bg-vs-scrollbar-bg;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--vs-dark-scrollbar-thumb);
-  border-radius: 6px;
+  @apply bg-vs-scrollbar-thumb rounded-md;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--vs-dark-scrollbar-thumb-hover);
+  @apply bg-vs-scrollbar-thumb-hover;
 }
 
 ::-webkit-scrollbar-corner {
-  background: var(--vs-dark-scrollbar-background);
+  @apply bg-vs-scrollbar-bg;
 }
 
 /* フォーカス時のアウトライン */
 *:focus {
-  outline: 2px solid var(--vs-dark-accent);
-  outline-offset: 2px;
+  @apply outline-2 outline-vs-accent outline-offset-2;
 }
 
 /* 選択時のハイライト */
 ::selection {
-  background-color: var(--vs-dark-accent);
-  color: var(--vs-dark-button-foreground);
+  @apply bg-vs-accent text-vs-btn-fg;
 }

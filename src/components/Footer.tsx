@@ -1,5 +1,5 @@
 import React, { memo } from 'react';
-import { useVSDarkTheme } from '@/context/ThemeContext';
+import { vsComponents, cn } from '@/lib/tailwindTheme';
 
 // ステータス表示のprops型定義
 interface FooterProps {
@@ -30,12 +30,8 @@ const Footer: React.FC<FooterProps> = memo(({
   hasUnsavedChanges,
   error
 }) => {
-  const { footerStyle } = useVSDarkTheme();
   return (
-    <div 
-      className="shrink-0 flex items-center justify-between h-6 px-3 border-t text-xs"
-      style={footerStyle}
-    >
+    <div className={cn("shrink-0 flex items-center justify-between h-6 px-3 text-xs", vsComponents.footer)}>
       
       {/* 左側: CADカーネルステータス */}
       <div className="flex items-center space-x-4">
