@@ -281,14 +281,23 @@ let combined = Union([testBox, testSphere, testCylinder]);
 - [ ] GUI コントロール（Slider, Checkbox等）
 
 #### 7.3 自動テストの実行
-既存のPlaywrightテストを使用：
+現在のプロジェクトには専用のテストスイートが設定されていないため、手動テストを中心に行います：
 
 ```bash
-# v0ディレクトリでのテスト実行
-cd v0/test
-python server.py  # バックグラウンドで実行
-npx folio
+# 開発サーバーでの動作確認
+npm run dev
+# または
+npm run dev:turbo
+
+# 本番ビルドでの動作確認
+npm run build
+npm run start
+
+# Electronアプリでの動作確認
+npm run electron:dev
 ```
+
+**注意**: v0フォルダは旧版のバックアップのため、そこにあるテストは使用しません。
 
 #### 7.4 パフォーマンステスト
 - [ ] 読み込み時間の比較
