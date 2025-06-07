@@ -1,3 +1,74 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* VS Code Dark テーマのグローバルスタイル */
+:root {
+  --vs-dark-background: #1e1e1e;
+  --vs-dark-background-secondary: #252526;
+  --vs-dark-background-tertiary: #2d2d30;
+  --vs-dark-foreground: #cccccc;
+  --vs-dark-foreground-secondary: #969696;
+  --vs-dark-foreground-muted: #6a6a6a;
+  --vs-dark-border: #3e3e42;
+  --vs-dark-border-light: #464647;
+  --vs-dark-accent: #007acc;
+  --vs-dark-accent-hover: #1177bb;
+  --vs-dark-success: #4ec9b0;
+  --vs-dark-warning: #dcdcaa;
+  --vs-dark-error: #f44747;
+  --vs-dark-info: #569cd6;
+  --vs-dark-button-background: #0e639c;
+  --vs-dark-button-background-hover: #1177bb;
+  --vs-dark-button-foreground: #ffffff;
+  --vs-dark-input-background: #3c3c3c;
+  --vs-dark-input-border: #3e3e42;
+  --vs-dark-input-foreground: #cccccc;
+  --vs-dark-dropdown-background: #252526;
+  --vs-dark-dropdown-border: #3e3e42;
+  --vs-dark-dropdown-hover: #2a2d2e;
+  --vs-dark-scrollbar-background: #1e1e1e;
+  --vs-dark-scrollbar-thumb: #424242;
+  --vs-dark-scrollbar-thumb-hover: #4f4f4f;
+}
+
+/* ボディのデフォルトスタイル */
+body {
+  background-color: var(--vs-dark-background);
+  color: var(--vs-dark-foreground);
+}
+
+/* スクロールバーのスタイル */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--vs-dark-scrollbar-background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--vs-dark-scrollbar-thumb);
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--vs-dark-scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--vs-dark-scrollbar-background);
+}
+
+/* フォーカス時のアウトライン */
+*:focus {
+  outline: 2px solid var(--vs-dark-accent);
+  outline-offset: 2px;
+}
+
+/* 選択時のハイライト */
+::selection {
+  background-color: var(--vs-dark-accent);
+  color: var(--vs-dark-button-foreground);
+}
