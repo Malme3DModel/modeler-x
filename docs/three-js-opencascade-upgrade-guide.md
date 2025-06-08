@@ -7,9 +7,9 @@
 - Phase 2a: ESM基盤実装（2025年1月7日完了）  
 - Phase 2b: 重大バグ修正とv1.1.1準備（2025年1月7日完了）
 
-**🎯 現在の作業**: Phase 2c - OpenCascade.js v1.1.1完全移行
+**🎯 現在の作業**: Phase 2 - OpenCascade.js v1.1.1完全移行
 
-## Phase 2c: OpenCascade.js v1.1.1完全移行
+## Phase 2: OpenCascade.js v1.1.1完全移行
 
 **ステータス**: 実装開始 🔄  
 **参考資料**: [OpenCascade.js公式ドキュメント](https://ocjs.org/)
@@ -217,14 +217,14 @@ initWorker: () => {
     let worker: Worker;
     if (typeof window !== 'undefined') {
       try {
-        // Phase 2c-1: v1.1.1カスタムビルド（最優先）
+        // Phase 2-1: v1.1.1カスタムビルド（最優先）
         const customWorkerUrl = `${window.location.origin}/js/CascadeStudioMainWorker.custom.mjs`;
         worker = new Worker(customWorkerUrl, { type: 'module' });
         console.log("OpenCascade.js v1.1.1 Custom Build Worker initialized successfully");
       } catch (customError) {
         console.warn("v1.1.1 Custom Build Worker failed, falling back to standard v1.1.1:", customError);
         try {
-          // Phase 2c-2: v1.1.1標準ビルド
+          // Phase 2-2: v1.1.1標準ビルド
           const v111WorkerUrl = `${window.location.origin}/js/CascadeStudioMainWorker.v111.mjs`;
           worker = new Worker(v111WorkerUrl, { type: 'module' });
           console.log("OpenCascade.js v1.1.1 Standard Worker initialized successfully");
@@ -285,9 +285,9 @@ npm install opencascade.js@beta
 # 本番環境での段階的ロールアウト
 ```
 
-## Phase 2cの実装判断基準
+## Phase 2の実装判断基準
 
-Phase 2c（v1.1.1完全移行）の実装条件：
+Phase 2（v1.1.1完全移行）の実装条件：
 
 1. **✅ 公式推奨初期化方法の確認**: シンプルな`initOpenCascade()`方法を採用
 2. **✅ Next.js/Webpack設定の最適化**: 公式バンドラー設定ガイドに基づく実装
