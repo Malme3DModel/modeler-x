@@ -26,6 +26,16 @@ const nextConfig = {
   },
 
   webpack: (config, { isServer }) => {
+    // OpenCascade.js v1.1.1用のWASMファイル設定
+    config.module.rules.find(k => k.oneOf !== undefined).oneOf.unshift({
+      test: /\.wasm$/,
+      type: "javascript/auto",
+      loader: "file-loader",
+      options: {
+        name: "static/js/[name].[contenthash:8].[ext]",
+      },
+    });
+    
     // WebWorkerのサポート
     if (!isServer) {
       config.resolve.fallback = {
@@ -33,6 +43,10 @@ const nextConfig = {
         fs: false,
         path: false,
         crypto: false,
+        perf_hooks: false,
+        os: false,
+        worker_threads: false,
+        stream: false,
       };
       
       // 動的インポートの問題を解決

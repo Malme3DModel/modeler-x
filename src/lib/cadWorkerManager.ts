@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { cadWorkerService } from '@/services/cadWorkerService';
+import { createCascadeStudioCore } from '@/lib/CascadeStudioCore';
 
 interface CADWorkerManagerProps {
   onWorkerReady?: () => void;
@@ -89,9 +90,26 @@ const CADWorkerManager: React.FC<CADWorkerManagerProps> = ({
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // ワーカーの作成
     try {
-      workerRef.current = new Worker('/js/CascadeStudioMainWorker.js');
+      const cascadeCore = createCascadeStudioCore(
+        (isWorking) => {
+          isWorkingRef.current = isWorking;
+          (window as any).workerWorking = isWorking;
+        },
+        (output) => {
+          if (onLog) {
+            const message = typeof output === 'function' ? output('') : output;
+            onLog(message);
+          }
+        }
+      );
+      
+      const worker = cascadeCore.initWorker();
+      if (!worker) {
+        throw new Error('Failed to initialize worker with 4-stage fallback');
+      }
+      
+      workerRef.current = worker;
       
       messageHandlersRef.current = {
         startupCallback: () => {
@@ -212,4 +230,4 @@ const CADWorkerManager: React.FC<CADWorkerManagerProps> = ({
   return null; // このコンポーネントは何もレンダリングしない
 };
 
-export default CADWorkerManager; 
+export default CADWorkerManager;    

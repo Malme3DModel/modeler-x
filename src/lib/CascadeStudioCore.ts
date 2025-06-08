@@ -46,22 +46,12 @@ export function createCascadeStudioCore(
           (window as any).cascadeStudioWorker.terminate();
         }
 
-        // Phase 2: ESM対応WebWorkerを優先的に試行
         let worker: Worker;
         if (typeof window !== 'undefined') {
           // クライアントサイドでのみ実行
-          try {
-            // まずESM対応のWorkerを試行
-            const esmWorkerUrl = `${window.location.origin}/js/CascadeStudioMainWorker.mjs`;
-            worker = new Worker(esmWorkerUrl, { type: 'module' });
-            console.log("ESM Worker initialized successfully");
-          } catch (esmError) {
-            console.warn("ESM Worker failed, falling back to legacy worker:", esmError);
-            // フォールバック: 既存のWorkerを使用
-            const legacyWorkerUrl = `${window.location.origin}/js/CascadeStudioMainWorker.js`;
-            worker = new Worker(legacyWorkerUrl);
-            console.log("Legacy Worker initialized as fallback");
-          }
+          const v111WorkerUrl = `${window.location.origin}/js/CascadeStudioMainWorker.v111.mjs`;
+          worker = new Worker(v111WorkerUrl, { type: 'module' });
+          console.log("v1.1.1 ESM Worker initialized successfully");
         } else {
           return null;
         }
@@ -75,33 +65,9 @@ export function createCascadeStudioCore(
 
         // エラーハンドラー
         worker.onerror = (e) => {
-          console.error("CAD Worker error:", e);
-          setConsoleOutput((prev: string) => prev + "\nCAD Worker error: " + e + "\n");
+          console.error("v1.1.1 Worker error:", e);
+          setConsoleOutput((prev: string) => prev + "\nv1.1.1 Worker error: " + e + "\n");
           core.setWorkingState(false);
-          
-          // ESMワーカーでエラーが発生した場合、レガシーワーカーにフォールバック
-          if (!(worker as any).fallbackAttempted) {
-            console.warn("ESM Worker failed, attempting fallback to legacy worker");
-            (worker as any).fallbackAttempted = true;
-            worker.terminate();
-            
-            try {
-              const legacyWorkerUrl = `${window.location.origin}/js/CascadeStudioMainWorker.js`;
-              const fallbackWorker = new Worker(legacyWorkerUrl);
-              
-              fallbackWorker.onmessage = worker.onmessage;
-              fallbackWorker.onerror = (fallbackError) => {
-                console.error("Fallback Worker also failed:", fallbackError);
-                setConsoleOutput((prev: string) => prev + "\nBoth ESM and Legacy Workers failed\n");
-              };
-              
-              (window as any).cascadeStudioWorker = fallbackWorker;
-              console.log("Successfully fell back to legacy worker");
-              return fallbackWorker;
-            } catch (fallbackError) {
-              console.error("Fallback worker initialization failed:", fallbackError);
-            }
-          }
         };
 
         // グローバルに保存（他のコンポーネントからアクセスできるように）
@@ -118,31 +84,10 @@ export function createCascadeStudioCore(
 
         // エラーハンドラー
         core.registerMessageHandler("error", (payload) => {
-          console.error("Worker Error:", payload);
+          console.error("v1.1.1 Worker Error:", payload);
           setConsoleOutput((prev: string) => prev + "\nError: " + payload);
           core.setWorkingState(false);
           (window as any).workerWorking = false;
-          
-          if (payload && payload.includes("ESM Worker failed")) {
-            console.warn("ESM Worker failed, attempting fallback to legacy worker");
-            setTimeout(() => {
-              try {
-                const legacyWorkerUrl = `${window.location.origin}/js/CascadeStudioMainWorker.js`;
-                const fallbackWorker = new Worker(legacyWorkerUrl);
-                
-                fallbackWorker.onmessage = worker.onmessage;
-                fallbackWorker.onerror = (fallbackError) => {
-                  console.error("Fallback Worker also failed:", fallbackError);
-                  setConsoleOutput((prev: string) => prev + "\nBoth ESM and Legacy Workers failed\n");
-                };
-                
-                (window as any).cascadeStudioWorker = fallbackWorker;
-                console.log("Successfully fell back to legacy worker");
-              } catch (fallbackError) {
-                console.error("Fallback worker initialization failed:", fallbackError);
-              }
-            }, 1000);
-          }
         });
 
         // リセットハンドラー
@@ -327,4 +272,4 @@ export function createCascadeStudioCore(
   };
 
   return core;
-}    
+}                        
