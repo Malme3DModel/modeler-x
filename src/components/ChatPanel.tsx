@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, Copy, ThumbsUp, ThumbsDown, AlertCircle, Play, Code } from 'lucide-react';
+import { Send, User, Bot, Copy, ThumbsUp, ThumbsDown, AlertCircle, Code } from 'lucide-react';
 import { CodeExecutionService } from '@/services/codeExecutionService';
 
 interface ChatMessage {
@@ -96,15 +96,31 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ className = '', onExecuteCode }) 
       // レスポンスからコードを抽出
       const extractedCode = extractCodeFromMessage(data.message);
       
+      // 抽出したコードブロックを content から除去
+      const contentWithoutCode = extractedCode
+        ? data.message.replace(/```(?:typescript|ts)\n[\s\S]*?```/g, '').trim()
+        : data.message;
+      
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: data.message,
+        content: contentWithoutCode,
         timestamp: new Date(),
         extractedCode: extractedCode || undefined
       };
       
       setMessages(prev => [...prev, assistantMessage]);
+      // 抽出したコードをエディターに置き換え
+      if (extractedCode) {
+        if (onExecuteCode) {
+          // ペーストではなく置き換え＆実行
+          onExecuteCode(extractedCode);
+        } else {
+          // 既存のコードをクリアしてから実行（変数再宣言エラー回避）
+          CodeExecutionService.clearEditor();
+          CodeExecutionService.executeCode(extractedCode);
+        }
+      }
     } catch (error) {
       console.error('チャットエラー:', error);
       const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました';
@@ -224,14 +240,6 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ className = '', onExecuteCode }) 
                             title="コードをコピー"
                           >
                             <Copy size={10} className="text-gray-500" />
-                          </button>
-                          <button
-                            onClick={() => executeCode(message.extractedCode!)}
-                            className="p-1 bg-green-500 hover:bg-green-600 text-white rounded transition-colors flex items-center"
-                            title="コードを実行"
-                          >
-                            <Play size={10} className="mr-1" />
-                            実行
                           </button>
                         </div>
                       </div>

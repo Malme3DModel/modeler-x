@@ -28,6 +28,13 @@ importScripts(
   './libs/opencascade.wasm.v0-modified.js',
   './opentype.js/dist/opentype.min.js');
 
+// C++ 例外処理用のスタブ関数 (Emscripten の __cxa_* 系関数が未定義の場合のエラー回避)
+self.___cxa_is_pointer_type = self.___cxa_is_pointer_type || function() { return false; };
+self.___cxa_allocate_exception = self.___cxa_allocate_exception || function() { return 0; };
+self.___cxa_throw = self.___cxa_throw || function() {};
+self.___cxa_begin_catch = self.___cxa_begin_catch || function() { return 0; };
+self.___cxa_end_catch = self.___cxa_end_catch || function() {};
+
 function Vector3(x, y, z) {
   this.x = x || 0;
   this.y = y || 0;

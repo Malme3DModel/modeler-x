@@ -13,6 +13,7 @@ import { useProjectState } from '../hooks/useProjectState';
 import { useProjectActions } from '../hooks/useProjectActions';
 import { useCADWorker } from '../hooks/useCADWorker';
 import { DEFAULT_CAD_CODE } from '../constants/defaultCode';
+import { CodeExecutionService } from '../services/codeExecutionService';
 
 
 // メインコンポーネント（プロバイダー内）
@@ -112,8 +113,12 @@ function HomeContent() {
   const chatPanel = (
     <ChatPanel 
       onExecuteCode={(code) => {
+        console.log('[ChatPanel] onExecuteCode called, code:', code);
         // AIが生成したコードをMonacoEditorに設定して実行
         handleCodeChange(code);
+        // エディターモデルをクリアして直接コードをセット＆実行
+        CodeExecutionService.clearEditor();
+        CodeExecutionService.executeCode(code);
         // 少し遅延してから実行（エディターの更新を待つ）
         setTimeout(() => {
           handleEvaluate();
