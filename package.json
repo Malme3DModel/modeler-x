@@ -57,7 +57,7 @@
   "homepage": "./",
   "build": {
     "appId": "com.modelerx.app",
-    "productName": "Modeler X",
+    "productName": "ModelerX",
     "directories": {
       "output": "dist"
     },
@@ -67,8 +67,7 @@
       "node_modules/**/*"
     ],
     "win": {
-      "target": "nsis",
-      "icon": "public/icon/favicon.ico"
+      "target": "nsis"
     },
     "mac": {
       "target": "dmg",
