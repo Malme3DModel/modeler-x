@@ -50,7 +50,7 @@ export function createCascadeStudioCore(
         let worker: Worker;
         if (typeof window !== 'undefined') {
           // クライアントサイドでのみ実行
-          const workerUrl = `${window.location.origin}/js/CascadeStudioMainWorker.js`;
+          const workerUrl = `./js/CascadeStudioMainWorker.js`;
           worker = new Worker(workerUrl);
         } else {
           return null;

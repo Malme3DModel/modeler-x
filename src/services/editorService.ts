@@ -1,5 +1,5 @@
 import type { MonacoEditorEvaluationParams, EvaluationOptions } from '../types';
-import { DEFAULT_GUI_STATE } from '../config/cadConfig';
+import { DEFAULT_GUI_STATE } from '@/config/cadConfig';
 
 /**
  * エディター評価サービス

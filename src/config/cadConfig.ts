@@ -52,6 +52,6 @@ export const CAD_WORKER_CONFIG = {
  * 型定義ファイルのパス設定
  */
 export const TYPE_DEFINITION_PATHS = {
-  cascadeStudio: '/js/CascadeStudioTypes.d.ts',
-  standardLibrary: '/js/StandardLibraryIntellisense.js',
+  cascadeStudio: './js/CascadeStudioTypes.d.ts',
+  standardLibrary: './js/StandardLibraryIntellisense.js',
 } as const; 

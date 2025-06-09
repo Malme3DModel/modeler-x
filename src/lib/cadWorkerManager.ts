@@ -91,7 +91,7 @@ const CADWorkerManager: React.FC<CADWorkerManagerProps> = ({
 
     // ワーカーの作成
     try {
-      workerRef.current = new Worker('/js/CascadeStudioMainWorker.js');
+      workerRef.current = new Worker('./js/CascadeStudioMainWorker.js');
       
       messageHandlersRef.current = {
         startupCallback: () => {

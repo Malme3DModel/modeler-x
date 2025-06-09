@@ -1,19 +1,19 @@
 'use client';
 
 import React, { useRef, useCallback } from 'react';
-import MonacoEditor from '../components/MonacoEditor';
-import ThreeViewport, { ThreeViewportRef } from '../components/ThreeViewport';
-import DockviewLayout from '../components/DockviewLayout';
-import CADWorkerManager from '../lib/cadWorkerManager';
-import ChatPanel from '../components/ChatPanel';
-import Header from '../components/Header';
-import Footer from '../components/Footer';
-import { ProjectProvider } from '../context/ProjectContext';
-import { useProjectState } from '../hooks/useProjectState';
-import { useProjectActions } from '../hooks/useProjectActions';
-import { useCADWorker } from '../hooks/useCADWorker';
-import { DEFAULT_CAD_CODE } from '../constants/defaultCode';
-import { CodeExecutionService } from '../services/codeExecutionService';
+import MonacoEditor from '@/components/MonacoEditor';
+import ThreeViewport, { ThreeViewportRef } from '@/components/ThreeViewport';
+import DockviewLayout from '@/components/DockviewLayout';
+import CADWorkerManager from '@/lib/cadWorkerManager';
+import ChatPanel from '@/components/ChatPanel';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import { ProjectProvider } from '@/context/ProjectContext';
+import { useProjectState } from '@/hooks/useProjectState';
+import { useProjectActions } from '@/hooks/useProjectActions';
+import { useCADWorker } from '@/hooks/useCADWorker';
+import { DEFAULT_CAD_CODE } from '@/constants/defaultCode';
+import { CodeExecutionService } from '@/services/codeExecutionService';
 
 
 // メインコンポーネント（プロバイダー内）

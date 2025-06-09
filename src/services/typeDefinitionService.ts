@@ -1,5 +1,5 @@
-import { TYPE_DEFINITION_PATHS } from '../config/cadConfig';
-import type { MonacoInstance, MonacoExtraLib } from '../types';
+import { TYPE_DEFINITION_PATHS } from '@/config/cadConfig';
+import type { MonacoInstance, MonacoExtraLib } from '@/types';
 
 /**
  * 型定義読み込みサービス

@@ -1,6 +1,7 @@
 const nextConfig = {
-  assetPrefix: process.env.NODE_ENV === 'production' ? './' : '',
-  // Electron用の静的エクスポート設定
+  // GitHub Pages用の設定
+  assetPrefix: process.env.NODE_ENV === 'production' ? '/modeler-x' : '',
+  basePath: process.env.NODE_ENV === 'production' ? '/modeler-x' : '',
   output: process.env.NODE_ENV === 'production' ? 'export' : undefined,
   trailingSlash: true,
   images: {

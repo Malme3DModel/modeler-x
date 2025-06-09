@@ -2,8 +2,8 @@
 
 import React, { useRef, useEffect, useState, useCallback, memo } from 'react';
 import Editor from '@monaco-editor/react';
-import { MONACO_EDITOR_CONFIG, TYPESCRIPT_CONFIG } from '../config/cadConfig';
-import type { MonacoEditorProps } from '../types';
+import { MONACO_EDITOR_CONFIG, TYPESCRIPT_CONFIG } from '@/config/cadConfig';
+import type { MonacoEditorProps } from '@/types';
 import { useCADWorker } from '@/hooks/useCADWorker';
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts';
 import { EditorService } from '@/services/editorService';
