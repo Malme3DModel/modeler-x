@@ -96,10 +96,15 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ className = '', onExecuteCode }) 
       // レスポンスからコードを抽出
       const extractedCode = extractCodeFromMessage(data.message);
       
+      // 抽出したコードブロックを content から除去
+      const contentWithoutCode = extractedCode
+        ? data.message.replace(/```(?:typescript|ts)\n[\s\S]*?```/g, '').trim()
+        : data.message;
+      
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'assistant',
-        content: data.message,
+        content: contentWithoutCode,
         timestamp: new Date(),
         extractedCode: extractedCode || undefined
       };
