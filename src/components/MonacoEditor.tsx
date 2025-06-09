@@ -43,6 +43,16 @@ const MonacoEditor: React.FC<MonacoEditorProps> = memo(({
     originalValueRef.current = value;
   }, [value]);
 
+  // 値が外部から変更されたらエディターの内容を更新
+  useEffect(() => {
+    if (isLoaded && editorRef.current) {
+      const currentValue = editorRef.current.getValue();
+      if (currentValue !== value) {
+        editorRef.current.setValue(value);
+      }
+    }
+  }, [value, isLoaded]);
+
   // エディターからコードを評価する関数（最適化: メモ化）
   const evaluateCode = useCallback(async (saveToURL = false) => {
     if (!editorRef.current || !monacoRef.current) {

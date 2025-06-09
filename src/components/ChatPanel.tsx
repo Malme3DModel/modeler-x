@@ -110,6 +110,17 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ className = '', onExecuteCode }) 
       };
       
       setMessages(prev => [...prev, assistantMessage]);
+      // 抽出したコードをエディターに置き換え
+      if (extractedCode) {
+        if (onExecuteCode) {
+          // ペーストではなく置き換え＆実行
+          onExecuteCode(extractedCode);
+        } else {
+          // 既存のコードをクリアしてから実行（変数再宣言エラー回避）
+          CodeExecutionService.clearEditor();
+          CodeExecutionService.executeCode(extractedCode);
+        }
+      }
     } catch (error) {
       console.error('チャットエラー:', error);
       const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました';
