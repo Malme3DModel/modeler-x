@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, User, Bot, Copy, ThumbsUp, ThumbsDown, AlertCircle, Play, Code } from 'lucide-react';
+import { Send, User, Bot, Copy, ThumbsUp, ThumbsDown, AlertCircle, Code } from 'lucide-react';
 import { CodeExecutionService } from '@/services/codeExecutionService';
 
 interface ChatMessage {
@@ -240,14 +240,6 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ className = '', onExecuteCode }) 
                             title="コードをコピー"
                           >
                             <Copy size={10} className="text-gray-500" />
-                          </button>
-                          <button
-                            onClick={() => executeCode(message.extractedCode!)}
-                            className="p-1 bg-green-500 hover:bg-green-600 text-white rounded transition-colors flex items-center"
-                            title="コードを実行"
-                          >
-                            <Play size={10} className="mr-1" />
-                            実行
                           </button>
                         </div>
                       </div>

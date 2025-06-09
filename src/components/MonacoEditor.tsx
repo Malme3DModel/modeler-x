@@ -45,6 +45,7 @@ const MonacoEditor: React.FC<MonacoEditorProps> = memo(({
 
   // 値が外部から変更されたらエディターの内容を更新
   useEffect(() => {
+    console.log('[MonacoEditor] useEffect: value=', value, ', isLoaded=', isLoaded);
     if (isLoaded && editorRef.current) {
       const currentValue = editorRef.current.getValue();
       if (currentValue !== value) {
