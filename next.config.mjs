@@ -1,4 +1,5 @@
 const nextConfig = {
+  assetPrefix: process.env.NODE_ENV === 'production' ? './' : '',
   // Electron用の静的エクスポート設定
   output: process.env.NODE_ENV === 'production' ? 'export' : undefined,
   trailingSlash: true,
