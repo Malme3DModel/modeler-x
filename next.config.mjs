@@ -1,11 +1,11 @@
 const nextConfig = {
-  // GitHub Pages用の設定
-  assetPrefix: process.env.NODE_ENV === 'production' ? '/modeler-x' : '',
-  basePath: process.env.NODE_ENV === 'production' ? '/modeler-x' : '',
-  output: process.env.NODE_ENV === 'production' ? 'export' : undefined,
-  trailingSlash: true,
+  // Vercel用の設定 - GitHub Pages用設定を無効化
+  assetPrefix: '',
+  basePath: '',
+  // outputを削除してVercelでのサーバーサイドレンダリングを有効にする
+  trailingSlash: false,
   images: {
-    unoptimized: true,
+    unoptimized: false, // Vercelでは画像最適化を有効にする
   },
   
   // ESLintを一時的に無効化（開発用）
