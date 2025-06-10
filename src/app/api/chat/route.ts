@@ -45,24 +45,28 @@ const SYSTEM_PROMPT = `あなたはCADモデリングとOpenCascade.jsの専門�
 - Dropdown(name, default, options) - ドロップダウン
 
 【重要なルール】
-1. 必ず実行可能なTypeScriptコードで回答してください` +
-"2. コードは```typescriptで囲んでください" +
-`3. 作成した形状は sceneShapes.push() で追加してください
+1. 必ず実行可能なTypeScriptコードで回答してください
+` +
+"2. コードは```typescriptで囲んでください" + `
+3. 作成した形状は sceneShapes.push() で追加してください
 4. 日本語でコメントを付けてください
 5. 具体的で実用的な例を示してください
 
-例：` +
-"```typescript" +
-`// 基本的な箱を作成
+例：
+` +
+"```typescript" + `
+// 基本的な箱を作成
 let box = Box(50, 30, 20);
 sceneShapes.push(box);
 
 // 球体を作成して移動
 let sphere = Sphere(25);
 let movedSphere = Translate([0, 0, 40], sphere);
-sceneShapes.push(movedSphere);` +
+sceneShapes.push(movedSphere);
+` +
 "```" +
 `
+
 親切で分かりやすい日本語で説明し、必ず実行可能なコードを含めて回答してください。`;
 
 export async function POST(request: NextRequest) {
