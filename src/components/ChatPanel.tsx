@@ -315,7 +315,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({ className = '', onExecuteCode }) 
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="メッセージを入力してください... (Enter で送信、Shift+Enter で改行)"
-              className="w-full p-2 pr-8 border border-gray-300 rounded text-xs resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+              className="w-full p-2 pr-8 border border-gray-300 rounded text-xs text-black resize-none focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
               rows={1}
               style={{ minHeight: '32px', maxHeight: '80px' }}
               disabled={isLoading}
