@@ -1,0 +1,85 @@
+{
+  "name": "modeler-x",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "dev:turbo": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "electron": "cross-env NODE_ENV=development electron electron/main.js",
+    "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:3000 && npm run electron\"",
+    "build:electron": "cross-env NODE_ENV=production npm run build && electron-builder",
+    "build:win": "cross-env NODE_ENV=production npm run build && electron-builder --win",
+    "build:mac": "cross-env NODE_ENV=production npm run build && electron-builder --mac",
+    "build:linux": "cross-env NODE_ENV=production npm run build && electron-builder --linux"
+  },
+  "dependencies": {
+    "@monaco-editor/react": "^4.7.0",
+    "@types/jquery": "^3.5.32",
+    "@types/three": "^0.177.0",
+    "autoprefixer": "^10.4.21",
+    "clsx": "^2.1.1",
+    "dockview": "^4.3.1",
+    "golden-layout": "^1.5.9",
+    "jquery": "^3.7.1",
+    "lucide-react": "^0.513.0",
+    "next": "15.3.3",
+    "openai": "^5.1.1",
+    "opencascade.js": "^0.1.15",
+    "opentype.js": "^1.3.4",
+    "postcss": "^8.5.4",
+    "potpack": "^2.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tailwind-merge": "^3.3.0",
+    "three": "^0.177.0",
+    "tweakpane": "^3.1.10"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@tailwindcss/postcss": "^4.1.8",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^36.4.0",
+    "electron-builder": "^26.0.12",
+    "eslint": "^9",
+    "eslint-config-next": "15.3.3",
+    "tailwindcss": "^4.1.8",
+    "typescript": "^5",
+    "wait-on": "^8.0.3"
+  },
+  "main": "electron/main.js",
+  "homepage": "./",
+  "build": {
+    "appId": "com.modelerx.app",
+    "productName": "ModelerX",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "electron/**/*",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "public/icon/apple-touch-icon.png"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "public/icon/android-chrome-192x192.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

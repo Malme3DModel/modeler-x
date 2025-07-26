@@ -1,0 +1,5 @@
+-r requirements.txt  # 共通パッケージを含める
+flake8
+isort
+mypy
+black

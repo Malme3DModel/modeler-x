@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+/* TailwindCSS v4 カスタムテーマ設定 */
+@theme {
+  /* VS Code Dark テーマの色定義 */
+  --color-vs-bg: #1e1e1e;
+  --color-vs-bg-secondary: #252526;
+  --color-vs-bg-tertiary: #2d2d30;
+  --color-vs-fg: #cccccc;
+  --color-vs-fg-secondary: #969696;
+  --color-vs-fg-muted: #6a6a6a;
+  --color-vs-border: #3e3e42;
+  --color-vs-border-light: #464647;
+  --color-vs-accent: #007acc;
+  --color-vs-accent-hover: #1177bb;
+  --color-vs-success: #4ec9b0;
+  --color-vs-warning: #dcdcaa;
+  --color-vs-error: #f44747;
+  --color-vs-info: #569cd6;
+  --color-vs-btn-bg: #0e639c;
+  --color-vs-btn-bg-hover: #1177bb;
+  --color-vs-btn-fg: #ffffff;
+  --color-vs-input-bg: #3c3c3c;
+  --color-vs-input-border: #3e3e42;
+  --color-vs-input-fg: #cccccc;
+  --color-vs-dropdown-bg: #252526;
+  --color-vs-dropdown-border: #3e3e42;
+  --color-vs-dropdown-hover: #2a2d2e;
+  --color-vs-scrollbar-bg: #1e1e1e;
+  --color-vs-scrollbar-thumb: #424242;
+  --color-vs-scrollbar-thumb-hover: #4f4f4f;
+}
+
+/* ボディのデフォルトスタイル */
+body {
+  @apply bg-vs-bg text-vs-fg;
+}
+
+/* スクロールバーのスタイル */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-vs-scrollbar-bg;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-vs-scrollbar-thumb rounded-md;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-vs-scrollbar-thumb-hover;
+}
+
+::-webkit-scrollbar-corner {
+  @apply bg-vs-scrollbar-bg;
+}
+
+/* フォーカス時のアウトライン */
+*:focus {
+  @apply outline-2 outline-vs-accent outline-offset-2;
+}
+
+/* 選択時のハイライト */
+::selection {
+  @apply bg-vs-accent text-vs-btn-fg;
+}

@@ -1,0 +1,19 @@
+version: "3.7"
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:80"
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      - /app/.venv
+    environment:
+      - PIPENV_VENV_IN_PROJECT=1
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    working_dir: /src
+    volumes:
+      - ./frontend:/app
